@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NBA Props Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080808;
+  --bg2: #0f0f0f;
+  --bg3: #161616;
+  --bg4: #1e1e1e;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.12);
+  --text: #ffffff;
+  --text2: #aaaaaa;
+  --text3: #555555;
+  --red: #c8102e;
+  --red2: #e8192e;
+  --gold: #fdb927;
+  --gold2: #ffcd57;
+  --green: #00e676;
+  --green-dim: rgba(0,230,118,0.1);
+  --amber: #ffb300;
+  --amber-dim: rgba(255,179,0,0.1);
+  --danger: #ff1744;
+  --danger-dim: rgba(255,23,68,0.08);
+  --fire: #ff6d00;
+  --fire-dim: rgba(255,109,0,0.1);
+  --display: 'Barlow Condensed', sans-serif;
+  --body: 'Barlow', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; overflow-x: hidden; }
+
+/* HEADER */
+.header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo-area { display: flex; align-items: center; gap: 14px; }
+.logo-icon {
+  width: 36px; height: 36px;
+  background: var(--red);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--display);
+  font-size: 18px; font-weight: 800;
+  color: white;
+  letter-spacing: -0.5px;
+}
+.logo-text { font-family: var(--display); font-size: 20px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text); }
+.logo-text span { color: var(--gold); }
+.live-pill {
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(200,16,46,0.15);
+  border: 1px solid rgba(200,16,46,0.4);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+  color: var(--red2); text-transform: uppercase;
+}
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red2); animation: blink 1.2s infinite; }
+@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
+.header-right { display: flex; align-items: center; gap: 16px; }
+.header-date { font-size: 12px; color: var(--text3); font-weight: 500; }
+.header-update { font-size: 11px; color: var(--text3); }
+
+/* MAIN */
+.main { max-width: 1000px; margin: 0 auto; padding: 24px 16px 80px; }
+
+/* API BAR */
+.api-bar {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex; align-items: center; gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.api-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); white-space: nowrap; }
+.api-input {
+  flex: 1; min-width: 200px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 13px; font-family: monospace;
+  color: var(--text); outline: none;
+  transition: border-color 0.2s;
+}
+.api-input:focus { border-color: var(--gold); }
+.api-input::placeholder { color: var(--text3); }
+.btn-primary {
+  background: var(--red);
+  border: none; border-radius: 8px;
+  padding: 9px 20px;
+  font-size: 13px; font-weight: 600;
+  color: white; cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  font-family: var(--body);
+}
+.btn-primary:hover { background: var(--red2); }
+.btn-primary.running { background: var(--bg4); color: var(--text2); border: 1px solid var(--border2); }
+.btn-demo {
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 13px; font-weight: 500;
+  color: var(--text2); cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  font-family: var(--body);
+}
+.btn-demo:hover { background: var(--bg3); color: var(--text); border-color: var(--gold); }
+
+/* STATS ROW */
+.stats-row { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 20px; }
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  position: relative; overflow: hidden;
+}
+.stat-card::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+}
+.stat-card.s-games::after { background: var(--gold); }
+.stat-card.s-alerts::after { background: var(--green); }
+.stat-card.s-risk::after { background: var(--danger); }
+.stat-card.s-blocked::after { background: var(--amber); }
+.stat-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+.stat-value { font-family: var(--display); font-size: 32px; font-weight: 800; line-height: 1; }
+.stat-value.gold { color: var(--gold); }
+.stat-value.green { color: var(--green); }
+.stat-value.red { color: var(--danger); }
+.stat-value.amber { color: var(--amber); }
+
+/* FILTERS */
+.filters { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+.filter-btn {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px; font-weight: 600;
+  color: var(--text3); cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+  font-family: var(--body);
+}
+.filter-btn:hover { border-color: var(--border2); color: var(--text2); }
+.filter-btn.active { color: var(--text); border-color: var(--border2); background: var(--bg3); }
+.filter-btn.f-fire.active { color: var(--fire); border-color: var(--fire); background: var(--fire-dim); }
+.filter-btn.f-red.active { color: #ff6b81; border-color: #ff6b81; background: rgba(255,107,129,0.1); }
+.filter-btn.f-orange.active { color: var(--amber); border-color: var(--amber); background: var(--amber-dim); }
+.filter-btn.f-yellow.active { color: var(--gold); border-color: var(--gold); background: rgba(253,185,39,0.1); }
+.filter-btn.f-risk.active { color: var(--danger); border-color: var(--danger); background: var(--danger-dim); }
+
+/* SECTION HEADER */
+.section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.section-title { font-family: var(--display); font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); }
+.section-line { flex: 1; height: 1px; background: var(--border); }
+
+/* ALERT CARDS */
+.alerts-list { display: flex; flex-direction: column; gap: 12px; }
+
+.alert-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.15s;
+}
+.alert-card:hover { transform: translateY(-1px); border-color: var(--border2); }
+.alert-card.fire { border-color: rgba(255,109,0,0.3); }
+.alert-card.red { border-color: rgba(255,107,129,0.25); }
+.alert-card.orange { border-color: rgba(255,179,0,0.25); }
+.alert-card.yellow { border-color: rgba(253,185,39,0.2); }
+.alert-card.risk { border-color: rgba(255,23,68,0.3); background: rgba(255,23,68,0.04); }
+
+/* Card accent bar */
+.card-accent { height: 3px; }
+.card-accent.fire { background: linear-gradient(90deg, var(--fire), var(--gold)); }
+.card-accent.red { background: linear-gradient(90deg, var(--red), #ff6b81); }
+.card-accent.orange { background: linear-gradient(90deg, var(--amber), var(--gold)); }
+.card-accent.yellow { background: linear-gradient(90deg, var(--gold), #fff176); }
+.card-accent.risk { background: linear-gradient(90deg, var(--danger), var(--red)); }
+
+.card-body { padding: 16px; }
+
+/* Player row */
+.player-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.player-photo-wrap {
+  width: 64px; height: 64px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  flex-shrink: 0;
+  position: relative;
+}
+.player-photo { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.player-photo-fallback {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--display); font-size: 20px; font-weight: 800;
+  color: var(--text2);
+}
+.player-info { flex: 1; min-width: 0; }
+.player-name {
+  font-family: var(--display);
+  font-size: 20px; font-weight: 800;
+  color: var(--text); line-height: 1;
+  margin-bottom: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.player-meta { font-size: 12px; color: var(--text3); font-weight: 500; margin-bottom: 6px; }
+.player-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+.badge {
+  font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 5px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  white-space: nowrap;
+}
+.badge.fire { background: var(--fire-dim); color: var(--fire); border: 1px solid rgba(255,109,0,0.3); }
+.badge.red { background: rgba(255,107,129,0.1); color: #ff6b81; border: 1px solid rgba(255,107,129,0.3); }
+.badge.orange { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(255,179,0,0.3); }
+.badge.yellow { background: rgba(253,185,39,0.1); color: var(--gold); border: 1px solid rgba(253,185,39,0.3); }
+.badge.warn { background: rgba(255,179,0,0.08); color: var(--amber); border: 1px solid rgba(255,179,0,0.2); }
+.badge.risk { background: var(--danger-dim); color: var(--danger); border: 1px solid rgba(255,23,68,0.3); }
+.badge.info { background: rgba(255,255,255,0.06); color: var(--text2); border: 1px solid var(--border2); }
+
+/* Game score mini */
+.game-score-mini {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg3);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px; font-weight: 600;
+  color: var(--text2);
+  white-space: nowrap;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+.game-score-mini .period { color: var(--text3); font-size: 10px; font-weight: 500; margin-left: 2px; }
+
+/* Stats grid */
+.stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-bottom: 12px; }
+.stat-box {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+}
+.stat-box.hot { border-color: rgba(255,109,0,0.2); background: rgba(255,109,0,0.04); }
+.stat-box-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; }
+.stat-box-main { display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; }
+.stat-box-val { font-family: var(--display); font-size: 26px; font-weight: 800; color: var(--text); line-height: 1; }
+.stat-box-proj { font-size: 11px; color: var(--text3); font-weight: 500; }
+.stat-box-proj span { color: var(--text2); }
+
+/* Progress bar */
+.progress-wrap { margin-bottom: 4px; }
+.progress-track { height: 3px; background: var(--bg4); border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
+.progress-fill.up { background: var(--green); }
+.progress-fill.fire { background: var(--fire); }
+.progress-fill.gold { background: var(--gold); }
+.stat-box-pct { font-size: 11px; font-weight: 600; }
+.stat-box-pct.up { color: var(--green); }
+.stat-box-pct.fire { color: var(--fire); }
+.stat-box-pct.gold { color: var(--gold); }
+.stat-box-pct.dim { color: var(--text3); }
+
+/* Card footer */
+.card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap; gap: 8px;
+}
+.lines-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.line-item { font-size: 12px; color: var(--text3); font-weight: 500; }
+.line-item span { color: var(--gold); font-weight: 700; font-family: var(--display); font-size: 14px; }
+
+/* Risk message */
+.risk-msg {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 600;
+  color: var(--danger);
+  background: var(--danger-dim);
+  border: 1px solid rgba(255,23,68,0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+/* Empty state */
+.state-box {
+  text-align: center;
+  padding: 60px 20px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.state-nba-logo { font-family: var(--display); font-size: 48px; font-weight: 800; color: var(--border2); margin-bottom: 16px; letter-spacing: -1px; }
+.state-title { font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--text2); margin-bottom: 8px; letter-spacing: 0.04em; text-transform: uppercase; }
+.state-sub { font-size: 13px; color: var(--text3); line-height: 1.7; max-width: 360px; margin: 0 auto; }
+
+/* Mobile */
+@media (max-width: 600px) {
+  .stats-row { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .stats-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .player-photo-wrap { width: 52px; height: 52px; }
+  .player-name { font-size: 17px; }
+  .header { padding: 0 14px; }
+  .main { padding: 16px 12px 80px; }
+  .logo-text { font-size: 16px; }
+  .game-score-mini { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo-area">
+    <div class="logo-icon">N</div>
+    <span class="logo-text">Props<span>Monitor</span></span>
+    <div class="live-pill"><div class="live-dot"></div>ao vivo</div>
+  </div>
+  <div class="header-right">
+    <div>
+      <div class="header-date" id="header-date">—</div>
+      <div class="header-update" id="header-update">aguardando</div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="api-bar">
+    <span class="api-label">API Key</span>
+    <input class="api-input" type="password" id="api-key-input" placeholder="Cole sua chave do BallDontLie aqui" />
+    <button class="btn-primary" id="start-btn" onclick="toggleMonitor()">Iniciar monitor</button>
+    <button class="btn-demo" onclick="loadDemo()">Ver demo</button>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card s-games">
+      <div class="stat-label">jogos ao vivo</div>
+      <div class="stat-value gold" id="stat-games">—</div>
+    </div>
+    <div class="stat-card s-alerts">
+      <div class="stat-label">alertas ativos</div>
+      <div class="stat-value green" id="stat-alerts">—</div>
+    </div>
+    <div class="stat-card s-risk">
+      <div class="stat-label">em risco</div>
+      <div class="stat-value red" id="stat-risk">—</div>
+    </div>
+    <div class="stat-card s-blocked">
+      <div class="stat-label">bloqueados</div>
+      <div class="stat-value amber" id="stat-blocked">—</div>
+    </div>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" onclick="setFilter('todos',this)">Todos</button>
+    <button class="filter-btn f-fire" onclick="setFilter('fire',this)">🔥 Duplo/Triplo</button>
+    <button class="filter-btn f-red" onclick="setFilter('red',this)">🔴 3º quarto</button>
+    <button class="filter-btn f-orange" onclick="setFilter('orange',this)">🟠 Intervalo</button>
+    <button class="filter-btn f-yellow" onclick="setFilter('yellow',this)">🟡 1º quarto</button>
+    <button class="filter-btn f-risk" onclick="setFilter('risk',this)">⚠️ Em risco</button>
+  </div>
+
+  <div class="section-header">
+    <span class="section-title">Alertas ativos</span>
+    <div class="section-line"></div>
+  </div>
+
+  <div class="alerts-list" id="alerts-list">
+    <div class="state-box">
+      <div class="state-nba-logo">NBA</div>
+      <div class="state-title">Monitor pausado</div>
+      <div class="state-sub">Cole sua API key do BallDontLie e clique em "Iniciar monitor" — ou clique em "Ver demo" para ver como funciona</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API_BASE = 'https://api.balldontlie.io';
+const NBA_PHOTO = id => `https://cdn.nba.com/headshots/nba/latest/1040x760/${id}.png`;
+const BLOWOUT = 20;
+const PACE_MIN = 1.5;
+
+let apiKey = '', monitorInterval = null, isRunning = false;
+let currentFilter = 'todos', allAlerts = [];
+
+const initials = n => n.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+
+function paceColor(pct) {
+  if (pct >= 180) return 'fire';
+  if (pct >= 160) return 'gold';
+  return 'up';
+}
+
+function progressWidth(pct) {
+  return Math.min(100, Math.round((pct / 250) * 100));
+}
+
+function getPace(cur, minsPlayed, total) {
+  if (!minsPlayed) return 0;
+  return (cur / minsPlayed) * total;
+}
+
+function getMinsPlayed(period, clock) {
+  const p = (period - 1) * 12;
+  let c = 12;
+  if (clock) {
+    const parts = clock.split(':');
+    if (parts.length === 2) c = 12 - (parseInt(parts[0]) + parseInt(parts[1])/60);
+  }
+  return p + c;
+}
+
+function alertType(period, triggered) {
+  if (triggered >= 2) return 'fire';
+  if (period >= 3) return 'red';
+  if (period === 2) return 'orange';
+  return 'yellow';
+}
+
+function momentLabel(type) {
+  return { fire:'Duplo alerta', red:'3º quarto', orange:'Intervalo', yellow:'1º quarto', risk:'Em risco' }[type] || '';
+}
+
+async function fetchAPI(url) {
+  const r = await fetch(url, { headers: { Authorization: apiKey } });
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+async function runMonitor() {
+  if (!apiKey) return;
+  try {
+    const now = new Date();
+    document.getElementById('header-update').textContent = `atualizado ${now.toLocaleTimeString('pt-BR')}`;
+    const today = now.toISOString().split('T')[0];
+    const gamesData = await fetchAPI(`${API_BASE}/nba/v1/games?dates[]=${today}`);
+    const live = (gamesData.data||[]).filter(g => g.status && g.status !== 'Final' && !g.status.includes('T'));
+    document.getElementById('stat-games').textContent = live.length;
+    if (!live.length) { allAlerts = []; renderAlerts(); updateStats(); return; }
+
+    const newAlerts = [];
+    let blocked = 0;
+
+    for (const game of live) {
+      const [statsData, propsData] = await Promise.all([
+        fetchAPI(`${API_BASE}/nba/v1/stats?game_ids[]=${game.id}`),
+        fetchAPI(`${API_BASE}/nba/v1/player_props?game_id=${game.id}`).catch(()=>({data:[]}))
+      ]);
+      const stats = statsData.data || [];
+      if (!stats.length) continue;
+
+      const pids = stats.map(s=>s.player?.id).filter(Boolean);
+      const season = new Date().getFullYear();
+      const avgData = await fetchAPI(`${API_BASE}/nba/v1/season_averages?season=${season}&${pids.map(id=>`player_ids[]=${id}`).join('&')}`);
+      const avgs = {};
+      (avgData.data||[]).forEach(a => avgs[a.player_id] = a);
+
+      const propsMap = {};
+      (propsData.data||[]).forEach(p => {
+        if (!propsMap[p.player_id]) propsMap[p.player_id] = {};
+        if (p.prop_type==='points') propsMap[p.player_id].pts = p.line_score;
+        if (p.prop_type==='rebounds') propsMap[p.player_id].reb = p.line_score;
+        if (p.prop_type==='assists') propsMap[p.player_id].ast = p.line_score;
+      });
+
+      const home = game.home_team_score||0, away = game.visitor_team_score||0;
+      const diff = Math.abs(home - away);
+      const period = game.period||1;
+      const minsPlayed = getMinsPlayed(period, game.time||'');
+      const gameLabel = `${game.visitor_team?.abbreviation} ${away} · ${game.home_team?.abbreviation} ${home}`;
+
+      for (const stat of stats) {
+        const { player, team } = stat;
+        if (!player||!team) continue;
+        const avg = avgs[player.id];
+        if (!avg) continue;
+
+        const isHome = team.id === game.home_team?.id;
+        const teamScore = isHome ? home : away;
+        const oppScore = isHome ? away : home;
+        const winning = teamScore > oppScore;
+        const tdiff = teamScore - oppScore;
+
+        if (diff >= BLOWOUT && winning) {
+          blocked++;
+          if (!newAlerts.find(a=>a.playerId===player.id&&a.type==='risk')) {
+            newAlerts.push({ playerId:player.id, type:'risk', name:`${player.first_name} ${player.last_name}`, team:team.abbreviation, position:player.position, nbaId:player.id, pts:stat.pts||0, reb:stat.reb||0, ast:stat.ast||0, ptsLine:propsMap[player.id]?.pts, gameLabel, period, riskMsg:`Time ganhando por +${Math.abs(tdiff)} pts — risco de banquinho`, warnings:[] });
+          }
+          continue;
+        }
+
+        const ptsPace = getPace(stat.pts||0, minsPlayed, 48);
+        const rebPace = getPace(stat.reb||0, minsPlayed, 48);
+        const astPace = getPace(stat.ast||0, minsPlayed, 48);
+
+        const triggered = [];
+        if (avg.pts>0 && ptsPace/avg.pts >= PACE_MIN) triggered.push({ stat:'pts', cur:stat.pts, proj:Math.round(ptsPace), avg:avg.pts, pct:Math.round((ptsPace/avg.pts)*100), line:propsMap[player.id]?.pts });
+        if (avg.reb>0 && rebPace/avg.reb >= PACE_MIN) triggered.push({ stat:'reb', cur:stat.reb, proj:Math.round(rebPace), avg:avg.reb, pct:Math.round((rebPace/avg.reb)*100), line:propsMap[player.id]?.reb });
+        if (avg.ast>0 && astPace/avg.ast >= PACE_MIN) triggered.push({ stat:'ast', cur:stat.ast, proj:Math.round(astPace), avg:avg.ast, pct:Math.round((astPace/avg.ast)*100), line:propsMap[player.id]?.ast });
+        if (!triggered.length) continue;
+
+        const type = alertType(period, triggered.length);
+        const warnings = [];
+        if (stat.pf>=3&&period<=2) warnings.push(`${stat.pf} faltas`);
+        if (stat.pf>=4&&period===3) warnings.push(`${stat.pf} faltas`);
+        if (diff>=BLOWOUT&&!winning) warnings.push('adversário em blowout');
+
+        newAlerts.push({ playerId:player.id, type, name:`${player.first_name} ${player.last_name}`, team:team.abbreviation, position:player.position||'—', nbaId:player.id, triggered, pts:stat.pts||0, reb:stat.reb||0, ast:stat.ast||0, gameLabel, period, warnings });
+      }
+    }
+
+    allAlerts = newAlerts;
+    document.getElementById('stat-blocked').textContent = blocked;
+    updateStats(); renderAlerts();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('header-update').textContent = 'erro — verifique a API key';
+  }
+}
+
+function updateStats() {
+  document.getElementById('stat-alerts').textContent = allAlerts.filter(a=>a.type!=='risk').length;
+  document.getElementById('stat-risk').textContent = allAlerts.filter(a=>a.type==='risk').length;
+}
+
+function renderCard(a) {
+  const ini = initials(a.name);
+  const photoUrl = `https://cdn.nba.com/headshots/nba/latest/1040x760/${a.nbaId}.png`;
+
+  if (a.type === 'risk') {
+    return `<div class="alert-card risk">
+      <div class="card-accent risk"></div>
+      <div class="card-body">
+        <div class="player-row">
+          <div class="player-photo-wrap">
+            <img class="player-photo" src="${photoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" alt="">
+            <div class="player-photo-fallback" style="display:none">${ini}</div>
+          </div>
+          <div class="player-info">
+            <div class="player-name">${a.name}</div>
+            <div class="player-meta">${a.team} · ${a.position}</div>
+            <div class="player-badges"><span class="badge risk">⚠ Em risco</span></div>
+          </div>
+          <div class="game-score-mini">${a.gameLabel} <span class="period">Q${a.period}</span></div>
+        </div>
+        <div class="risk-msg">⚠ ${a.riskMsg}</div>
+        <div class="card-footer">
+          <div class="lines-row">
+            <div class="line-item">Pts: <span>${a.pts}</span></div>
+            <div class="line-item">Reb: <span>${a.reb}</span></div>
+            <div class="line-item">Ast: <span>${a.ast}</span></div>
+            ${a.ptsLine ? `<div class="line-item">Linha: <span>${a.ptsLine}</span></div>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  const statLabels = { pts:'Pontos', reb:'Rebotes', ast:'Assistências' };
+  const allStats = ['pts','reb','ast'];
+  const statsHTML = allStats.map(s => {
+    const t = (a.triggered||[]).find(x=>x.stat===s);
+    const curVal = s==='pts'?a.pts : s==='reb'?a.reb : a.ast;
+    if (t) {
+      const col = paceColor(t.pct);
+      const pw = progressWidth(t.pct);
+      return `<div class="stat-box hot">
+        <div class="stat-box-label">${statLabels[s]}</div>
+        <div class="stat-box-main">
+          <span class="stat-box-val">${t.cur}</span>
+          <span class="stat-box-proj">proj <span>${t.proj}</span></span>
+        </div>
+        <div class="progress-wrap"><div class="progress-track"><div class="progress-fill ${col}" style="width:${pw}%"></div></div></div>
+        <div class="stat-box-pct ${col}">+${t.pct}% da média</div>
+      </div>`;
+    }
+    return `<div class="stat-box">
+      <div class="stat-box-label">${statLabels[s]}</div>
+      <div class="stat-box-main"><span class="stat-box-val">${curVal}</span></div>
+      <div class="progress-wrap"><div class="progress-track"><div class="progress-fill up" style="width:20%"></div></div></div>
+      <div class="stat-box-pct dim">—</div>
+    </div>`;
+  }).join('');
+
+  const warnBadges = (a.warnings||[]).map(w=>`<span class="badge warn">⚠ ${w}</span>`).join('');
+  const lines = (a.triggered||[]).filter(t=>t.line).map(t=>`<div class="line-item">Linha ${t.stat}: <span>${t.line}</span></div>`).join('');
+
+  return `<div class="alert-card ${a.type}">
+    <div class="card-accent ${a.type}"></div>
+    <div class="card-body">
+      <div class="player-row">
+        <div class="player-photo-wrap">
+          <img class="player-photo" src="${photoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" alt="">
+          <div class="player-photo-fallback" style="display:none">${ini}</div>
+        </div>
+        <div class="player-info">
+          <div class="player-name">${a.name}</div>
+          <div class="player-meta">${a.team} · ${a.position}</div>
+          <div class="player-badges">
+            <span class="badge ${a.type}">${momentLabel(a.type)}</span>
+            ${warnBadges}
+          </div>
+        </div>
+        <div class="game-score-mini">${a.gameLabel} <span class="period">Q${a.period}</span></div>
+      </div>
+      <div class="stats-grid">${statsHTML}</div>
+      <div class="card-footer">
+        <div class="lines-row">${lines||'<div class="line-item" style="color:var(--text3)">Linhas indisponíveis</div>'}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderAlerts() {
+  const list = document.getElementById('alerts-list');
+  const filtered = currentFilter==='todos' ? allAlerts : allAlerts.filter(a=>a.type===currentFilter);
+  if (!filtered.length) {
+    list.innerHTML = `<div class="state-box"><div class="state-nba-logo">NBA</div><div class="state-title">${isRunning?'Nenhum alerta no momento':'Monitor pausado'}</div><div class="state-sub">${isRunning?'Monitorando jogos — próxima verificação em 5 minutos':'Cole sua API key e inicie o monitor, ou clique em Ver demo'}</div></div>`;
+    return;
+  }
+  const order = {fire:0,red:1,orange:2,yellow:3,risk:4};
+  list.innerHTML = [...filtered].sort((a,b)=>(order[a.type]??9)-(order[b.type]??9)).map(renderCard).join('');
+}
+
+function setFilter(type, btn) {
+  currentFilter = type;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAlerts();
+}
+
+function toggleMonitor() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key && !isRunning) {
+    document.getElementById('api-key-input').style.borderColor='var(--red)';
+    setTimeout(()=>document.getElementById('api-key-input').style.borderColor='',2000);
+    return;
+  }
+  if (isRunning) {
+    clearInterval(monitorInterval);
+    isRunning = false;
+    const btn = document.getElementById('start-btn');
+    btn.textContent = 'Iniciar monitor';
+    btn.classList.remove('running');
+    document.getElementById('header-update').textContent = 'monitor pausado';
+    return;
+  }
+  apiKey = key;
+  isRunning = true;
+  const btn = document.getElementById('start-btn');
+  btn.textContent = 'Parar monitor';
+  btn.classList.add('running');
+  runMonitor();
+  monitorInterval = setInterval(runMonitor, 5*60*1000);
+}
+
+function loadDemo() {
+  const NBA_IDS = { jokic:203999, sga:1628983, wagner:1630532, brunson:1628384, herro:1629029, kawhi:202695 };
+  allAlerts = [
+    { playerId:1, type:'fire', name:'Nikola Jokic', team:'DEN', position:'C', nbaId:NBA_IDS.jokic, triggered:[{stat:'pts',cur:19,proj:38,avg:26,pct:188,line:24.5},{stat:'ast',cur:8,proj:16,avg:9,pct:178,line:8.5}], pts:19, reb:6, ast:8, gameLabel:'MIN 58 · DEN 61', period:3, warnings:[] },
+    { playerId:2, type:'red', name:'Shai Gilgeous-Alexander', team:'OKC', position:'G', nbaId:NBA_IDS.sga, triggered:[{stat:'pts',cur:31,proj:41,avg:32,pct:161,line:29.5}], pts:31, reb:3, ast:4, gameLabel:'LAL 81 · OKC 89', period:4, warnings:[] },
+    { playerId:3, type:'orange', name:'Franz Wagner', team:'ORL', position:'SF', nbaId:NBA_IDS.wagner, triggered:[{stat:'pts',cur:18,proj:36,avg:20,pct:184,line:15.5}], pts:18, reb:4, ast:3, gameLabel:'ORL 48 · BOS 51', period:3, warnings:['4 faltas'] },
+    { playerId:4, type:'orange', name:'Jalen Brunson', team:'NYK', position:'G', nbaId:NBA_IDS.brunson, triggered:[{stat:'pts',cur:16,proj:32,avg:26,pct:155,line:26.5},{stat:'ast',cur:5,proj:10,avg:7,pct:152,line:6.5}], pts:16, reb:2, ast:5, gameLabel:'NYK 52 · MIA 49', period:3, warnings:['back-to-back'] },
+    { playerId:5, type:'yellow', name:'Tyler Herro', team:'MIA', position:'G', nbaId:NBA_IDS.herro, triggered:[{stat:'pts',cur:11,proj:44,avg:22,pct:202,line:20.5}], pts:11, reb:1, ast:2, gameLabel:'MIA 28 · NYK 24', period:2, warnings:[] },
+    { playerId:6, type:'risk', name:'Kawhi Leonard', team:'LAC', position:'SF', nbaId:NBA_IDS.kawhi, pts:16, reb:4, ast:2, ptsLine:18.5, gameLabel:'SAC 75 · LAC 98', period:4, riskMsg:'Time ganhando por +23 pts — risco de banquinho', warnings:[] }
+  ];
+  document.getElementById('stat-games').textContent = 4;
+  document.getElementById('stat-blocked').textContent = 2;
+  document.getElementById('header-update').textContent = 'modo demo';
+  updateStats(); renderAlerts();
+}
+
+document.getElementById('header-date').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+</script>
+</body>
+</html>
