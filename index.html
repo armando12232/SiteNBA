@@ -33,11 +33,23 @@
   --body: 'Barlow', sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; overflow-x: hidden; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; overflow-x: hidden; position: relative; }
+
+.court-bg {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.07;
+}
+
+.header, .main { position: relative; z-index: 1; }
 
 /* HEADER */
 .header {
-  background: var(--bg2);
+  background: rgba(15,15,15,0.92);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   padding: 0 24px;
   display: flex;
@@ -337,6 +349,51 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 </style>
 </head>
 <body>
+
+<svg class="court-bg" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1000" height="560" fill="none"/>
+  <!-- Court outline -->
+  <rect x="40" y="30" width="920" height="500" fill="none" stroke="#fdb927" stroke-width="3"/>
+  <!-- Center line -->
+  <line x1="500" y1="30" x2="500" y2="530" stroke="#fdb927" stroke-width="2"/>
+  <!-- Center circle -->
+  <circle cx="500" cy="280" r="60" fill="none" stroke="#fdb927" stroke-width="2"/>
+  <circle cx="500" cy="280" r="4" fill="#fdb927"/>
+  <!-- Left paint -->
+  <rect x="40" y="180" width="160" height="200" fill="none" stroke="#fdb927" stroke-width="2"/>
+  <!-- Left free throw circle -->
+  <path d="M 200 180 A 60 60 0 0 1 200 380" fill="none" stroke="#fdb927" stroke-width="2"/>
+  <path d="M 200 180 A 60 60 0 0 0 200 380" fill="none" stroke="#fdb927" stroke-width="2" stroke-dasharray="8 6"/>
+  <!-- Left basket -->
+  <circle cx="80" cy="280" r="10" fill="none" stroke="#fdb927" stroke-width="2"/>
+  <line x1="40" y1="280" x2="90" y2="280" stroke="#fdb927" stroke-width="2"/>
+  <!-- Left restricted area -->
+  <path d="M 80 248 A 32 32 0 0 1 80 312" fill="none" stroke="#fdb927" stroke-width="1.5"/>
+  <!-- Left 3pt arc -->
+  <path d="M 40 110 L 180 110" fill="none" stroke="#fdb927" stroke-width="2"/>
+  <path d="M 40 450 L 180 450" fill="none" stroke="#fdb927" stroke-width="2"/>
+  <path d="M 180 110 A 220 220 0 0 1 180 450" fill="none" stroke="#fdb927" stroke-width="2"/>
+  <!-- Right paint -->
+  <rect x="800" y="180" width="160" height="200" fill="none" stroke="#fdb927" stroke-width="2"/>
+  <!-- Right free throw circle -->
+  <path d="M 800 180 A 60 60 0 0 0 800 380" fill="none" stroke="#fdb927" stroke-width="2"/>
+  <path d="M 800 180 A 60 60 0 0 1 800 380" fill="none" stroke="#fdb927" stroke-width="2" stroke-dasharray="8 6"/>
+  <!-- Right basket -->
+  <circle cx="920" cy="280" r="10" fill="none" stroke="#fdb927" stroke-width="2"/>
+  <line x1="910" y1="280" x2="960" y2="280" stroke="#fdb927" stroke-width="2"/>
+  <!-- Right restricted area -->
+  <path d="M 920 248 A 32 32 0 0 0 920 312" fill="none" stroke="#fdb927" stroke-width="1.5"/>
+  <!-- Right 3pt arc -->
+  <path d="M 960 110 L 820 110" fill="none" stroke="#fdb927" stroke-width="2"/>
+  <path d="M 960 450 L 820 450" fill="none" stroke="#fdb927" stroke-width="2"/>
+  <path d="M 820 110 A 220 220 0 0 0 820 450" fill="none" stroke="#fdb927" stroke-width="2"/>
+  <!-- Left elbow marks -->
+  <line x1="200" y1="205" x2="200" y2="220" stroke="#fdb927" stroke-width="1.5"/>
+  <line x1="200" y1="340" x2="200" y2="355" stroke="#fdb927" stroke-width="1.5"/>
+  <!-- Right elbow marks -->
+  <line x1="800" y1="205" x2="800" y2="220" stroke="#fdb927" stroke-width="1.5"/>
+  <line x1="800" y1="340" x2="800" y2="355" stroke="#fdb927" stroke-width="1.5"/>
+</svg>
 
 <div class="header">
   <div class="logo-area">
