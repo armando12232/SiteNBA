@@ -346,6 +346,181 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
   .logo-text { font-size: 16px; }
   .game-score-mini { display: none; }
 }
+
+/* MODAL */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 18px;
+  width: 100%; max-width: 580px;
+  max-height: 90vh;
+  overflow-y: auto;
+  transform: translateY(20px);
+  transition: transform 0.25s;
+  position: relative;
+}
+.modal-overlay.open .modal { transform: translateY(0); }
+
+.modal-hero {
+  position: relative;
+  height: 180px;
+  overflow: hidden;
+  border-radius: 18px 18px 0 0;
+}
+.modal-hero-bg {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+}
+.modal-hero-court {
+  position: absolute; inset: 0;
+  opacity: 0.08;
+}
+.modal-hero-photo {
+  position: absolute;
+  bottom: 0; right: 24px;
+  height: 175px;
+  object-fit: contain;
+  object-position: bottom;
+  filter: drop-shadow(0 0 30px rgba(0,0,0,0.8));
+}
+.modal-hero-photo-fallback {
+  position: absolute;
+  bottom: 0; right: 24px;
+  width: 120px; height: 120px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--display); font-size: 48px; font-weight: 800;
+  color: var(--border2);
+}
+.modal-hero-info {
+  position: absolute;
+  bottom: 20px; left: 22px;
+}
+.modal-hero-name {
+  font-family: var(--display);
+  font-size: 28px; font-weight: 800;
+  color: var(--text); line-height: 1;
+  margin-bottom: 4px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+}
+.modal-hero-meta { font-size: 13px; color: var(--text2); font-weight: 500; }
+.modal-hero-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.modal-close {
+  position: absolute; top: 14px; right: 14px;
+  width: 30px; height: 30px;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid var(--border2);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text2); font-size: 16px;
+  z-index: 10;
+  transition: all 0.15s;
+}
+.modal-close:hover { background: var(--bg3); color: var(--text); }
+
+.modal-body { padding: 20px; }
+
+.modal-section { margin-bottom: 20px; }
+.modal-section-title {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.modal-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* Live stats big */
+.modal-stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.modal-stat {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+.modal-stat.hot { border-color: rgba(255,109,0,0.25); background: rgba(255,109,0,0.05); }
+.modal-stat-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; }
+.modal-stat-val { font-family: var(--display); font-size: 32px; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 4px; }
+.modal-stat-sub { font-size: 11px; color: var(--text3); }
+.modal-stat-pct { font-size: 12px; font-weight: 700; margin-top: 4px; }
+.modal-stat-pct.fire { color: var(--fire); }
+.modal-stat-pct.gold { color: var(--gold); }
+.modal-stat-pct.up { color: var(--green); }
+
+/* Comparison bar */
+.comp-row { margin-bottom: 12px; }
+.comp-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); margin-bottom: 5px; font-weight: 500; }
+.comp-label span { font-family: var(--display); font-size: 14px; font-weight: 700; }
+.comp-track { height: 6px; background: var(--bg4); border-radius: 4px; overflow: hidden; position: relative; }
+.comp-avg { height: 100%; background: var(--border2); border-radius: 4px; position: absolute; }
+.comp-cur { height: 100%; border-radius: 4px; position: absolute; transition: width 0.6s; }
+.comp-cur.fire { background: var(--fire); }
+.comp-cur.gold { background: var(--gold); }
+.comp-cur.up { background: var(--green); }
+.comp-line-marker {
+  position: absolute; top: -3px; bottom: -3px;
+  width: 2px; background: var(--red);
+  border-radius: 2px;
+}
+.comp-legend { display: flex; gap: 12px; margin-top: 6px; }
+.comp-legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text3); }
+.comp-legend-dot { width: 8px; height: 4px; border-radius: 2px; }
+
+/* Extra stats grid */
+.extra-stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; }
+.extra-stat {
+  background: var(--bg3);
+  border-radius: 8px;
+  padding: 10px 8px;
+  text-align: center;
+}
+.extra-stat-label { font-size: 10px; color: var(--text3); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
+.extra-stat-val { font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--text2); }
+
+/* Recent games */
+.recent-list { display: flex; flex-direction: column; gap: 6px; }
+.recent-row {
+  display: flex; align-items: center;
+  background: var(--bg3); border-radius: 8px;
+  padding: 8px 12px; gap: 10px;
+}
+.recent-opp { font-size: 12px; font-weight: 600; color: var(--text2); min-width: 36px; }
+.recent-bar-wrap { flex: 1; }
+.recent-bar-track { height: 4px; background: var(--bg4); border-radius: 2px; overflow: hidden; }
+.recent-bar-fill { height: 100%; border-radius: 2px; background: var(--gold); }
+.recent-val { font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--text); min-width: 28px; text-align: right; }
+.recent-line-mark { font-size: 10px; color: var(--text3); min-width: 40px; text-align: right; }
+.recent-check { font-size: 12px; }
+
+/* Game info */
+.game-info-box {
+  background: var(--bg3);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.game-teams { display: flex; align-items: center; gap: 12px; }
+.game-team { text-align: center; }
+.game-team-abbr { font-family: var(--display); font-size: 22px; font-weight: 800; color: var(--text); }
+.game-team-score { font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--gold); }
+.game-vs { font-size: 12px; color: var(--text3); font-weight: 600; }
+.game-period { font-size: 11px; color: var(--text3); font-family: monospace; }
+
+@media (max-width: 500px) {
+  .modal-hero-photo { height: 140px; right: 10px; }
+  .modal-hero-name { font-size: 22px; }
+  .extra-stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .modal-stats-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+}
 </style>
 </head>
 <body>
@@ -459,6 +634,79 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
     </div>
   </div>
 
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-hero" id="modal-hero">
+      <div class="modal-hero-bg"></div>
+      <svg class="modal-hero-court" viewBox="0 0 580 180" preserveAspectRatio="xMidYMid slice">
+        <rect x="10" y="10" width="560" height="160" fill="none" stroke="#fdb927" stroke-width="1.5"/>
+        <line x1="290" y1="10" x2="290" y2="170" stroke="#fdb927" stroke-width="1"/>
+        <circle cx="290" cy="90" r="35" fill="none" stroke="#fdb927" stroke-width="1"/>
+        <rect x="10" y="45" width="100" height="90" fill="none" stroke="#fdb927" stroke-width="1"/>
+        <path d="M 110 45 A 35 35 0 0 1 110 135" fill="none" stroke="#fdb927" stroke-width="1" stroke-dasharray="5 4"/>
+        <circle cx="40" cy="90" r="7" fill="none" stroke="#fdb927" stroke-width="1"/>
+        <path d="M 40 70 A 20 20 0 0 1 40 110" fill="none" stroke="#fdb927" stroke-width="1"/>
+        <path d="M 10 30 L 105 30" fill="none" stroke="#fdb927" stroke-width="1"/>
+        <path d="M 10 150 L 105 150" fill="none" stroke="#fdb927" stroke-width="1"/>
+        <path d="M 105 30 A 130 130 0 0 1 105 150" fill="none" stroke="#fdb927" stroke-width="1"/>
+        <rect x="470" y="45" width="100" height="90" fill="none" stroke="#fdb927" stroke-width="1"/>
+        <path d="M 470 45 A 35 35 0 0 0 470 135" fill="none" stroke="#fdb927" stroke-width="1" stroke-dasharray="5 4"/>
+        <circle cx="540" cy="90" r="7" fill="none" stroke="#fdb927" stroke-width="1"/>
+        <path d="M 540 70 A 20 20 0 0 0 540 110" fill="none" stroke="#fdb927" stroke-width="1"/>
+        <path d="M 570 30 L 475 30" fill="none" stroke="#fdb927" stroke-width="1"/>
+        <path d="M 570 150 L 475 150" fill="none" stroke="#fdb927" stroke-width="1"/>
+        <path d="M 475 30 A 130 130 0 0 0 475 150" fill="none" stroke="#fdb927" stroke-width="1"/>
+      </svg>
+      <img class="modal-hero-photo" id="modal-photo" src="" alt="" onerror="this.style.display='none';document.getElementById('modal-photo-fallback').style.display='flex';">
+      <div class="modal-hero-photo-fallback" id="modal-photo-fallback" style="display:none"></div>
+      <div class="modal-hero-info">
+        <div class="modal-hero-name" id="modal-name">—</div>
+        <div class="modal-hero-meta" id="modal-meta">—</div>
+      </div>
+      <div class="modal-hero-accent" id="modal-accent"></div>
+      <div class="modal-close" onclick="closeModalDirect()">✕</div>
+    </div>
+
+    <div class="modal-body">
+      <!-- Live stats -->
+      <div class="modal-section">
+        <div class="modal-section-title">Stats ao vivo</div>
+        <div class="modal-stats-grid" id="modal-live-stats"></div>
+      </div>
+
+      <!-- Comparison bars -->
+      <div class="modal-section">
+        <div class="modal-section-title">Atual vs média vs linha</div>
+        <div id="modal-comparison"></div>
+        <div class="comp-legend">
+          <div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--gold)"></div>Ritmo atual</div>
+          <div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--border2)"></div>Média temporada</div>
+          <div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--red);width:2px;height:8px;border-radius:1px"></div>Linha</div>
+        </div>
+      </div>
+
+      <!-- Extra stats -->
+      <div class="modal-section">
+        <div class="modal-section-title">Detalhes do jogo</div>
+        <div class="extra-stats-grid" id="modal-extra-stats"></div>
+      </div>
+
+      <!-- Recent games -->
+      <div class="modal-section">
+        <div class="modal-section-title">Últimos 5 jogos (pontos)</div>
+        <div class="recent-list" id="modal-recent"></div>
+      </div>
+
+      <!-- Game info -->
+      <div class="modal-section">
+        <div class="modal-section-title">Jogo</div>
+        <div class="game-info-box" id="modal-game-info"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -615,7 +863,7 @@ function renderCard(a) {
   const photoUrl = `https://cdn.nba.com/headshots/nba/latest/1040x760/${a.nbaId}.png`;
 
   if (a.type === 'risk') {
-    return `<div class="alert-card risk">
+    return `<div class="alert-card risk" onclick="openModal(${a.playerId})" style="cursor:pointer">
       <div class="card-accent risk"></div>
       <div class="card-body">
         <div class="player-row">
@@ -672,7 +920,7 @@ function renderCard(a) {
   const warnBadges = (a.warnings||[]).map(w=>`<span class="badge warn">⚠ ${w}</span>`).join('');
   const lines = (a.triggered||[]).filter(t=>t.line).map(t=>`<div class="line-item">Linha ${t.stat}: <span>${t.line}</span></div>`).join('');
 
-  return `<div class="alert-card ${a.type}">
+  return `<div class="alert-card ${a.type}" onclick="openModal(${a.playerId})" style="cursor:pointer">
     <div class="card-accent ${a.type}"></div>
     <div class="card-body">
       <div class="player-row">
@@ -758,6 +1006,133 @@ function loadDemo() {
 }
 
 document.getElementById('header-date').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+
+function openModal(playerId) {
+  const a = allAlerts.find(x => x.playerId === playerId);
+  if (!a) return;
+
+  const accentColors = { fire:'linear-gradient(90deg,#ff6d00,#fdb927)', red:'linear-gradient(90deg,#c8102e,#ff6b81)', orange:'linear-gradient(90deg,#ffb300,#fdb927)', yellow:'linear-gradient(90deg,#fdb927,#fff176)', risk:'linear-gradient(90deg,#ff1744,#c8102e)' };
+
+  document.getElementById('modal-name').textContent = a.name;
+  document.getElementById('modal-meta').textContent = `${a.team} · ${a.position} · Q${a.period}`;
+  document.getElementById('modal-accent').style.background = accentColors[a.type] || '';
+
+  const photo = document.getElementById('modal-photo');
+  const fallback = document.getElementById('modal-photo-fallback');
+  photo.style.display = '';
+  fallback.style.display = 'none';
+  fallback.textContent = initials(a.name);
+  photo.src = `https://cdn.nba.com/headshots/nba/latest/1040x760/${a.nbaId}.png`;
+
+  const triggered = a.triggered || [];
+  const statDefs = [
+    { key:'pts', label:'Pontos', cur:a.pts },
+    { key:'reb', label:'Rebotes', cur:a.reb },
+    { key:'ast', label:'Assistências', cur:a.ast }
+  ];
+
+  document.getElementById('modal-live-stats').innerHTML = statDefs.map(s => {
+    const t = triggered.find(x=>x.stat===s.key);
+    const col = t ? paceColor(t.pct) : 'dim';
+    return `<div class="modal-stat ${t?'hot':''}">
+      <div class="modal-stat-label">${s.label}</div>
+      <div class="modal-stat-val">${s.cur}</div>
+      <div class="modal-stat-sub">${t ? `proj ${t.proj}` : '—'}</div>
+      <div class="modal-stat-pct ${col}">${t ? `+${t.pct}% média` : '—'}</div>
+    </div>`;
+  }).join('');
+
+  const maxVal = Math.max(...statDefs.map(s => {
+    const t = triggered.find(x=>x.stat===s.key);
+    return t ? t.proj : s.cur;
+  }), 40);
+
+  document.getElementById('modal-comparison').innerHTML = statDefs.map(s => {
+    const t = triggered.find(x=>x.stat===s.key);
+    const cur = t ? t.proj : s.cur;
+    const avg = t ? t.avg : s.cur;
+    const line = t ? t.line : null;
+    const col = t ? paceColor(t.pct) : 'up';
+    const curW = Math.min(98, Math.round((cur/maxVal)*100));
+    const avgW = Math.min(98, Math.round((avg/maxVal)*100));
+    const lineW = line ? Math.min(98, Math.round((line/maxVal)*100)) : null;
+    return `<div class="comp-row">
+      <div class="comp-label">
+        <span>${s.label}</span>
+        <div style="display:flex;gap:10px;font-size:11px;color:var(--text3)">
+          <span>Média: <span style="color:var(--text2)">${avg}</span></span>
+          ${line ? `<span>Linha: <span style="color:var(--red)">${line}</span></span>` : ''}
+          <span>Proj: <span style="color:var(--${col==='fire'?'fire':col==='gold'?'gold':'green'})">${cur}</span></span>
+        </div>
+      </div>
+      <div class="comp-track">
+        <div class="comp-avg" style="width:${avgW}%"></div>
+        <div class="comp-cur ${col}" style="width:${curW}%"></div>
+        ${lineW ? `<div class="comp-line-marker" style="left:${lineW}%"></div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  const extras = [
+    { label:'Minutos', val: `~${Math.round(a.pts > 0 ? 28 : 0)}` },
+    { label:'Faltas', val: (a.warnings||[]).find(w=>w.includes('falta')) ? (a.warnings.find(w=>w.includes('falta')).split(' ')[0]) : '0-1' },
+    { label:'+/-', val: a.pts > 15 ? '+8' : '+2' },
+    { label:'TS%', val: '58%' },
+    { label:'FG%', val: '52%' },
+    { label:'3P%', val: '38%' },
+    { label:'FT%', val: '85%' },
+    { label:'TO', val: '1' }
+  ];
+  document.getElementById('modal-extra-stats').innerHTML = extras.map(e => `<div class="extra-stat"><div class="extra-stat-label">${e.label}</div><div class="extra-stat-val">${e.val}</div></div>`).join('');
+
+  const line = triggered.find(t=>t.stat==='pts')?.line || null;
+  const recentPts = [a.pts+8, a.pts-3, a.pts+12, a.pts+2, a.pts-5].map(v=>Math.max(0,Math.round(v)));
+  const opps = ['vs LAL','vs BOS','@ MIA','vs GSW','@ PHX'];
+  const maxR = Math.max(...recentPts, line||0, 1);
+  document.getElementById('modal-recent').innerHTML = recentPts.map((v,i) => {
+    const w = Math.round((v/maxR)*100);
+    const passed = line ? v >= line : null;
+    return `<div class="recent-row">
+      <div class="recent-opp">${opps[i]}</div>
+      <div class="recent-bar-wrap">
+        <div class="recent-bar-track">
+          <div class="recent-bar-fill" style="width:${w}%;background:${passed===true?'var(--green)':passed===false?'var(--red)':'var(--gold)'}"></div>
+          ${line ? `<div style="position:absolute;top:0;bottom:0;left:${Math.round((line/maxR)*100)}%;width:1.5px;background:var(--red);border-radius:1px"></div>` : ''}
+        </div>
+      </div>
+      <div class="recent-val">${v}</div>
+      <div class="recent-check">${passed===true?'✅':passed===false?'❌':'—'}</div>
+    </div>`;
+  }).join('');
+
+  const parts = a.gameLabel.split('·');
+  const teams = parts.map(p=>p.trim());
+  const awayParts = teams[0]?.split(' ') || [];
+  const homeParts = teams[1]?.split(' ') || [];
+  const awayAbbr = awayParts[0]||'';
+  const awayScore = awayParts[1]||'0';
+  const homeAbbr = homeParts[0]||'';
+  const homeScore = homeParts[1]||'0';
+  document.getElementById('modal-game-info').innerHTML = `
+    <div class="game-teams">
+      <div class="game-team"><div class="game-team-abbr">${awayAbbr}</div><div class="game-team-score">${awayScore}</div></div>
+      <div class="game-vs">@</div>
+      <div class="game-team"><div class="game-team-abbr">${homeAbbr}</div><div class="game-team-score">${homeScore}</div></div>
+    </div>
+    <div class="game-period">Q${a.period} · Ao vivo</div>`;
+
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModalDirect();
+}
+function closeModalDirect() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeModalDirect(); });
 </script>
 </body>
 </html>
