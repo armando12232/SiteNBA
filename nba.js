@@ -1,0 +1,39 @@
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
+  const BDL_KEY = process.env.BALLDONTLIE_API_KEY;
+  if (!BDL_KEY) return res.status(500).json({ error: 'API key not configured' });
+
+  const { endpoint } = req.query;
+  if (!endpoint) return res.status(400).json({ error: 'Missing endpoint' });
+
+  const allowedEndpoints = [
+    'nba/v1/games',
+    'nba/v1/stats',
+    'nba/v1/season_averages',
+    'nba/v1/player_props',
+    'nba/v1/box_scores',
+  ];
+
+  const base = endpoint.split('?')[0];
+  if (!allowedEndpoints.some(e => base.startsWith(e))) {
+    return res.status(403).json({ error: 'Endpoint not allowed' });
+  }
+
+  try {
+    const params = new URLSearchParams(req.query);
+    params.delete('endpoint');
+    const url = `https://api.balldontlie.io/${endpoint}${params.toString() ? '&' + params.toString() : ''}`;
+    const response = await fetch(url, {
+      headers: { Authorization: BDL_KEY }
+    });
+    const data = await response.json();
+    res.setHeader('Cache-Control', 's-maxage=30');
+    return res.status(response.status).json(data);
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to fetch data' });
+  }
+}
