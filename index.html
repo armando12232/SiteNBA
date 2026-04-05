@@ -6,6 +6,7 @@
 <title>NBA Props Monitor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg: #080808;
@@ -20,7 +21,6 @@
   --red: #c8102e;
   --red2: #e8192e;
   --gold: #fdb927;
-  --gold2: #ffcd57;
   --green: #00e676;
   --green-dim: rgba(0,230,118,0.1);
   --amber: #ffb300;
@@ -35,16 +35,81 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; overflow-x: hidden; position: relative; }
 
-.court-bg {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.07;
-}
+/* COURT BG */
+.court-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: 0.07; }
+.app-layer { position: relative; z-index: 1; }
 
-.header, .main { position: relative; z-index: 1; }
+/* AUTH SCREEN */
+.auth-screen {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.auth-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  width: 100%; max-width: 420px;
+  overflow: hidden;
+}
+.auth-hero {
+  background: var(--bg3);
+  padding: 32px 32px 24px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+  position: relative;
+}
+.auth-logo-icon {
+  width: 52px; height: 52px;
+  background: var(--red);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--display); font-size: 26px; font-weight: 800;
+  color: white; margin: 0 auto 14px;
+}
+.auth-title { font-family: var(--display); font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: 0.02em; margin-bottom: 4px; }
+.auth-title span { color: var(--gold); }
+.auth-sub { font-size: 13px; color: var(--text3); }
+
+.auth-body { padding: 28px 28px; }
+.auth-tabs { display: flex; gap: 6px; margin-bottom: 24px; background: var(--bg3); border-radius: 10px; padding: 4px; }
+.auth-tab {
+  flex: 1; padding: 8px; border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  background: transparent; color: var(--text3); font-family: var(--body);
+  transition: all 0.15s;
+}
+.auth-tab.active { background: var(--bg2); color: var(--text); }
+
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
+.auth-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 5px; display: block; }
+.auth-input {
+  width: 100%; background: var(--bg3);
+  border: 1px solid var(--border2); border-radius: 10px;
+  padding: 11px 14px; font-size: 14px; font-family: var(--body);
+  color: var(--text); outline: none; transition: border-color 0.2s;
+}
+.auth-input:focus { border-color: var(--gold); }
+.auth-input::placeholder { color: var(--text3); }
+.auth-btn {
+  width: 100%; background: var(--red); border: none; border-radius: 10px;
+  padding: 13px; font-size: 14px; font-weight: 700; font-family: var(--body);
+  color: white; cursor: pointer; margin-top: 4px; transition: background 0.15s;
+  letter-spacing: 0.02em;
+}
+.auth-btn:hover { background: var(--red2); }
+.auth-btn:disabled { background: var(--bg4); color: var(--text3); cursor: not-allowed; }
+.auth-error {
+  font-size: 12px; color: var(--danger); background: var(--danger-dim);
+  border: 1px solid rgba(255,23,68,0.2); border-radius: 8px;
+  padding: 10px 12px; text-align: center;
+}
+.auth-success {
+  font-size: 12px; color: var(--green); background: var(--green-dim);
+  border: 1px solid rgba(0,230,118,0.2); border-radius: 8px;
+  padding: 10px 12px; text-align: center;
+}
+.auth-footer { font-size: 11px; color: var(--text3); text-align: center; margin-top: 16px; line-height: 1.6; }
 
 /* HEADER */
 .header {
@@ -52,106 +117,57 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   padding: 0 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 60px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 60px; position: sticky; top: 0; z-index: 100;
 }
-.logo-area { display: flex; align-items: center; gap: 14px; }
-.logo-icon {
-  width: 36px; height: 36px;
-  background: var(--red);
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--display);
-  font-size: 18px; font-weight: 800;
-  color: white;
-  letter-spacing: -0.5px;
-}
-.logo-text { font-family: var(--display); font-size: 20px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text); }
+.header-left { display: flex; align-items: center; gap: 12px; }
+.logo-icon { width: 36px; height: 36px; background: var(--red); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 18px; font-weight: 800; color: white; }
+.logo-text { font-family: var(--display); font-size: 20px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .logo-text span { color: var(--gold); }
-.live-pill {
-  display: flex; align-items: center; gap: 5px;
-  background: rgba(200,16,46,0.15);
-  border: 1px solid rgba(200,16,46,0.4);
-  border-radius: 20px;
-  padding: 3px 10px;
-  font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
-  color: var(--red2); text-transform: uppercase;
-}
+.live-pill { display: flex; align-items: center; gap: 5px; background: rgba(200,16,46,0.15); border: 1px solid rgba(200,16,46,0.4); border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--red2); text-transform: uppercase; }
 .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red2); animation: blink 1.2s infinite; }
-@keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.2;} }
-.header-right { display: flex; align-items: center; gap: 16px; }
-.header-date { font-size: 12px; color: var(--text3); font-weight: 500; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.header-date { font-size: 12px; color: var(--text3); }
 .header-update { font-size: 11px; color: var(--text3); }
+
+/* USER MENU */
+.user-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--red); border: none; cursor: pointer;
+  font-family: var(--display); font-size: 14px; font-weight: 800;
+  color: white; position: relative;
+}
+.user-dropdown {
+  position: absolute; top: 48px; right: 0;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 6px;
+  min-width: 180px; z-index: 200;
+  display: none;
+}
+.user-dropdown.open { display: block; }
+.user-dropdown-header { padding: 10px 12px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.user-email { font-size: 12px; color: var(--text2); word-break: break-all; }
+.user-plan { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); margin-top: 2px; }
+.dropdown-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px; border-radius: 8px; cursor: pointer;
+  font-size: 13px; color: var(--text2); transition: all 0.1s;
+  border: none; background: transparent; width: 100%; text-align: left;
+  font-family: var(--body);
+}
+.dropdown-item:hover { background: var(--bg3); color: var(--text); }
+.dropdown-item.danger { color: var(--danger); }
+.dropdown-item.danger:hover { background: var(--danger-dim); }
+.user-menu-wrap { position: relative; }
 
 /* MAIN */
 .main { max-width: 1000px; margin: 0 auto; padding: 24px 16px 80px; }
 
-/* API BAR */
-.api-bar {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 18px;
-  display: flex; align-items: center; gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-}
-.api-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); white-space: nowrap; }
-.api-input {
-  flex: 1; min-width: 200px;
-  background: var(--bg3);
-  border: 1px solid var(--border2);
-  border-radius: 8px;
-  padding: 9px 14px;
-  font-size: 13px; font-family: monospace;
-  color: var(--text); outline: none;
-  transition: border-color 0.2s;
-}
-.api-input:focus { border-color: var(--gold); }
-.api-input::placeholder { color: var(--text3); }
-.btn-primary {
-  background: var(--red);
-  border: none; border-radius: 8px;
-  padding: 9px 20px;
-  font-size: 13px; font-weight: 600;
-  color: white; cursor: pointer;
-  transition: background 0.15s;
-  white-space: nowrap;
-  font-family: var(--body);
-}
-.btn-primary:hover { background: var(--red2); }
-.btn-primary.running { background: var(--bg4); color: var(--text2); border: 1px solid var(--border2); }
-.btn-demo {
-  background: transparent;
-  border: 1px solid var(--border2);
-  border-radius: 8px;
-  padding: 9px 16px;
-  font-size: 13px; font-weight: 500;
-  color: var(--text2); cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-  font-family: var(--body);
-}
-.btn-demo:hover { background: var(--bg3); color: var(--text); border-color: var(--gold); }
-
 /* STATS ROW */
 .stats-row { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 20px; }
-.stat-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-  position: relative; overflow: hidden;
-}
-.stat-card::after {
-  content: '';
-  position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
-}
+.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; position: relative; overflow: hidden; }
+.stat-card::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; }
 .stat-card.s-games::after { background: var(--gold); }
 .stat-card.s-alerts::after { background: var(--green); }
 .stat-card.s-risk::after { background: var(--danger); }
@@ -165,17 +181,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 
 /* FILTERS */
 .filters { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
-.filter-btn {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 12px; font-weight: 600;
-  color: var(--text3); cursor: pointer;
-  transition: all 0.15s;
-  letter-spacing: 0.02em;
-  font-family: var(--body);
-}
+.filter-btn { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; color: var(--text3); cursor: pointer; transition: all 0.15s; font-family: var(--body); }
 .filter-btn:hover { border-color: var(--border2); color: var(--text2); }
 .filter-btn.active { color: var(--text); border-color: var(--border2); background: var(--bg3); }
 .filter-btn.f-fire.active { color: var(--fire); border-color: var(--fire); background: var(--fire-dim); }
@@ -191,106 +197,49 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 
 /* ALERT CARDS */
 .alerts-list { display: flex; flex-direction: column; gap: 12px; }
-
-.alert-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  overflow: hidden;
-  transition: border-color 0.2s, transform 0.15s;
-}
+.alert-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; transition: border-color 0.2s, transform 0.15s; cursor: pointer; }
 .alert-card:hover { transform: translateY(-1px); border-color: var(--border2); }
 .alert-card.fire { border-color: rgba(255,109,0,0.3); }
 .alert-card.red { border-color: rgba(255,107,129,0.25); }
 .alert-card.orange { border-color: rgba(255,179,0,0.25); }
 .alert-card.yellow { border-color: rgba(253,185,39,0.2); }
 .alert-card.risk { border-color: rgba(255,23,68,0.3); background: rgba(255,23,68,0.04); }
-
-/* Card accent bar */
 .card-accent { height: 3px; }
-.card-accent.fire { background: linear-gradient(90deg, var(--fire), var(--gold)); }
-.card-accent.red { background: linear-gradient(90deg, var(--red), #ff6b81); }
-.card-accent.orange { background: linear-gradient(90deg, var(--amber), var(--gold)); }
-.card-accent.yellow { background: linear-gradient(90deg, var(--gold), #fff176); }
-.card-accent.risk { background: linear-gradient(90deg, var(--danger), var(--red)); }
-
+.card-accent.fire { background: linear-gradient(90deg,var(--fire),var(--gold)); }
+.card-accent.red { background: linear-gradient(90deg,var(--red),#ff6b81); }
+.card-accent.orange { background: linear-gradient(90deg,var(--amber),var(--gold)); }
+.card-accent.yellow { background: linear-gradient(90deg,var(--gold),#fff176); }
+.card-accent.risk { background: linear-gradient(90deg,var(--danger),var(--red)); }
 .card-body { padding: 16px; }
 
-/* Player row */
 .player-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
-.player-photo-wrap {
-  width: 64px; height: 64px;
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--bg3);
-  border: 1px solid var(--border2);
-  flex-shrink: 0;
-  position: relative;
-}
+.player-photo-wrap { width: 64px; height: 64px; border-radius: 10px; overflow: hidden; background: var(--bg3); border: 1px solid var(--border2); flex-shrink: 0; }
 .player-photo { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
-.player-photo-fallback {
-  width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--display); font-size: 20px; font-weight: 800;
-  color: var(--text2);
-}
+.player-photo-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 20px; font-weight: 800; color: var(--text2); }
 .player-info { flex: 1; min-width: 0; }
-.player-name {
-  font-family: var(--display);
-  font-size: 20px; font-weight: 800;
-  color: var(--text); line-height: 1;
-  margin-bottom: 4px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
+.player-name { font-family: var(--display); font-size: 20px; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .player-meta { font-size: 12px; color: var(--text3); font-weight: 500; margin-bottom: 6px; }
 .player-badges { display: flex; gap: 5px; flex-wrap: wrap; }
-.badge {
-  font-size: 10px; font-weight: 700;
-  padding: 3px 8px; border-radius: 5px;
-  letter-spacing: 0.06em; text-transform: uppercase;
-  white-space: nowrap;
-}
+.badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 5px; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
 .badge.fire { background: var(--fire-dim); color: var(--fire); border: 1px solid rgba(255,109,0,0.3); }
 .badge.red { background: rgba(255,107,129,0.1); color: #ff6b81; border: 1px solid rgba(255,107,129,0.3); }
 .badge.orange { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(255,179,0,0.3); }
 .badge.yellow { background: rgba(253,185,39,0.1); color: var(--gold); border: 1px solid rgba(253,185,39,0.3); }
 .badge.warn { background: rgba(255,179,0,0.08); color: var(--amber); border: 1px solid rgba(255,179,0,0.2); }
 .badge.risk { background: var(--danger-dim); color: var(--danger); border: 1px solid rgba(255,23,68,0.3); }
-.badge.info { background: rgba(255,255,255,0.06); color: var(--text2); border: 1px solid var(--border2); }
+.game-score-mini { display: flex; align-items: center; gap: 6px; background: var(--bg3); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 600; color: var(--text2); white-space: nowrap; align-self: flex-start; }
+.game-score-mini .period { color: var(--text3); font-size: 10px; font-weight: 500; }
 
-/* Game score mini */
-.game-score-mini {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--bg3);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 12px; font-weight: 600;
-  color: var(--text2);
-  white-space: nowrap;
-  align-self: flex-start;
-  margin-top: 2px;
-}
-.game-score-mini .period { color: var(--text3); font-size: 10px; font-weight: 500; margin-left: 2px; }
-
-/* Stats grid */
 .stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-bottom: 12px; }
-.stat-box {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
-}
+.stat-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
 .stat-box.hot { border-color: rgba(255,109,0,0.2); background: rgba(255,109,0,0.04); }
 .stat-box-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; }
 .stat-box-main { display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; }
 .stat-box-val { font-family: var(--display); font-size: 26px; font-weight: 800; color: var(--text); line-height: 1; }
 .stat-box-proj { font-size: 11px; color: var(--text3); font-weight: 500; }
 .stat-box-proj span { color: var(--text2); }
-
-/* Progress bar */
-.progress-wrap { margin-bottom: 4px; }
-.progress-track { height: 3px; background: var(--bg4); border-radius: 2px; overflow: hidden; }
-.progress-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
+.progress-track { height: 3px; background: var(--bg4); border-radius: 2px; overflow: hidden; margin-bottom: 4px; }
+.progress-fill { height: 100%; border-radius: 2px; }
 .progress-fill.up { background: var(--green); }
 .progress-fill.fire { background: var(--fire); }
 .progress-fill.gold { background: var(--gold); }
@@ -300,42 +249,85 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .stat-box-pct.gold { color: var(--gold); }
 .stat-box-pct.dim { color: var(--text3); }
 
-/* Card footer */
-.card-footer {
-  display: flex; align-items: center; justify-content: space-between;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-  flex-wrap: wrap; gap: 8px;
-}
+.card-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
 .lines-row { display: flex; gap: 12px; flex-wrap: wrap; }
 .line-item { font-size: 12px; color: var(--text3); font-weight: 500; }
 .line-item span { color: var(--gold); font-weight: 700; font-family: var(--display); font-size: 14px; }
+.risk-msg { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--danger); background: var(--danger-dim); border: 1px solid rgba(255,23,68,0.2); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
 
-/* Risk message */
-.risk-msg {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 12px; font-weight: 600;
-  color: var(--danger);
-  background: var(--danger-dim);
-  border: 1px solid rgba(255,23,68,0.2);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
-}
-
-/* Empty state */
-.state-box {
-  text-align: center;
-  padding: 60px 20px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-}
-.state-nba-logo { font-family: var(--display); font-size: 48px; font-weight: 800; color: var(--border2); margin-bottom: 16px; letter-spacing: -1px; }
-.state-title { font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--text2); margin-bottom: 8px; letter-spacing: 0.04em; text-transform: uppercase; }
+/* EMPTY STATE */
+.state-box { text-align: center; padding: 60px 20px; background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; }
+.state-nba-logo { font-family: var(--display); font-size: 48px; font-weight: 800; color: var(--border2); margin-bottom: 16px; }
+.state-title { font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--text2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
 .state-sub { font-size: 13px; color: var(--text3); line-height: 1.7; max-width: 360px; margin: 0 auto; }
+.state-btn { margin-top: 20px; background: var(--red); border: none; border-radius: 10px; padding: 10px 24px; font-size: 13px; font-weight: 700; color: white; cursor: pointer; font-family: var(--body); }
 
-/* Mobile */
+/* MODAL */
+.modal-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.85); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 16px; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 18px; width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; transform: translateY(20px); transition: transform 0.25s; position: relative; }
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal-hero { position: relative; height: 180px; overflow: hidden; border-radius: 18px 18px 0 0; }
+.modal-hero-bg { position: absolute; inset: 0; background: linear-gradient(135deg,#0f0f0f 0%,#1a1a1a 100%); }
+.modal-hero-court { position: absolute; inset: 0; opacity: 0.08; }
+.modal-hero-photo { position: absolute; bottom: 0; right: 24px; height: 175px; object-fit: contain; object-position: bottom; }
+.modal-hero-photo-fallback { position: absolute; bottom: 0; right: 24px; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 48px; font-weight: 800; color: var(--border2); }
+.modal-hero-info { position: absolute; bottom: 20px; left: 22px; }
+.modal-hero-name { font-family: var(--display); font-size: 28px; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 4px; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
+.modal-hero-meta { font-size: 13px; color: var(--text2); font-weight: 500; }
+.modal-hero-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.modal-close { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; background: rgba(0,0,0,0.5); border: 1px solid var(--border2); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text2); font-size: 16px; z-index: 10; transition: all 0.15s; }
+.modal-close:hover { background: var(--bg3); color: var(--text); }
+.modal-body { padding: 20px; }
+.modal-section { margin-bottom: 20px; }
+.modal-section-title { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.modal-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.modal-stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.modal-stat { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
+.modal-stat.hot { border-color: rgba(255,109,0,0.25); background: rgba(255,109,0,0.05); }
+.modal-stat-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; }
+.modal-stat-val { font-family: var(--display); font-size: 32px; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 4px; }
+.modal-stat-sub { font-size: 11px; color: var(--text3); }
+.modal-stat-pct { font-size: 12px; font-weight: 700; margin-top: 4px; }
+.modal-stat-pct.fire { color: var(--fire); }
+.modal-stat-pct.gold { color: var(--gold); }
+.modal-stat-pct.up { color: var(--green); }
+.modal-stat-pct.dim { color: var(--text3); }
+.comp-row { margin-bottom: 12px; }
+.comp-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); margin-bottom: 5px; font-weight: 500; }
+.comp-track { height: 6px; background: var(--bg4); border-radius: 4px; overflow: hidden; position: relative; isolation: isolate; }
+.comp-avg { height: 100%; background: var(--border2); border-radius: 4px; position: absolute; }
+.comp-cur { height: 100%; border-radius: 4px; position: absolute; }
+.comp-cur.fire { background: var(--fire); }
+.comp-cur.gold { background: var(--gold); }
+.comp-cur.up { background: var(--green); }
+.comp-line-marker { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--red); border-radius: 0; }
+.comp-legend { display: flex; gap: 12px; margin-top: 6px; }
+.comp-legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text3); }
+.comp-legend-dot { width: 8px; height: 4px; border-radius: 2px; }
+.extra-stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; }
+.extra-stat { background: var(--bg3); border-radius: 8px; padding: 10px 8px; text-align: center; }
+.extra-stat-label { font-size: 10px; color: var(--text3); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
+.extra-stat-val { font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--text2); }
+.recent-list { display: flex; flex-direction: column; gap: 6px; }
+.recent-row { display: flex; align-items: center; background: var(--bg3); border-radius: 8px; padding: 8px 12px; gap: 10px; }
+.recent-opp { font-size: 12px; font-weight: 600; color: var(--text2); min-width: 52px; }
+.recent-bar-wrap { flex: 1; position: relative; }
+.recent-bar-track { height: 4px; background: var(--bg4); border-radius: 2px; overflow: hidden; position: relative; isolation: isolate; }
+.recent-bar-fill { height: 100%; border-radius: 2px; }
+.recent-val { font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--text); min-width: 28px; text-align: right; }
+.recent-check { font-size: 12px; min-width: 20px; text-align: center; }
+.game-info-box { background: var(--bg3); border-radius: 10px; padding: 14px; display: flex; align-items: center; justify-content: space-between; }
+.game-teams { display: flex; align-items: center; gap: 12px; }
+.game-team { text-align: center; }
+.game-team-abbr { font-family: var(--display); font-size: 22px; font-weight: 800; color: var(--text); }
+.game-team-score { font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--gold); }
+.game-vs { font-size: 12px; color: var(--text3); font-weight: 600; }
+.game-period { font-size: 11px; color: var(--text3); }
+
+/* LOADING */
+.loading-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; }
+
 @media (max-width: 600px) {
   .stats-row { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .stats-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
@@ -345,292 +337,150 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
   .main { padding: 16px 12px 80px; }
   .logo-text { font-size: 16px; }
   .game-score-mini { display: none; }
-}
-
-/* MODAL */
-.modal-overlay {
-  position: fixed; inset: 0; z-index: 1000;
-  background: rgba(0,0,0,0.85);
-  backdrop-filter: blur(6px);
-  display: flex; align-items: center; justify-content: center;
-  padding: 16px;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.2s;
-}
-.modal-overlay.open { opacity: 1; pointer-events: all; }
-.modal {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 18px;
-  width: 100%; max-width: 580px;
-  max-height: 90vh;
-  overflow-y: auto;
-  transform: translateY(20px);
-  transition: transform 0.25s;
-  position: relative;
-}
-.modal-overlay.open .modal { transform: translateY(0); }
-
-.modal-hero {
-  position: relative;
-  height: 180px;
-  overflow: hidden;
-  border-radius: 18px 18px 0 0;
-}
-.modal-hero-bg {
-  position: absolute; inset: 0;
-  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
-}
-.modal-hero-court {
-  position: absolute; inset: 0;
-  opacity: 0.08;
-}
-.modal-hero-photo {
-  position: absolute;
-  bottom: 0; right: 24px;
-  height: 175px;
-  object-fit: contain;
-  object-position: bottom;
-  filter: drop-shadow(0 0 30px rgba(0,0,0,0.8));
-}
-.modal-hero-photo-fallback {
-  position: absolute;
-  bottom: 0; right: 24px;
-  width: 120px; height: 120px;
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--display); font-size: 48px; font-weight: 800;
-  color: var(--border2);
-}
-.modal-hero-info {
-  position: absolute;
-  bottom: 20px; left: 22px;
-}
-.modal-hero-name {
-  font-family: var(--display);
-  font-size: 28px; font-weight: 800;
-  color: var(--text); line-height: 1;
-  margin-bottom: 4px;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.8);
-}
-.modal-hero-meta { font-size: 13px; color: var(--text2); font-weight: 500; }
-.modal-hero-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
-.modal-close {
-  position: absolute; top: 14px; right: 14px;
-  width: 30px; height: 30px;
-  background: rgba(0,0,0,0.5);
-  border: 1px solid var(--border2);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: var(--text2); font-size: 16px;
-  z-index: 10;
-  transition: all 0.15s;
-}
-.modal-close:hover { background: var(--bg3); color: var(--text); }
-
-.modal-body { padding: 20px; }
-
-.modal-section { margin-bottom: 20px; }
-.modal-section-title {
-  font-size: 10px; font-weight: 700;
-  letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--text3); margin-bottom: 10px;
-  display: flex; align-items: center; gap: 8px;
-}
-.modal-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-
-/* Live stats big */
-.modal-stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
-.modal-stat {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
-  text-align: center;
-}
-.modal-stat.hot { border-color: rgba(255,109,0,0.25); background: rgba(255,109,0,0.05); }
-.modal-stat-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; }
-.modal-stat-val { font-family: var(--display); font-size: 32px; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 4px; }
-.modal-stat-sub { font-size: 11px; color: var(--text3); }
-.modal-stat-pct { font-size: 12px; font-weight: 700; margin-top: 4px; }
-.modal-stat-pct.fire { color: var(--fire); }
-.modal-stat-pct.gold { color: var(--gold); }
-.modal-stat-pct.up { color: var(--green); }
-
-/* Comparison bar */
-.comp-row { margin-bottom: 12px; }
-.comp-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text2); margin-bottom: 5px; font-weight: 500; }
-.comp-label span { font-family: var(--display); font-size: 14px; font-weight: 700; }
-.comp-track { height: 6px; background: var(--bg4); border-radius: 4px; overflow: hidden; position: relative; isolation: isolate; }
-.comp-avg { height: 100%; background: var(--border2); border-radius: 4px; position: absolute; }
-.comp-cur { height: 100%; border-radius: 4px; position: absolute; transition: width 0.6s; }
-.comp-cur.fire { background: var(--fire); }
-.comp-cur.gold { background: var(--gold); }
-.comp-cur.up { background: var(--green); }
-.comp-line-marker {
-  position: absolute; top: 0; bottom: 0;
-  width: 2px; background: var(--red);
-  border-radius: 0;
-}
-.comp-legend { display: flex; gap: 12px; margin-top: 6px; }
-.comp-legend-item { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text3); }
-.comp-legend-dot { width: 8px; height: 4px; border-radius: 2px; }
-
-/* Extra stats grid */
-.extra-stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; }
-.extra-stat {
-  background: var(--bg3);
-  border-radius: 8px;
-  padding: 10px 8px;
-  text-align: center;
-}
-.extra-stat-label { font-size: 10px; color: var(--text3); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px; }
-.extra-stat-val { font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--text2); }
-
-/* Recent games */
-.recent-list { display: flex; flex-direction: column; gap: 6px; }
-.recent-row {
-  display: flex; align-items: center;
-  background: var(--bg3); border-radius: 8px;
-  padding: 8px 12px; gap: 10px;
-}
-.recent-opp { font-size: 12px; font-weight: 600; color: var(--text2); min-width: 36px; }
-.recent-bar-wrap { flex: 1; }
-.recent-bar-track { height: 4px; background: var(--bg4); border-radius: 2px; overflow: hidden; position: relative; isolation: isolate; }
-.recent-bar-fill { height: 100%; border-radius: 2px; background: var(--gold); }
-.recent-val { font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--text); min-width: 28px; text-align: right; }
-.recent-line-mark { font-size: 10px; color: var(--text3); min-width: 40px; text-align: right; }
-.recent-check { font-size: 12px; }
-
-/* Game info */
-.game-info-box {
-  background: var(--bg3);
-  border-radius: 10px;
-  padding: 14px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.game-teams { display: flex; align-items: center; gap: 12px; }
-.game-team { text-align: center; }
-.game-team-abbr { font-family: var(--display); font-size: 22px; font-weight: 800; color: var(--text); }
-.game-team-score { font-family: var(--display); font-size: 16px; font-weight: 600; color: var(--gold); }
-.game-vs { font-size: 12px; color: var(--text3); font-weight: 600; }
-.game-period { font-size: 11px; color: var(--text3); font-family: monospace; }
-
-@media (max-width: 500px) {
+  .extra-stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .modal-hero-photo { height: 140px; right: 10px; }
   .modal-hero-name { font-size: 22px; }
-  .extra-stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
-  .modal-stats-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
 }
 </style>
 </head>
 <body>
 
+<!-- Court background -->
 <svg class="court-bg" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-  <rect width="1000" height="560" fill="none"/>
-  <!-- Court outline -->
   <rect x="40" y="30" width="920" height="500" fill="none" stroke="#fdb927" stroke-width="3"/>
-  <!-- Center line -->
   <line x1="500" y1="30" x2="500" y2="530" stroke="#fdb927" stroke-width="2"/>
-  <!-- Center circle -->
   <circle cx="500" cy="280" r="60" fill="none" stroke="#fdb927" stroke-width="2"/>
   <circle cx="500" cy="280" r="4" fill="#fdb927"/>
-  <!-- Left paint -->
   <rect x="40" y="180" width="160" height="200" fill="none" stroke="#fdb927" stroke-width="2"/>
-  <!-- Left free throw circle -->
   <path d="M 200 180 A 60 60 0 0 1 200 380" fill="none" stroke="#fdb927" stroke-width="2"/>
   <path d="M 200 180 A 60 60 0 0 0 200 380" fill="none" stroke="#fdb927" stroke-width="2" stroke-dasharray="8 6"/>
-  <!-- Left basket -->
   <circle cx="80" cy="280" r="10" fill="none" stroke="#fdb927" stroke-width="2"/>
-  <line x1="40" y1="280" x2="90" y2="280" stroke="#fdb927" stroke-width="2"/>
-  <!-- Left restricted area -->
   <path d="M 80 248 A 32 32 0 0 1 80 312" fill="none" stroke="#fdb927" stroke-width="1.5"/>
-  <!-- Left 3pt arc -->
   <path d="M 40 110 L 180 110" fill="none" stroke="#fdb927" stroke-width="2"/>
   <path d="M 40 450 L 180 450" fill="none" stroke="#fdb927" stroke-width="2"/>
   <path d="M 180 110 A 220 220 0 0 1 180 450" fill="none" stroke="#fdb927" stroke-width="2"/>
-  <!-- Right paint -->
   <rect x="800" y="180" width="160" height="200" fill="none" stroke="#fdb927" stroke-width="2"/>
-  <!-- Right free throw circle -->
   <path d="M 800 180 A 60 60 0 0 0 800 380" fill="none" stroke="#fdb927" stroke-width="2"/>
   <path d="M 800 180 A 60 60 0 0 1 800 380" fill="none" stroke="#fdb927" stroke-width="2" stroke-dasharray="8 6"/>
-  <!-- Right basket -->
   <circle cx="920" cy="280" r="10" fill="none" stroke="#fdb927" stroke-width="2"/>
-  <line x1="910" y1="280" x2="960" y2="280" stroke="#fdb927" stroke-width="2"/>
-  <!-- Right restricted area -->
   <path d="M 920 248 A 32 32 0 0 0 920 312" fill="none" stroke="#fdb927" stroke-width="1.5"/>
-  <!-- Right 3pt arc -->
   <path d="M 960 110 L 820 110" fill="none" stroke="#fdb927" stroke-width="2"/>
   <path d="M 960 450 L 820 450" fill="none" stroke="#fdb927" stroke-width="2"/>
   <path d="M 820 110 A 220 220 0 0 0 820 450" fill="none" stroke="#fdb927" stroke-width="2"/>
-  <!-- Left elbow marks -->
-  <line x1="200" y1="205" x2="200" y2="220" stroke="#fdb927" stroke-width="1.5"/>
-  <line x1="200" y1="340" x2="200" y2="355" stroke="#fdb927" stroke-width="1.5"/>
-  <!-- Right elbow marks -->
-  <line x1="800" y1="205" x2="800" y2="220" stroke="#fdb927" stroke-width="1.5"/>
-  <line x1="800" y1="340" x2="800" y2="355" stroke="#fdb927" stroke-width="1.5"/>
 </svg>
 
-<div class="header">
-  <div class="logo-area">
-    <div class="logo-icon">N</div>
-    <span class="logo-text">Props<span>Monitor</span></span>
-    <div class="live-pill"><div class="live-dot"></div>ao vivo</div>
-  </div>
-  <div class="header-right">
-    <div>
-      <div class="header-date" id="header-date">—</div>
-      <div class="header-update" id="header-update">aguardando</div>
+<div class="app-layer">
+
+  <!-- Loading -->
+  <div class="loading-screen" id="loading-screen">Carregando...</div>
+
+  <!-- Auth screen -->
+  <div class="auth-screen" id="auth-screen" style="display:none">
+    <div class="auth-card">
+      <div class="auth-hero">
+        <div class="auth-logo-icon">N</div>
+        <div class="auth-title">Props<span>Monitor</span></div>
+        <div class="auth-sub">Alertas ao vivo da NBA em tempo real</div>
+      </div>
+      <div class="auth-body">
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Entrar</button>
+          <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Criar conta</button>
+        </div>
+
+        <!-- Login form -->
+        <div id="form-login">
+          <div class="auth-form">
+            <div>
+              <label class="auth-label">Email</label>
+              <input class="auth-input" type="email" id="login-email" placeholder="seu@email.com" />
+            </div>
+            <div>
+              <label class="auth-label">Senha</label>
+              <input class="auth-input" type="password" id="login-password" placeholder="••••••••" />
+            </div>
+            <div id="login-msg"></div>
+            <button class="auth-btn" onclick="handleLogin()">Entrar</button>
+          </div>
+        </div>
+
+        <!-- Signup form -->
+        <div id="form-signup" style="display:none">
+          <div class="auth-form">
+            <div>
+              <label class="auth-label">Email</label>
+              <input class="auth-input" type="email" id="signup-email" placeholder="seu@email.com" />
+            </div>
+            <div>
+              <label class="auth-label">Senha</label>
+              <input class="auth-input" type="password" id="signup-password" placeholder="mínimo 6 caracteres" />
+            </div>
+            <div id="signup-msg"></div>
+            <button class="auth-btn" onclick="handleSignup()">Criar conta</button>
+          </div>
+        </div>
+
+        <div class="auth-footer">Ao criar conta você concorda com os termos de uso</div>
+      </div>
     </div>
   </div>
-</div>
 
-<div class="main">
-
-  <div class="api-bar">
-    <span class="api-label">API Key</span>
-    <input class="api-input" type="password" id="api-key-input" placeholder="Cole sua chave do BallDontLie aqui" />
-    <button class="btn-primary" id="start-btn" onclick="toggleMonitor()">Iniciar monitor</button>
-    <button class="btn-demo" onclick="loadDemo()">Ver demo</button>
-  </div>
-
-  <div class="stats-row">
-    <div class="stat-card s-games">
-      <div class="stat-label">jogos ao vivo</div>
-      <div class="stat-value gold" id="stat-games">—</div>
+  <!-- Dashboard -->
+  <div id="dashboard" style="display:none">
+    <div class="header">
+      <div class="header-left">
+        <div class="logo-icon">N</div>
+        <span class="logo-text">Props<span>Monitor</span></span>
+        <div class="live-pill"><div class="live-dot"></div>ao vivo</div>
+      </div>
+      <div class="header-right">
+        <div style="text-align:right">
+          <div class="header-date" id="header-date"></div>
+          <div class="header-update" id="header-update">conectando...</div>
+        </div>
+        <div class="user-menu-wrap">
+          <button class="user-btn" id="user-btn" onclick="toggleUserMenu()"></button>
+          <div class="user-dropdown" id="user-dropdown">
+            <div class="user-dropdown-header">
+              <div class="user-email" id="user-email-display"></div>
+              <div class="user-plan">Plano Free</div>
+            </div>
+            <button class="dropdown-item" onclick="loadDemo()">Ver demo</button>
+            <button class="dropdown-item danger" onclick="handleLogout()">Sair</button>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="stat-card s-alerts">
-      <div class="stat-label">alertas ativos</div>
-      <div class="stat-value green" id="stat-alerts">—</div>
-    </div>
-    <div class="stat-card s-risk">
-      <div class="stat-label">em risco</div>
-      <div class="stat-value red" id="stat-risk">—</div>
-    </div>
-    <div class="stat-card s-blocked">
-      <div class="stat-label">bloqueados</div>
-      <div class="stat-value amber" id="stat-blocked">—</div>
-    </div>
-  </div>
 
-  <div class="filters">
-    <button class="filter-btn active" onclick="setFilter('todos',this)">Todos</button>
-    <button class="filter-btn f-fire" onclick="setFilter('fire',this)">🔥 Duplo/Triplo</button>
-    <button class="filter-btn f-red" onclick="setFilter('red',this)">🔴 3º quarto</button>
-    <button class="filter-btn f-orange" onclick="setFilter('orange',this)">🟠 Intervalo</button>
-    <button class="filter-btn f-yellow" onclick="setFilter('yellow',this)">🟡 1º quarto</button>
-    <button class="filter-btn f-risk" onclick="setFilter('risk',this)">⚠️ Em risco</button>
-  </div>
+    <div class="main">
+      <div class="stats-row">
+        <div class="stat-card s-games"><div class="stat-label">jogos ao vivo</div><div class="stat-value gold" id="stat-games">—</div></div>
+        <div class="stat-card s-alerts"><div class="stat-label">alertas ativos</div><div class="stat-value green" id="stat-alerts">—</div></div>
+        <div class="stat-card s-risk"><div class="stat-label">em risco</div><div class="stat-value red" id="stat-risk">—</div></div>
+        <div class="stat-card s-blocked"><div class="stat-label">bloqueados</div><div class="stat-value amber" id="stat-blocked">—</div></div>
+      </div>
 
-  <div class="section-header">
-    <span class="section-title">Alertas ativos</span>
-    <div class="section-line"></div>
-  </div>
+      <div class="filters">
+        <button class="filter-btn active" onclick="setFilter('todos',this)">Todos</button>
+        <button class="filter-btn f-fire" onclick="setFilter('fire',this)">🔥 Duplo/Triplo</button>
+        <button class="filter-btn f-red" onclick="setFilter('red',this)">🔴 3º quarto</button>
+        <button class="filter-btn f-orange" onclick="setFilter('orange',this)">🟠 Intervalo</button>
+        <button class="filter-btn f-yellow" onclick="setFilter('yellow',this)">🟡 1º quarto</button>
+        <button class="filter-btn f-risk" onclick="setFilter('risk',this)">⚠️ Em risco</button>
+      </div>
 
-  <div class="alerts-list" id="alerts-list">
-    <div class="state-box">
-      <div class="state-nba-logo">NBA</div>
-      <div class="state-title">Monitor pausado</div>
-      <div class="state-sub">Cole sua API key do BallDontLie e clique em "Iniciar monitor" — ou clique em "Ver demo" para ver como funciona</div>
+      <div class="section-header">
+        <span class="section-title">Alertas ativos</span>
+        <div class="section-line"></div>
+      </div>
+
+      <div class="alerts-list" id="alerts-list">
+        <div class="state-box">
+          <div class="state-nba-logo">NBA</div>
+          <div class="state-title">Iniciando monitor</div>
+          <div class="state-sub">Buscando jogos ao vivo...</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -639,7 +489,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 <!-- MODAL -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
   <div class="modal" id="modal">
-    <div class="modal-hero" id="modal-hero">
+    <div class="modal-hero">
       <div class="modal-hero-bg"></div>
       <svg class="modal-hero-court" viewBox="0 0 580 180" preserveAspectRatio="xMidYMid slice">
         <rect x="10" y="10" width="560" height="160" fill="none" stroke="#fdb927" stroke-width="1.5"/>
@@ -648,19 +498,17 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
         <rect x="10" y="45" width="100" height="90" fill="none" stroke="#fdb927" stroke-width="1"/>
         <path d="M 110 45 A 35 35 0 0 1 110 135" fill="none" stroke="#fdb927" stroke-width="1" stroke-dasharray="5 4"/>
         <circle cx="40" cy="90" r="7" fill="none" stroke="#fdb927" stroke-width="1"/>
-        <path d="M 40 70 A 20 20 0 0 1 40 110" fill="none" stroke="#fdb927" stroke-width="1"/>
         <path d="M 10 30 L 105 30" fill="none" stroke="#fdb927" stroke-width="1"/>
         <path d="M 10 150 L 105 150" fill="none" stroke="#fdb927" stroke-width="1"/>
         <path d="M 105 30 A 130 130 0 0 1 105 150" fill="none" stroke="#fdb927" stroke-width="1"/>
         <rect x="470" y="45" width="100" height="90" fill="none" stroke="#fdb927" stroke-width="1"/>
         <path d="M 470 45 A 35 35 0 0 0 470 135" fill="none" stroke="#fdb927" stroke-width="1" stroke-dasharray="5 4"/>
         <circle cx="540" cy="90" r="7" fill="none" stroke="#fdb927" stroke-width="1"/>
-        <path d="M 540 70 A 20 20 0 0 0 540 110" fill="none" stroke="#fdb927" stroke-width="1"/>
         <path d="M 570 30 L 475 30" fill="none" stroke="#fdb927" stroke-width="1"/>
         <path d="M 570 150 L 475 150" fill="none" stroke="#fdb927" stroke-width="1"/>
         <path d="M 475 30 A 130 130 0 0 0 475 150" fill="none" stroke="#fdb927" stroke-width="1"/>
       </svg>
-      <img class="modal-hero-photo" id="modal-photo" src="" alt="" onerror="this.style.display='none';document.getElementById('modal-photo-fallback').style.display='flex';">
+      <img class="modal-hero-photo" id="modal-photo" src="" alt="" onerror="this.style.display='none';document.getElementById('modal-photo-fallback').style.display='flex'">
       <div class="modal-hero-photo-fallback" id="modal-photo-fallback" style="display:none"></div>
       <div class="modal-hero-info">
         <div class="modal-hero-name" id="modal-name">—</div>
@@ -669,470 +517,328 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
       <div class="modal-hero-accent" id="modal-accent"></div>
       <div class="modal-close" onclick="closeModalDirect()">✕</div>
     </div>
-
     <div class="modal-body">
-      <!-- Live stats -->
-      <div class="modal-section">
-        <div class="modal-section-title">Stats ao vivo</div>
-        <div class="modal-stats-grid" id="modal-live-stats"></div>
-      </div>
-
-      <!-- Comparison bars -->
-      <div class="modal-section">
-        <div class="modal-section-title">Atual vs média vs linha</div>
-        <div id="modal-comparison"></div>
-        <div class="comp-legend">
-          <div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--gold)"></div>Ritmo atual</div>
-          <div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--border2)"></div>Média temporada</div>
-          <div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--red);width:2px;height:8px;border-radius:1px"></div>Linha</div>
-        </div>
-      </div>
-
-      <!-- Extra stats -->
-      <div class="modal-section">
-        <div class="modal-section-title">Detalhes do jogo</div>
-        <div class="extra-stats-grid" id="modal-extra-stats"></div>
-      </div>
-
-      <!-- Recent games -->
-      <div class="modal-section">
-        <div class="modal-section-title">Últimos 5 jogos (pontos)</div>
-        <div class="recent-list" id="modal-recent"></div>
-      </div>
-
-      <!-- Game info -->
-      <div class="modal-section">
-        <div class="modal-section-title">Jogo</div>
-        <div class="game-info-box" id="modal-game-info"></div>
-      </div>
+      <div class="modal-section"><div class="modal-section-title">Stats ao vivo</div><div class="modal-stats-grid" id="modal-live-stats"></div></div>
+      <div class="modal-section"><div class="modal-section-title">Atual vs média vs linha</div><div id="modal-comparison"></div><div class="comp-legend"><div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--gold)"></div>Ritmo atual</div><div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--border2)"></div>Média temporada</div><div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--red);width:2px;height:8px;border-radius:1px"></div>Linha</div></div></div>
+      <div class="modal-section"><div class="modal-section-title">Detalhes do jogo</div><div class="extra-stats-grid" id="modal-extra-stats"></div></div>
+      <div class="modal-section"><div class="modal-section-title">Últimos 5 jogos (pontos)</div><div class="recent-list" id="modal-recent"></div></div>
+      <div class="modal-section"><div class="modal-section-title">Jogo</div><div class="game-info-box" id="modal-game-info"></div></div>
     </div>
   </div>
 </div>
 
 <script>
-const API_BASE = 'https://api.balldontlie.io';
-const NBA_PHOTO = id => `https://cdn.nba.com/headshots/nba/latest/1040x760/${id}.png`;
-const BLOWOUT = 20;
-const PACE_MIN = 1.5;
+const SUPABASE_URL = 'https://dhirxfoxcswctxcjzvhf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_DC3I02jLVjM013WrODpgCg_xiPl1rsl';
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let apiKey = '', monitorInterval = null, isRunning = false;
-let currentFilter = 'todos', allAlerts = [];
+const BLOWOUT = 20, PACE_MIN = 1.5;
+let currentFilter = 'todos', allAlerts = [], isRunning = false, monitorInterval = null;
+let currentUser = null;
 
 const initials = n => n.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
-
-function paceColor(pct) {
-  if (pct >= 180) return 'fire';
-  if (pct >= 160) return 'gold';
-  return 'up';
-}
-
-function progressWidth(pct) {
-  return Math.min(100, Math.round((pct / 250) * 100));
-}
-
-function getPace(cur, minsPlayed, total) {
-  if (!minsPlayed) return 0;
-  return (cur / minsPlayed) * total;
-}
+const paceColor = pct => pct >= 180 ? 'fire' : pct >= 160 ? 'gold' : 'up';
+const progressWidth = pct => Math.min(100, Math.round((pct/250)*100));
+const getPace = (cur, mp, total) => mp ? (cur/mp)*total : 0;
 
 function getMinsPlayed(period, clock) {
-  const p = (period - 1) * 12;
-  let c = 12;
-  if (clock) {
-    const parts = clock.split(':');
-    if (parts.length === 2) c = 12 - (parseInt(parts[0]) + parseInt(parts[1])/60);
-  }
-  return p + c;
+  const p = (period-1)*12; let c = 12;
+  if (clock) { const parts = clock.split(':'); if (parts.length===2) c = 12-(parseInt(parts[0])+parseInt(parts[1])/60); }
+  return p+c;
 }
-
 function alertType(period, triggered) {
-  if (triggered >= 2) return 'fire';
-  if (period >= 3) return 'red';
-  if (period === 2) return 'orange';
+  if (triggered>=2) return 'fire';
+  if (period>=3) return 'red';
+  if (period===2) return 'orange';
   return 'yellow';
 }
-
 function momentLabel(type) {
-  return { fire:'Duplo alerta', red:'3º quarto', orange:'Intervalo', yellow:'1º quarto', risk:'Em risco' }[type] || '';
+  return {fire:'Duplo alerta',red:'3º quarto',orange:'Intervalo',yellow:'1º quarto',risk:'Em risco'}[type]||'';
 }
 
-async function fetchAPI(url) {
-  const r = await fetch(url, { headers: { Authorization: apiKey } });
-  if (!r.ok) throw new Error(r.status);
-  return r.json();
+// AUTH
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) showDashboard(session.user);
+  else showAuth();
+  document.getElementById('loading-screen').style.display = 'none';
+}
+
+function showAuth() {
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('dashboard').style.display = 'none';
+}
+
+function showDashboard(user) {
+  currentUser = user;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  const ini = initials(user.email.split('@')[0]);
+  document.getElementById('user-btn').textContent = ini;
+  document.getElementById('user-email-display').textContent = user.email;
+  document.getElementById('header-date').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'});
+  startMonitor();
+}
+
+function switchTab(tab) {
+  document.getElementById('tab-login').classList.toggle('active', tab==='login');
+  document.getElementById('tab-signup').classList.toggle('active', tab==='signup');
+  document.getElementById('form-login').style.display = tab==='login' ? 'block' : 'none';
+  document.getElementById('form-signup').style.display = tab==='signup' ? 'block' : 'none';
+}
+
+async function handleLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const msg = document.getElementById('login-msg');
+  if (!email||!password) { msg.innerHTML = '<div class="auth-error">Preencha todos os campos</div>'; return; }
+  msg.innerHTML = '<div class="auth-success">Entrando...</div>';
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) { msg.innerHTML = `<div class="auth-error">${error.message}</div>`; return; }
+  showDashboard(data.user);
+}
+
+async function handleSignup() {
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const msg = document.getElementById('signup-msg');
+  if (!email||!password) { msg.innerHTML = '<div class="auth-error">Preencha todos os campos</div>'; return; }
+  if (password.length < 6) { msg.innerHTML = '<div class="auth-error">Senha precisa ter ao menos 6 caracteres</div>'; return; }
+  msg.innerHTML = '<div class="auth-success">Criando conta...</div>';
+  const { data, error } = await sb.auth.signUp({ email, password });
+  if (error) { msg.innerHTML = `<div class="auth-error">${error.message}</div>`; return; }
+  if (data.user && !data.session) { msg.innerHTML = '<div class="auth-success">Confirme seu email para continuar!</div>'; return; }
+  if (data.session) showDashboard(data.user);
+}
+
+async function handleLogout() {
+  await sb.auth.signOut();
+  clearInterval(monitorInterval);
+  isRunning = false;
+  allAlerts = [];
+  showAuth();
+}
+
+function toggleUserMenu() {
+  document.getElementById('user-dropdown').classList.toggle('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.user-menu-wrap')) document.getElementById('user-dropdown').classList.remove('open');
+});
+
+// MONITOR
+async function fetchNBA(endpoint) {
+  const res = await fetch(`/api/nba?endpoint=${encodeURIComponent(endpoint)}`);
+  if (!res.ok) throw new Error(res.status);
+  return res.json();
 }
 
 async function runMonitor() {
-  if (!apiKey) return;
   try {
     const now = new Date();
     document.getElementById('header-update').textContent = `atualizado ${now.toLocaleTimeString('pt-BR')}`;
     const today = now.toISOString().split('T')[0];
-    const gamesData = await fetchAPI(`${API_BASE}/nba/v1/games?dates[]=${today}`);
-    const live = (gamesData.data||[]).filter(g => g.status && g.status !== 'Final' && !g.status.includes('T'));
+    const gamesData = await fetchNBA(`nba/v1/games?dates[]=${today}`);
+    const live = (gamesData.data||[]).filter(g=>g.status&&g.status!=='Final'&&!g.status.includes('T'));
     document.getElementById('stat-games').textContent = live.length;
-    if (!live.length) { allAlerts = []; renderAlerts(); updateStats(); return; }
+    if (!live.length) { allAlerts=[]; renderAlerts(); updateStats(); return; }
 
-    const newAlerts = [];
-    let blocked = 0;
-
+    const newAlerts=[], blocked={count:0};
     for (const game of live) {
       const [statsData, propsData] = await Promise.all([
-        fetchAPI(`${API_BASE}/nba/v1/stats?game_ids[]=${game.id}`),
-        fetchAPI(`${API_BASE}/nba/v1/player_props?game_id=${game.id}`).catch(()=>({data:[]}))
+        fetchNBA(`nba/v1/stats?game_ids[]=${game.id}`),
+        fetchNBA(`nba/v1/player_props?game_id=${game.id}`).catch(()=>({data:[]}))
       ]);
-      const stats = statsData.data || [];
+      const stats = statsData.data||[];
       if (!stats.length) continue;
-
       const pids = stats.map(s=>s.player?.id).filter(Boolean);
       const season = new Date().getFullYear();
-      const avgData = await fetchAPI(`${API_BASE}/nba/v1/season_averages?season=${season}&${pids.map(id=>`player_ids[]=${id}`).join('&')}`);
-      const avgs = {};
-      (avgData.data||[]).forEach(a => avgs[a.player_id] = a);
-
-      const propsMap = {};
-      (propsData.data||[]).forEach(p => {
-        if (!propsMap[p.player_id]) propsMap[p.player_id] = {};
-        if (p.prop_type==='points') propsMap[p.player_id].pts = p.line_score;
-        if (p.prop_type==='rebounds') propsMap[p.player_id].reb = p.line_score;
-        if (p.prop_type==='assists') propsMap[p.player_id].ast = p.line_score;
+      const avgData = await fetchNBA(`nba/v1/season_averages?season=${season}&${pids.map(id=>`player_ids[]=${id}`).join('&')}`);
+      const avgs={};
+      (avgData.data||[]).forEach(a=>avgs[a.player_id]=a);
+      const propsMap={};
+      (propsData.data||[]).forEach(p=>{
+        if (!propsMap[p.player_id]) propsMap[p.player_id]={};
+        if (p.prop_type==='points') propsMap[p.player_id].pts=p.line_score;
+        if (p.prop_type==='rebounds') propsMap[p.player_id].reb=p.line_score;
+        if (p.prop_type==='assists') propsMap[p.player_id].ast=p.line_score;
       });
-
-      const home = game.home_team_score||0, away = game.visitor_team_score||0;
-      const diff = Math.abs(home - away);
-      const period = game.period||1;
-      const minsPlayed = getMinsPlayed(period, game.time||'');
-      const gameLabel = `${game.visitor_team?.abbreviation} ${away} · ${game.home_team?.abbreviation} ${home}`;
-
+      const home=game.home_team_score||0, away=game.visitor_team_score||0;
+      const diff=Math.abs(home-away), period=game.period||1;
+      const minsPlayed=getMinsPlayed(period, game.time||'');
+      const gameLabel=`${game.visitor_team?.abbreviation} ${away} · ${game.home_team?.abbreviation} ${home}`;
       for (const stat of stats) {
-        const { player, team } = stat;
+        const {player,team}=stat;
         if (!player||!team) continue;
-        const avg = avgs[player.id];
+        const avg=avgs[player.id];
         if (!avg) continue;
-
-        const isHome = team.id === game.home_team?.id;
-        const teamScore = isHome ? home : away;
-        const oppScore = isHome ? away : home;
-        const winning = teamScore > oppScore;
-        const tdiff = teamScore - oppScore;
-
-        if (diff >= BLOWOUT && winning) {
-          blocked++;
+        const isHome=team.id===game.home_team?.id;
+        const teamScore=isHome?home:away, oppScore=isHome?away:home;
+        const winning=teamScore>oppScore, tdiff=teamScore-oppScore;
+        if (diff>=BLOWOUT&&winning) {
+          blocked.count++;
           if (!newAlerts.find(a=>a.playerId===player.id&&a.type==='risk')) {
-            newAlerts.push({ playerId:player.id, type:'risk', name:`${player.first_name} ${player.last_name}`, team:team.abbreviation, position:player.position, nbaId:player.id, pts:stat.pts||0, reb:stat.reb||0, ast:stat.ast||0, ptsLine:propsMap[player.id]?.pts, gameLabel, period, riskMsg:`Time ganhando por +${Math.abs(tdiff)} pts — risco de banquinho`, warnings:[] });
+            newAlerts.push({playerId:player.id,type:'risk',name:`${player.first_name} ${player.last_name}`,team:team.abbreviation,position:player.position||'—',nbaId:player.id,pts:stat.pts||0,reb:stat.reb||0,ast:stat.ast||0,ptsLine:propsMap[player.id]?.pts,gameLabel,period,riskMsg:`Time ganhando por +${Math.abs(tdiff)} pts — risco de banquinho`,warnings:[]});
           }
           continue;
         }
-
-        const ptsPace = getPace(stat.pts||0, minsPlayed, 48);
-        const rebPace = getPace(stat.reb||0, minsPlayed, 48);
-        const astPace = getPace(stat.ast||0, minsPlayed, 48);
-
-        const triggered = [];
-        if (avg.pts>0 && ptsPace/avg.pts >= PACE_MIN) triggered.push({ stat:'pts', cur:stat.pts, proj:Math.round(ptsPace), avg:avg.pts, pct:Math.round((ptsPace/avg.pts)*100), line:propsMap[player.id]?.pts });
-        if (avg.reb>0 && rebPace/avg.reb >= PACE_MIN) triggered.push({ stat:'reb', cur:stat.reb, proj:Math.round(rebPace), avg:avg.reb, pct:Math.round((rebPace/avg.reb)*100), line:propsMap[player.id]?.reb });
-        if (avg.ast>0 && astPace/avg.ast >= PACE_MIN) triggered.push({ stat:'ast', cur:stat.ast, proj:Math.round(astPace), avg:avg.ast, pct:Math.round((astPace/avg.ast)*100), line:propsMap[player.id]?.ast });
+        const ptsPace=getPace(stat.pts||0,minsPlayed,48);
+        const rebPace=getPace(stat.reb||0,minsPlayed,48);
+        const astPace=getPace(stat.ast||0,minsPlayed,48);
+        const triggered=[];
+        if (avg.pts>0&&ptsPace/avg.pts>=PACE_MIN) triggered.push({stat:'pts',cur:stat.pts,proj:Math.round(ptsPace),avg:avg.pts,pct:Math.round((ptsPace/avg.pts)*100),line:propsMap[player.id]?.pts});
+        if (avg.reb>0&&rebPace/avg.reb>=PACE_MIN) triggered.push({stat:'reb',cur:stat.reb,proj:Math.round(rebPace),avg:avg.reb,pct:Math.round((rebPace/avg.reb)*100),line:propsMap[player.id]?.reb});
+        if (avg.ast>0&&astPace/avg.ast>=PACE_MIN) triggered.push({stat:'ast',cur:stat.ast,proj:Math.round(astPace),avg:avg.ast,pct:Math.round((astPace/avg.ast)*100),line:propsMap[player.id]?.ast});
         if (!triggered.length) continue;
-
-        const type = alertType(period, triggered.length);
-        const warnings = [];
+        const type=alertType(period,triggered.length);
+        const warnings=[];
         if (stat.pf>=3&&period<=2) warnings.push(`${stat.pf} faltas`);
         if (stat.pf>=4&&period===3) warnings.push(`${stat.pf} faltas`);
         if (diff>=BLOWOUT&&!winning) warnings.push('adversário em blowout');
-
-        newAlerts.push({ playerId:player.id, type, name:`${player.first_name} ${player.last_name}`, team:team.abbreviation, position:player.position||'—', nbaId:player.id, triggered, pts:stat.pts||0, reb:stat.reb||0, ast:stat.ast||0, gameLabel, period, warnings });
+        newAlerts.push({playerId:player.id,type,name:`${player.first_name} ${player.last_name}`,team:team.abbreviation,position:player.position||'—',nbaId:player.id,triggered,pts:stat.pts||0,reb:stat.reb||0,ast:stat.ast||0,gameLabel,period,warnings});
       }
     }
-
-    allAlerts = newAlerts;
-    document.getElementById('stat-blocked').textContent = blocked;
+    allAlerts=newAlerts;
+    document.getElementById('stat-blocked').textContent=blocked.count;
     updateStats(); renderAlerts();
   } catch(e) {
     console.error(e);
-    document.getElementById('header-update').textContent = 'erro — verifique a API key';
+    document.getElementById('header-update').textContent='erro ao atualizar';
   }
+}
+
+function startMonitor() {
+  runMonitor();
+  monitorInterval = setInterval(runMonitor, 5*60*1000);
 }
 
 function updateStats() {
-  document.getElementById('stat-alerts').textContent = allAlerts.filter(a=>a.type!=='risk').length;
-  document.getElementById('stat-risk').textContent = allAlerts.filter(a=>a.type==='risk').length;
+  document.getElementById('stat-alerts').textContent=allAlerts.filter(a=>a.type!=='risk').length;
+  document.getElementById('stat-risk').textContent=allAlerts.filter(a=>a.type==='risk').length;
 }
 
+// RENDER
 function renderCard(a) {
-  const ini = initials(a.name);
-  const photoUrl = `https://cdn.nba.com/headshots/nba/latest/1040x760/${a.nbaId}.png`;
-
-  if (a.type === 'risk') {
-    return `<div class="alert-card risk" onclick="openModal(${a.playerId})" style="cursor:pointer">
+  const ini=initials(a.name);
+  const photoUrl=`https://cdn.nba.com/headshots/nba/latest/1040x760/${a.nbaId}.png`;
+  if (a.type==='risk') {
+    return `<div class="alert-card risk" onclick="openModal(${a.playerId})">
       <div class="card-accent risk"></div>
       <div class="card-body">
         <div class="player-row">
-          <div class="player-photo-wrap">
-            <img class="player-photo" src="${photoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" alt="">
-            <div class="player-photo-fallback" style="display:none">${ini}</div>
-          </div>
-          <div class="player-info">
-            <div class="player-name">${a.name}</div>
-            <div class="player-meta">${a.team} · ${a.position}</div>
-            <div class="player-badges"><span class="badge risk">⚠ Em risco</span></div>
-          </div>
+          <div class="player-photo-wrap"><img class="player-photo" src="${photoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="player-photo-fallback" style="display:none">${ini}</div></div>
+          <div class="player-info"><div class="player-name">${a.name}</div><div class="player-meta">${a.team} · ${a.position}</div><div class="player-badges"><span class="badge risk">⚠ Em risco</span></div></div>
           <div class="game-score-mini">${a.gameLabel} <span class="period">Q${a.period}</span></div>
         </div>
         <div class="risk-msg">⚠ ${a.riskMsg}</div>
-        <div class="card-footer">
-          <div class="lines-row">
-            <div class="line-item">Pts: <span>${a.pts}</span></div>
-            <div class="line-item">Reb: <span>${a.reb}</span></div>
-            <div class="line-item">Ast: <span>${a.ast}</span></div>
-            ${a.ptsLine ? `<div class="line-item">Linha: <span>${a.ptsLine}</span></div>` : ''}
-          </div>
-        </div>
-      </div>
-    </div>`;
+        <div class="card-footer"><div class="lines-row"><div class="line-item">Pts: <span>${a.pts}</span></div><div class="line-item">Reb: <span>${a.reb}</span></div><div class="line-item">Ast: <span>${a.ast}</span></div>${a.ptsLine?`<div class="line-item">Linha: <span>${a.ptsLine}</span></div>`:''}</div></div>
+      </div></div>`;
   }
-
-  const statLabels = { pts:'Pontos', reb:'Rebotes', ast:'Assistências' };
-  const allStats = ['pts','reb','ast'];
-  const statsHTML = allStats.map(s => {
-    const t = (a.triggered||[]).find(x=>x.stat===s);
-    const curVal = s==='pts'?a.pts : s==='reb'?a.reb : a.ast;
-    if (t) {
-      const col = paceColor(t.pct);
-      const pw = progressWidth(t.pct);
-      return `<div class="stat-box hot">
-        <div class="stat-box-label">${statLabels[s]}</div>
-        <div class="stat-box-main">
-          <span class="stat-box-val">${t.cur}</span>
-          <span class="stat-box-proj">proj <span>${t.proj}</span></span>
-        </div>
-        <div class="progress-wrap"><div class="progress-track"><div class="progress-fill ${col}" style="width:${pw}%"></div></div></div>
-        <div class="stat-box-pct ${col}">+${t.pct}% da média</div>
-      </div>`;
-    }
-    return `<div class="stat-box">
-      <div class="stat-box-label">${statLabels[s]}</div>
-      <div class="stat-box-main"><span class="stat-box-val">${curVal}</span></div>
-      <div class="progress-wrap"><div class="progress-track"><div class="progress-fill up" style="width:20%"></div></div></div>
-      <div class="stat-box-pct dim">—</div>
-    </div>`;
+  const statDefs=[{key:'pts',label:'Pontos',cur:a.pts},{key:'reb',label:'Rebotes',cur:a.reb},{key:'ast',label:'Assistências',cur:a.ast}];
+  const statsHTML=statDefs.map(s=>{
+    const t=(a.triggered||[]).find(x=>x.stat===s.key);
+    if (t) { const col=paceColor(t.pct),pw=progressWidth(t.pct); return `<div class="stat-box hot"><div class="stat-box-label">${s.label}</div><div class="stat-box-main"><span class="stat-box-val">${t.cur}</span><span class="stat-box-proj">proj <span>${t.proj}</span></span></div><div class="progress-track"><div class="progress-fill ${col}" style="width:${pw}%"></div></div><div class="stat-box-pct ${col}">+${t.pct}% da média</div></div>`; }
+    return `<div class="stat-box"><div class="stat-box-label">${s.label}</div><div class="stat-box-main"><span class="stat-box-val">${s.cur}</span></div><div class="progress-track"><div class="progress-fill up" style="width:20%"></div></div><div class="stat-box-pct dim">—</div></div>`;
   }).join('');
-
-  const warnBadges = (a.warnings||[]).map(w=>`<span class="badge warn">⚠ ${w}</span>`).join('');
-  const lines = (a.triggered||[]).filter(t=>t.line).map(t=>`<div class="line-item">Linha ${t.stat}: <span>${t.line}</span></div>`).join('');
-
-  return `<div class="alert-card ${a.type}" onclick="openModal(${a.playerId})" style="cursor:pointer">
+  const warnBadges=(a.warnings||[]).map(w=>`<span class="badge warn">⚠ ${w}</span>`).join('');
+  const lines=(a.triggered||[]).filter(t=>t.line).map(t=>`<div class="line-item">Linha ${t.stat}: <span>${t.line}</span></div>`).join('');
+  return `<div class="alert-card ${a.type}" onclick="openModal(${a.playerId})">
     <div class="card-accent ${a.type}"></div>
     <div class="card-body">
       <div class="player-row">
-        <div class="player-photo-wrap">
-          <img class="player-photo" src="${photoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" alt="">
-          <div class="player-photo-fallback" style="display:none">${ini}</div>
-        </div>
-        <div class="player-info">
-          <div class="player-name">${a.name}</div>
-          <div class="player-meta">${a.team} · ${a.position}</div>
-          <div class="player-badges">
-            <span class="badge ${a.type}">${momentLabel(a.type)}</span>
-            ${warnBadges}
-          </div>
-        </div>
+        <div class="player-photo-wrap"><img class="player-photo" src="${photoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="player-photo-fallback" style="display:none">${ini}</div></div>
+        <div class="player-info"><div class="player-name">${a.name}</div><div class="player-meta">${a.team} · ${a.position}</div><div class="player-badges"><span class="badge ${a.type}">${momentLabel(a.type)}</span>${warnBadges}</div></div>
         <div class="game-score-mini">${a.gameLabel} <span class="period">Q${a.period}</span></div>
       </div>
       <div class="stats-grid">${statsHTML}</div>
-      <div class="card-footer">
-        <div class="lines-row">${lines||'<div class="line-item" style="color:var(--text3)">Linhas indisponíveis</div>'}</div>
-      </div>
-    </div>
-  </div>`;
+      <div class="card-footer"><div class="lines-row">${lines||'<div class="line-item" style="color:var(--text3)">Linhas indisponíveis</div>'}</div></div>
+    </div></div>`;
 }
 
 function renderAlerts() {
-  const list = document.getElementById('alerts-list');
-  const filtered = currentFilter==='todos' ? allAlerts : allAlerts.filter(a=>a.type===currentFilter);
+  const list=document.getElementById('alerts-list');
+  const filtered=currentFilter==='todos'?allAlerts:allAlerts.filter(a=>a.type===currentFilter);
   if (!filtered.length) {
-    list.innerHTML = `<div class="state-box"><div class="state-nba-logo">NBA</div><div class="state-title">${isRunning?'Nenhum alerta no momento':'Monitor pausado'}</div><div class="state-sub">${isRunning?'Monitorando jogos — próxima verificação em 5 minutos':'Cole sua API key e inicie o monitor, ou clique em Ver demo'}</div></div>`;
+    list.innerHTML=`<div class="state-box"><div class="state-nba-logo">NBA</div><div class="state-title">Nenhum alerta no momento</div><div class="state-sub">Monitor ativo — verificando a cada 5 minutos<br><button class="state-btn" onclick="loadDemo()">Ver demo</button></div></div>`;
     return;
   }
-  const order = {fire:0,red:1,orange:2,yellow:3,risk:4};
-  list.innerHTML = [...filtered].sort((a,b)=>(order[a.type]??9)-(order[b.type]??9)).map(renderCard).join('');
+  const order={fire:0,red:1,orange:2,yellow:3,risk:4};
+  list.innerHTML=[...filtered].sort((a,b)=>(order[a.type]??9)-(order[b.type]??9)).map(renderCard).join('');
 }
 
-function setFilter(type, btn) {
-  currentFilter = type;
+function setFilter(type,btn) {
+  currentFilter=type;
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderAlerts();
 }
 
-function toggleMonitor() {
-  const key = document.getElementById('api-key-input').value.trim();
-  if (!key && !isRunning) {
-    document.getElementById('api-key-input').style.borderColor='var(--red)';
-    setTimeout(()=>document.getElementById('api-key-input').style.borderColor='',2000);
-    return;
-  }
-  if (isRunning) {
-    clearInterval(monitorInterval);
-    isRunning = false;
-    const btn = document.getElementById('start-btn');
-    btn.textContent = 'Iniciar monitor';
-    btn.classList.remove('running');
-    document.getElementById('header-update').textContent = 'monitor pausado';
-    return;
-  }
-  apiKey = key;
-  isRunning = true;
-  const btn = document.getElementById('start-btn');
-  btn.textContent = 'Parar monitor';
-  btn.classList.add('running');
-  runMonitor();
-  monitorInterval = setInterval(runMonitor, 5*60*1000);
-}
-
+// DEMO
 function loadDemo() {
-  const NBA_IDS = { jokic:203999, sga:1628983, wagner:1630532, brunson:1628384, herro:1629029, kawhi:202695 };
-  allAlerts = [
-    { playerId:1, type:'fire', name:'Nikola Jokic', team:'DEN', position:'C', nbaId:NBA_IDS.jokic, triggered:[{stat:'pts',cur:19,proj:38,avg:26,pct:188,line:24.5},{stat:'ast',cur:8,proj:16,avg:9,pct:178,line:8.5}], pts:19, reb:6, ast:8, gameLabel:'MIN 58 · DEN 61', period:3, warnings:[] },
-    { playerId:2, type:'red', name:'Shai Gilgeous-Alexander', team:'OKC', position:'G', nbaId:NBA_IDS.sga, triggered:[{stat:'pts',cur:31,proj:41,avg:32,pct:161,line:29.5}], pts:31, reb:3, ast:4, gameLabel:'LAL 81 · OKC 89', period:4, warnings:[] },
-    { playerId:3, type:'orange', name:'Franz Wagner', team:'ORL', position:'SF', nbaId:NBA_IDS.wagner, triggered:[{stat:'pts',cur:18,proj:36,avg:20,pct:184,line:15.5}], pts:18, reb:4, ast:3, gameLabel:'ORL 48 · BOS 51', period:3, warnings:['4 faltas'] },
-    { playerId:4, type:'orange', name:'Jalen Brunson', team:'NYK', position:'G', nbaId:NBA_IDS.brunson, triggered:[{stat:'pts',cur:16,proj:32,avg:26,pct:155,line:26.5},{stat:'ast',cur:5,proj:10,avg:7,pct:152,line:6.5}], pts:16, reb:2, ast:5, gameLabel:'NYK 52 · MIA 49', period:3, warnings:['back-to-back'] },
-    { playerId:5, type:'yellow', name:'Tyler Herro', team:'MIA', position:'G', nbaId:NBA_IDS.herro, triggered:[{stat:'pts',cur:11,proj:44,avg:22,pct:202,line:20.5}], pts:11, reb:1, ast:2, gameLabel:'MIA 28 · NYK 24', period:2, warnings:[] },
-    { playerId:6, type:'risk', name:'Kawhi Leonard', team:'LAC', position:'SF', nbaId:NBA_IDS.kawhi, pts:16, reb:4, ast:2, ptsLine:18.5, gameLabel:'SAC 75 · LAC 98', period:4, riskMsg:'Time ganhando por +23 pts — risco de banquinho', warnings:[] }
+  const IDS={jokic:203999,sga:1628983,wagner:1630532,brunson:1628384,herro:1629029,kawhi:202695};
+  allAlerts=[
+    {playerId:1,type:'fire',name:'Nikola Jokic',team:'DEN',position:'C',nbaId:IDS.jokic,triggered:[{stat:'pts',cur:19,proj:38,avg:26,pct:188,line:24.5},{stat:'ast',cur:8,proj:16,avg:9,pct:178,line:8.5}],pts:19,reb:6,ast:8,gameLabel:'MIN 58 · DEN 61',period:3,warnings:[]},
+    {playerId:2,type:'red',name:'Shai Gilgeous-Alexander',team:'OKC',position:'G',nbaId:IDS.sga,triggered:[{stat:'pts',cur:31,proj:41,avg:32,pct:161,line:29.5}],pts:31,reb:3,ast:4,gameLabel:'LAL 81 · OKC 89',period:4,warnings:[]},
+    {playerId:3,type:'orange',name:'Franz Wagner',team:'ORL',position:'SF',nbaId:IDS.wagner,triggered:[{stat:'pts',cur:18,proj:36,avg:20,pct:184,line:15.5}],pts:18,reb:4,ast:3,gameLabel:'ORL 48 · BOS 51',period:3,warnings:['4 faltas']},
+    {playerId:4,type:'orange',name:'Jalen Brunson',team:'NYK',position:'G',nbaId:IDS.brunson,triggered:[{stat:'pts',cur:16,proj:32,avg:26,pct:155,line:26.5},{stat:'ast',cur:5,proj:10,avg:7,pct:152,line:6.5}],pts:16,reb:2,ast:5,gameLabel:'NYK 52 · MIA 49',period:3,warnings:['back-to-back']},
+    {playerId:5,type:'yellow',name:'Tyler Herro',team:'MIA',position:'G',nbaId:IDS.herro,triggered:[{stat:'pts',cur:11,proj:44,avg:22,pct:202,line:20.5}],pts:11,reb:1,ast:2,gameLabel:'MIA 28 · NYK 24',period:2,warnings:[]},
+    {playerId:6,type:'risk',name:'Kawhi Leonard',team:'LAC',position:'SF',nbaId:IDS.kawhi,pts:16,reb:4,ast:2,ptsLine:18.5,gameLabel:'SAC 75 · LAC 98',period:4,riskMsg:'Time ganhando por +23 pts — risco de banquinho',warnings:[]}
   ];
-  document.getElementById('stat-games').textContent = 4;
-  document.getElementById('stat-blocked').textContent = 2;
-  document.getElementById('header-update').textContent = 'modo demo';
+  document.getElementById('stat-games').textContent=4;
+  document.getElementById('stat-blocked').textContent=2;
+  document.getElementById('header-update').textContent='modo demo';
+  document.getElementById('user-dropdown').classList.remove('open');
   updateStats(); renderAlerts();
 }
 
-document.getElementById('header-date').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
-
+// MODAL
 function openModal(playerId) {
-  const a = allAlerts.find(x => x.playerId === playerId);
+  const a=allAlerts.find(x=>x.playerId===playerId);
   if (!a) return;
-
-  const accentColors = { fire:'linear-gradient(90deg,#ff6d00,#fdb927)', red:'linear-gradient(90deg,#c8102e,#ff6b81)', orange:'linear-gradient(90deg,#ffb300,#fdb927)', yellow:'linear-gradient(90deg,#fdb927,#fff176)', risk:'linear-gradient(90deg,#ff1744,#c8102e)' };
-
-  document.getElementById('modal-name').textContent = a.name;
-  document.getElementById('modal-meta').textContent = `${a.team} · ${a.position} · Q${a.period}`;
-  document.getElementById('modal-accent').style.background = accentColors[a.type] || '';
-
-  const photo = document.getElementById('modal-photo');
-  const fallback = document.getElementById('modal-photo-fallback');
-  photo.style.display = '';
-  fallback.style.display = 'none';
-  fallback.textContent = initials(a.name);
-  photo.src = `https://cdn.nba.com/headshots/nba/latest/1040x760/${a.nbaId}.png`;
-
-  const triggered = a.triggered || [];
-  const statDefs = [
-    { key:'pts', label:'Pontos', cur:a.pts },
-    { key:'reb', label:'Rebotes', cur:a.reb },
-    { key:'ast', label:'Assistências', cur:a.ast }
-  ];
-
-  document.getElementById('modal-live-stats').innerHTML = statDefs.map(s => {
-    const t = triggered.find(x=>x.stat===s.key);
-    const col = t ? paceColor(t.pct) : 'dim';
-    return `<div class="modal-stat ${t?'hot':''}">
-      <div class="modal-stat-label">${s.label}</div>
-      <div class="modal-stat-val">${s.cur}</div>
-      <div class="modal-stat-sub">${t ? `proj ${t.proj}` : '—'}</div>
-      <div class="modal-stat-pct ${col}">${t ? `+${t.pct}% média` : '—'}</div>
-    </div>`;
+  const accentColors={fire:'linear-gradient(90deg,#ff6d00,#fdb927)',red:'linear-gradient(90deg,#c8102e,#ff6b81)',orange:'linear-gradient(90deg,#ffb300,#fdb927)',yellow:'linear-gradient(90deg,#fdb927,#fff176)',risk:'linear-gradient(90deg,#ff1744,#c8102e)'};
+  document.getElementById('modal-name').textContent=a.name;
+  document.getElementById('modal-meta').textContent=`${a.team} · ${a.position} · Q${a.period}`;
+  document.getElementById('modal-accent').style.background=accentColors[a.type]||'';
+  const photo=document.getElementById('modal-photo'), fallback=document.getElementById('modal-photo-fallback');
+  photo.style.display=''; fallback.style.display='none'; fallback.textContent=initials(a.name);
+  photo.src=`https://cdn.nba.com/headshots/nba/latest/1040x760/${a.nbaId}.png`;
+  const triggered=a.triggered||[];
+  const statDefs=[{key:'pts',label:'Pontos',cur:a.pts},{key:'reb',label:'Rebotes',cur:a.reb},{key:'ast',label:'Assistências',cur:a.ast}];
+  document.getElementById('modal-live-stats').innerHTML=statDefs.map(s=>{
+    const t=triggered.find(x=>x.stat===s.key), col=t?paceColor(t.pct):'dim';
+    return `<div class="modal-stat ${t?'hot':''}"><div class="modal-stat-label">${s.label}</div><div class="modal-stat-val">${s.cur}</div><div class="modal-stat-sub">${t?`proj ${t.proj}`:'—'}</div><div class="modal-stat-pct ${col}">${t?`+${t.pct}% média`:'—'}</div></div>`;
   }).join('');
-
-  const maxVal = Math.max(...statDefs.map(s => {
-    const t = triggered.find(x=>x.stat===s.key);
-    return t ? t.proj : s.cur;
-  }), 40);
-
-  document.getElementById('modal-comparison').innerHTML = statDefs.map(s => {
-    const t = triggered.find(x=>x.stat===s.key);
-    const cur = t ? t.proj : s.cur;
-    const avg = t ? t.avg : s.cur;
-    const line = t ? t.line : null;
-    const col = t ? paceColor(t.pct) : 'up';
-    const curW = Math.min(98, Math.round((cur/maxVal)*100));
-    const avgW = Math.min(98, Math.round((avg/maxVal)*100));
-    const lineW = line ? Math.min(98, Math.round((line/maxVal)*100)) : null;
-    return `<div class="comp-row">
-      <div class="comp-label">
-        <span>${s.label}</span>
-        <div style="display:flex;gap:10px;font-size:11px;color:var(--text3)">
-          <span>Média: <span style="color:var(--text2)">${avg}</span></span>
-          ${line ? `<span>Linha: <span style="color:var(--red)">${line}</span></span>` : ''}
-          <span>Proj: <span style="color:var(--${col==='fire'?'fire':col==='gold'?'gold':'green'})">${cur}</span></span>
-        </div>
-      </div>
-      <div class="comp-track">
-        <div class="comp-avg" style="width:${avgW}%"></div>
-        <div class="comp-cur ${col}" style="width:${curW}%"></div>
-        ${lineW ? `<div class="comp-line-marker" style="left:${lineW}%"></div>` : ''}
-      </div>
-    </div>`;
+  const maxVal=Math.max(...statDefs.map(s=>{const t=triggered.find(x=>x.stat===s.key);return t?t.proj:s.cur;}),40);
+  document.getElementById('modal-comparison').innerHTML=statDefs.map(s=>{
+    const t=triggered.find(x=>x.stat===s.key), cur=t?t.proj:s.cur, avg=t?t.avg:s.cur, line=t?t.line:null, col=t?paceColor(t.pct):'up';
+    const curW=Math.min(98,Math.round((cur/maxVal)*100)), avgW=Math.min(98,Math.round((avg/maxVal)*100));
+    const lineW=line?Math.min(98,Math.round((line/maxVal)*100)):null;
+    const colVar=col==='fire'?'var(--fire)':col==='gold'?'var(--gold)':'var(--green)';
+    return `<div class="comp-row"><div class="comp-label"><span>${s.label}</span><div style="display:flex;gap:10px;font-size:11px;color:var(--text3)"><span>Média: <span style="color:var(--text2)">${avg}</span></span>${line?`<span>Linha: <span style="color:var(--red)">${line}</span></span>`:''}<span>Proj: <span style="color:${colVar}">${cur}</span></span></div></div><div class="comp-track"><div class="comp-avg" style="width:${avgW}%"></div><div class="comp-cur ${col}" style="width:${curW}%"></div>${lineW?`<div class="comp-line-marker" style="left:${lineW}%"></div>`:''}</div></div>`;
   }).join('');
-
-  const extras = [
-    { label:'Minutos', val: `~${Math.round(a.pts > 0 ? 28 : 0)}` },
-    { label:'Faltas', val: (a.warnings||[]).find(w=>w.includes('falta')) ? (a.warnings.find(w=>w.includes('falta')).split(' ')[0]) : '0-1' },
-    { label:'+/-', val: a.pts > 15 ? '+8' : '+2' },
-    { label:'TS%', val: '58%' },
-    { label:'FG%', val: '52%' },
-    { label:'3P%', val: '38%' },
-    { label:'FT%', val: '85%' },
-    { label:'TO', val: '1' }
-  ];
-  document.getElementById('modal-extra-stats').innerHTML = extras.map(e => `<div class="extra-stat"><div class="extra-stat-label">${e.label}</div><div class="extra-stat-val">${e.val}</div></div>`).join('');
-
-  const line = triggered.find(t=>t.stat==='pts')?.line || null;
-  const recentPts = [a.pts+8, a.pts-3, a.pts+12, a.pts+2, a.pts-5].map(v=>Math.max(0,Math.round(v)));
-  const opps = ['vs LAL','vs BOS','@ MIA','vs GSW','@ PHX'];
-  const maxR = Math.max(...recentPts, line||0, 1);
-  document.getElementById('modal-recent').innerHTML = recentPts.map((v,i) => {
-    const w = Math.round((v/maxR)*100);
-    const passed = line ? v >= line : null;
-    return `<div class="recent-row">
-      <div class="recent-opp">${opps[i]}</div>
-      <div class="recent-bar-wrap">
-        <div class="recent-bar-track">
-          <div class="recent-bar-fill" style="width:${w}%;background:${passed===true?'var(--green)':passed===false?'var(--red)':'var(--gold)'}"></div>
-          ${line ? `<div style="position:absolute;top:0;bottom:0;left:${Math.round((line/maxR)*100)}%;width:1.5px;background:var(--red);border-radius:1px"></div>` : ''}
-        </div>
-      </div>
-      <div class="recent-val">${v}</div>
-      <div class="recent-check">${passed===true?'✅':passed===false?'❌':'—'}</div>
-    </div>`;
+  const extras=[{label:'Minutos',val:'~28'},{label:'Faltas',val:(a.warnings||[]).find(w=>w.includes('falta'))?a.warnings.find(w=>w.includes('falta')).split(' ')[0]:'0-1'},{label:'+/-',val:a.pts>15?'+8':'+2'},{label:'TS%',val:'58%'},{label:'FG%',val:'52%'},{label:'3P%',val:'38%'},{label:'FT%',val:'85%'},{label:'TO',val:'1'}];
+  document.getElementById('modal-extra-stats').innerHTML=extras.map(e=>`<div class="extra-stat"><div class="extra-stat-label">${e.label}</div><div class="extra-stat-val">${e.val}</div></div>`).join('');
+  const line=triggered.find(t=>t.stat==='pts')?.line||null;
+  const recentPts=[a.pts+8,a.pts-3,a.pts+12,a.pts+2,a.pts-5].map(v=>Math.max(0,Math.round(v)));
+  const opps=['vs LAL','vs BOS','@ MIA','vs GSW','@ PHX'];
+  const maxR=Math.max(...recentPts,line||0,1);
+  document.getElementById('modal-recent').innerHTML=recentPts.map((v,i)=>{
+    const w=Math.round((v/maxR)*100), passed=line?v>=line:null;
+    return `<div class="recent-row"><div class="recent-opp">${opps[i]}</div><div class="recent-bar-wrap"><div class="recent-bar-track"><div class="recent-bar-fill" style="width:${w}%;background:${passed===true?'var(--green)':passed===false?'var(--red)':'var(--gold)'}"></div>${line?`<div style="position:absolute;top:0;bottom:0;left:${Math.round((line/maxR)*100)}%;width:1.5px;background:var(--red)"></div>`:''}</div></div><div class="recent-val">${v}</div><div class="recent-check">${passed===true?'✅':passed===false?'❌':'—'}</div></div>`;
   }).join('');
-
-  const parts = a.gameLabel.split('·');
-  const teams = parts.map(p=>p.trim());
-  const awayParts = teams[0]?.split(' ') || [];
-  const homeParts = teams[1]?.split(' ') || [];
-  const awayAbbr = awayParts[0]||'';
-  const awayScore = awayParts[1]||'0';
-  const homeAbbr = homeParts[0]||'';
-  const homeScore = homeParts[1]||'0';
-  document.getElementById('modal-game-info').innerHTML = `
-    <div class="game-teams">
-      <div class="game-team"><div class="game-team-abbr">${awayAbbr}</div><div class="game-team-score">${awayScore}</div></div>
-      <div class="game-vs">@</div>
-      <div class="game-team"><div class="game-team-abbr">${homeAbbr}</div><div class="game-team-score">${homeScore}</div></div>
-    </div>
-    <div class="game-period">Q${a.period} · Ao vivo</div>`;
-
+  const parts=a.gameLabel.split('·'), teams=parts.map(p=>p.trim());
+  const awayParts=teams[0]?.split(' ')||[], homeParts=teams[1]?.split(' ')||[];
+  document.getElementById('modal-game-info').innerHTML=`<div class="game-teams"><div class="game-team"><div class="game-team-abbr">${awayParts[0]||''}</div><div class="game-team-score">${awayParts[1]||'0'}</div></div><div class="game-vs">@</div><div class="game-team"><div class="game-team-abbr">${homeParts[0]||''}</div><div class="game-team-score">${homeParts[1]||'0'}</div></div></div><div class="game-period">Q${a.period} · Ao vivo</div>`;
   document.getElementById('modal-overlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
+  document.body.style.overflow='hidden';
 }
 
-function closeModal(e) {
-  if (e.target === document.getElementById('modal-overlay')) closeModalDirect();
-}
-function closeModalDirect() {
-  document.getElementById('modal-overlay').classList.remove('open');
-  document.body.style.overflow = '';
-}
-document.addEventListener('keydown', e => { if (e.key==='Escape') closeModalDirect(); });
+function closeModal(e) { if (e.target===document.getElementById('modal-overlay')) closeModalDirect(); }
+function closeModalDirect() { document.getElementById('modal-overlay').classList.remove('open'); document.body.style.overflow=''; }
+document.addEventListener('keydown', e=>{ if (e.key==='Escape') closeModalDirect(); });
+
+init();
 </script>
 </body>
 </html>
