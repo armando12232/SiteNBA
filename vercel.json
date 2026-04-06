@@ -1,5 +1,8 @@
 {
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/nba.js" }
-  ]
+  "functions": {
+    "api/nba.js": {
+      "memory": 128,
+      "maxDuration": 10
+    }
+  }
 }
