@@ -712,7 +712,7 @@ async function runMonitor() {
     const scoreboard = await fetchESPN('scoreboard');
     const events = scoreboard?.events || [];
     const liveGames = events.filter(e => {
-      const status = e.status?.type?.state;
+      const status = e.status?.type?.state || e.competitions?.[0]?.status?.type?.state;
       return status === 'in';
     });
 
@@ -731,8 +731,8 @@ async function runMonitor() {
 
     for (const game of liveGames) {
       const gameId = game.id;
-      const period = game.status?.period || 1;
-      const clock = game.status?.displayClock || '';
+      const period = game.competitions?.[0]?.status?.period || game.status?.period || 1;
+      const clock = game.competitions?.[0]?.status?.displayClock || game.status?.displayClock || '';
       const competitors = game.competitions?.[0]?.competitors || [];
       const homeTeam = competitors.find(c => c.homeAway === 'home');
       const awayTeam = competitors.find(c => c.homeAway === 'away');
