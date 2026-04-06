@@ -627,84 +627,198 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.user-menu-wrap')) document.getElementById('user-dropdown').classList.remove('open');
 });
 
-// MONITOR
-async function fetchNBA(endpoint) {
-  const res = await fetch(`/api/nba?endpoint=${encodeURIComponent(endpoint)}`);
+// MONITOR — ESPN API (gratuita)
+async function fetchESPN(type, gameId) {
+  const params = gameId ? `?type=${type}&gameId=${gameId}` : `?type=${type}`;
+  const res = await fetch(`/api/nba${params}`);
   if (!res.ok) throw new Error(res.status);
   return res.json();
+}
+
+function parseESPNStats(boxscore) {
+  const players = [];
+  const teams = boxscore?.players || [];
+  for (const teamData of teams) {
+    const teamAbbr = teamData.team?.abbreviation || '?';
+    const teamId = teamData.team?.id;
+    for (const statGroup of teamData.statistics || []) {
+      for (const athlete of statGroup.athletes || []) {
+        const p = athlete.athlete;
+        const stats = athlete.stats || [];
+        if (!p || athlete.didNotPlay) continue;
+        const mins = parseFloat(stats[0]) || 0;
+        const fgm = parseFloat(stats[1]) || 0;
+        const fga = parseFloat(stats[2]) || 0;
+        const tpm = parseFloat(stats[5]) || 0;
+        const ftm = parseFloat(stats[8]) || 0;
+        const oreb = parseFloat(stats[10]) || 0;
+        const dreb = parseFloat(stats[11]) || 0;
+        const reb = parseFloat(stats[12]) || 0;
+        const ast = parseFloat(stats[13]) || 0;
+        const stl = parseFloat(stats[14]) || 0;
+        const blk = parseFloat(stats[15]) || 0;
+        const to = parseFloat(stats[16]) || 0;
+        const pf = parseFloat(stats[17]) || 0;
+        const pts = parseFloat(stats[18]) || 0;
+        const plusMinus = parseFloat(stats[19]) || 0;
+        players.push({
+          id: p.id,
+          name: p.displayName || p.fullName,
+          shortName: p.shortName,
+          position: p.position?.abbreviation || '—',
+          teamAbbr,
+          teamId,
+          nbaId: p.id,
+          mins, fgm, fga, tpm, ftm, reb, ast, stl, blk, to, pf, pts, plusMinus, oreb, dreb
+        });
+      }
+    }
+  }
+  return players;
+}
+
+function getSeasonAvgFromProfile(playerData) {
+  const stats = playerData?.statistics?.[0]?.splits?.categories;
+  if (!stats) return null;
+  const general = stats.find(c => c.name === 'general');
+  if (!general) return null;
+  const get = name => parseFloat(general.stats?.find(s => s.name === name)?.value || 0);
+  return { pts: get('avgPoints'), reb: get('avgRebounds'), ast: get('avgAssists') };
+}
+
+const seasonAvgCache = {};
+
+async function getSeasonAvg(playerId) {
+  if (seasonAvgCache[playerId]) return seasonAvgCache[playerId];
+  try {
+    const res = await fetch(`https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${playerId}/stats`);
+    const data = await res.json();
+    const cats = data?.splits?.categories;
+    if (!cats) return null;
+    const general = cats.find(c => c.name === 'general');
+    if (!general) return null;
+    const get = name => parseFloat(general.stats?.find(s => s.name === name)?.value || 0);
+    const avg = { pts: get('avgPoints'), reb: get('avgRebounds'), ast: get('avgAssists') };
+    seasonAvgCache[playerId] = avg;
+    return avg;
+  } catch { return null; }
 }
 
 async function runMonitor() {
   try {
     const now = new Date();
     document.getElementById('header-update').textContent = `atualizado ${now.toLocaleTimeString('pt-BR')}`;
-    const today = now.toISOString().split('T')[0];
-    const gamesData = await fetchNBA(`nba/v1/games?dates[]=${today}`);
-    const live = (gamesData.data||[]).filter(g=>g.status&&g.status!=='Final'&&!g.status.includes('T'));
-    document.getElementById('stat-games').textContent = live.length;
-    if (!live.length) { allAlerts=[]; renderAlerts(); updateStats(); return; }
 
-    const newAlerts=[], blocked={count:0};
-    for (const game of live) {
-      const [statsData, propsData] = await Promise.all([
-        fetchNBA(`nba/v1/stats?game_ids[]=${game.id}`),
-        fetchNBA(`nba/v1/player_props?game_id=${game.id}`).catch(()=>({data:[]}))
-      ]);
-      const stats = statsData.data||[];
-      if (!stats.length) continue;
-      const pids = stats.map(s=>s.player?.id).filter(Boolean);
-      const season = new Date().getFullYear();
-      const avgData = await fetchNBA(`nba/v1/season_averages?season=${season}&${pids.map(id=>`player_ids[]=${id}`).join('&')}`);
-      const avgs={};
-      (avgData.data||[]).forEach(a=>avgs[a.player_id]=a);
-      const propsMap={};
-      (propsData.data||[]).forEach(p=>{
-        if (!propsMap[p.player_id]) propsMap[p.player_id]={};
-        if (p.prop_type==='points') propsMap[p.player_id].pts=p.line_score;
-        if (p.prop_type==='rebounds') propsMap[p.player_id].reb=p.line_score;
-        if (p.prop_type==='assists') propsMap[p.player_id].ast=p.line_score;
-      });
-      const home=game.home_team_score||0, away=game.visitor_team_score||0;
-      const diff=Math.abs(home-away), period=game.period||1;
-      const minsPlayed=getMinsPlayed(period, game.time||'');
-      const gameLabel=`${game.visitor_team?.abbreviation} ${away} · ${game.home_team?.abbreviation} ${home}`;
-      for (const stat of stats) {
-        const {player,team}=stat;
-        if (!player||!team) continue;
-        const avg=avgs[player.id];
-        if (!avg) continue;
-        const isHome=team.id===game.home_team?.id;
-        const teamScore=isHome?home:away, oppScore=isHome?away:home;
-        const winning=teamScore>oppScore, tdiff=teamScore-oppScore;
-        if (diff>=BLOWOUT&&winning) {
-          blocked.count++;
-          if (!newAlerts.find(a=>a.playerId===player.id&&a.type==='risk')) {
-            newAlerts.push({playerId:player.id,type:'risk',name:`${player.first_name} ${player.last_name}`,team:team.abbreviation,position:player.position||'—',nbaId:player.id,pts:stat.pts||0,reb:stat.reb||0,ast:stat.ast||0,ptsLine:propsMap[player.id]?.pts,gameLabel,period,riskMsg:`Time ganhando por +${Math.abs(tdiff)} pts — risco de banquinho`,warnings:[]});
+    const scoreboard = await fetchESPN('scoreboard');
+    const events = scoreboard?.events || [];
+    const liveGames = events.filter(e => {
+      const status = e.status?.type?.state;
+      return status === 'in';
+    });
+
+    document.getElementById('stat-games').textContent = liveGames.length;
+
+    if (!liveGames.length) {
+      allAlerts = [];
+      renderAlerts();
+      updateStats();
+      document.getElementById('stat-blocked').textContent = 0;
+      return;
+    }
+
+    const newAlerts = [];
+    let blockedCount = 0;
+
+    for (const game of liveGames) {
+      const gameId = game.id;
+      const period = game.status?.period || 1;
+      const clock = game.status?.displayClock || '';
+      const competitors = game.competitions?.[0]?.competitors || [];
+      const homeTeam = competitors.find(c => c.homeAway === 'home');
+      const awayTeam = competitors.find(c => c.homeAway === 'away');
+      const homeScore = parseInt(homeTeam?.score || 0);
+      const awayScore = parseInt(awayTeam?.score || 0);
+      const diff = Math.abs(homeScore - awayScore);
+      const homeAbbr = homeTeam?.team?.abbreviation || '';
+      const awayAbbr = awayTeam?.team?.abbreviation || '';
+      const gameLabel = `${awayAbbr} ${awayScore} · ${homeAbbr} ${homeScore}`;
+
+      let boxData;
+      try { boxData = await fetchESPN('boxscore', gameId); } catch { continue; }
+
+      const players = parseESPNStats(boxData?.boxscore);
+      if (!players.length) continue;
+
+      const clockParts = clock.replace(/"/g, '').split(':');
+      let minsInPeriod = 12;
+      if (clockParts.length === 2) {
+        minsInPeriod = 12 - (parseInt(clockParts[0]) + parseInt(clockParts[1]) / 60);
+      }
+      const minsPlayed = Math.max(1, (period - 1) * 12 + minsInPeriod);
+
+      for (const player of players) {
+        if (player.mins < 3) continue;
+
+        const avg = await getSeasonAvg(player.id);
+        if (!avg || (!avg.pts && !avg.reb && !avg.ast)) continue;
+
+        const isHomePlayer = player.teamId === homeTeam?.team?.id;
+        const teamScore = isHomePlayer ? homeScore : awayScore;
+        const oppScore = isHomePlayer ? awayScore : homeScore;
+        const winning = teamScore > oppScore;
+        const tdiff = teamScore - oppScore;
+
+        if (diff >= BLOWOUT && winning) {
+          blockedCount++;
+          if (!newAlerts.find(a => a.playerId === player.id && a.type === 'risk')) {
+            newAlerts.push({
+              playerId: player.id, type: 'risk',
+              name: player.name, team: player.teamAbbr,
+              position: player.position, nbaId: player.id,
+              pts: player.pts, reb: player.reb, ast: player.ast,
+              gameLabel, period,
+              riskMsg: `Time ganhando por +${Math.abs(tdiff)} pts — risco de banquinho`,
+              warnings: []
+            });
           }
           continue;
         }
-        const ptsPace=getPace(stat.pts||0,minsPlayed,48);
-        const rebPace=getPace(stat.reb||0,minsPlayed,48);
-        const astPace=getPace(stat.ast||0,minsPlayed,48);
-        const triggered=[];
-        if (avg.pts>0&&ptsPace/avg.pts>=PACE_MIN) triggered.push({stat:'pts',cur:stat.pts,proj:Math.round(ptsPace),avg:avg.pts,pct:Math.round((ptsPace/avg.pts)*100),line:propsMap[player.id]?.pts});
-        if (avg.reb>0&&rebPace/avg.reb>=PACE_MIN) triggered.push({stat:'reb',cur:stat.reb,proj:Math.round(rebPace),avg:avg.reb,pct:Math.round((rebPace/avg.reb)*100),line:propsMap[player.id]?.reb});
-        if (avg.ast>0&&astPace/avg.ast>=PACE_MIN) triggered.push({stat:'ast',cur:stat.ast,proj:Math.round(astPace),avg:avg.ast,pct:Math.round((astPace/avg.ast)*100),line:propsMap[player.id]?.ast});
+
+        const ptsPace = (player.pts / minsPlayed) * 48;
+        const rebPace = (player.reb / minsPlayed) * 48;
+        const astPace = (player.ast / minsPlayed) * 48;
+
+        const triggered = [];
+        if (avg.pts > 0 && ptsPace / avg.pts >= PACE_MIN) triggered.push({ stat: 'pts', cur: player.pts, proj: Math.round(ptsPace), avg: avg.pts, pct: Math.round((ptsPace / avg.pts) * 100), line: null });
+        if (avg.reb > 0 && rebPace / avg.reb >= PACE_MIN) triggered.push({ stat: 'reb', cur: player.reb, proj: Math.round(rebPace), avg: avg.reb, pct: Math.round((rebPace / avg.reb) * 100), line: null });
+        if (avg.ast > 0 && astPace / avg.ast >= PACE_MIN) triggered.push({ stat: 'ast', cur: player.ast, proj: Math.round(astPace), avg: avg.ast, pct: Math.round((astPace / avg.ast) * 100), line: null });
+
         if (!triggered.length) continue;
-        const type=alertType(period,triggered.length);
-        const warnings=[];
-        if (stat.pf>=3&&period<=2) warnings.push(`${stat.pf} faltas`);
-        if (stat.pf>=4&&period===3) warnings.push(`${stat.pf} faltas`);
-        if (diff>=BLOWOUT&&!winning) warnings.push('adversário em blowout');
-        newAlerts.push({playerId:player.id,type,name:`${player.first_name} ${player.last_name}`,team:team.abbreviation,position:player.position||'—',nbaId:player.id,triggered,pts:stat.pts||0,reb:stat.reb||0,ast:stat.ast||0,gameLabel,period,warnings});
+
+        const type = alertType(period, triggered.length);
+        const warnings = [];
+        if (player.pf >= 3 && period <= 2) warnings.push(`${player.pf} faltas`);
+        if (player.pf >= 4 && period === 3) warnings.push(`${player.pf} faltas`);
+        if (diff >= BLOWOUT && !winning) warnings.push('adversário em blowout');
+
+        newAlerts.push({
+          playerId: player.id, type,
+          name: player.name, team: player.teamAbbr,
+          position: player.position, nbaId: player.id,
+          triggered, pts: player.pts, reb: player.reb, ast: player.ast,
+          gameLabel, period, warnings,
+          extraStats: { mins: player.mins, fgm: player.fgm, fga: player.fga, tpm: player.tpm, pf: player.pf, to: player.to, plusMinus: player.plusMinus }
+        });
       }
     }
-    allAlerts=newAlerts;
-    document.getElementById('stat-blocked').textContent=blocked.count;
-    updateStats(); renderAlerts();
-  } catch(e) {
+
+    allAlerts = newAlerts;
+    document.getElementById('stat-blocked').textContent = blockedCount;
+    updateStats();
+    renderAlerts();
+  } catch (e) {
     console.error(e);
-    document.getElementById('header-update').textContent='erro ao atualizar';
+    document.getElementById('header-update').textContent = 'erro ao atualizar';
   }
 }
 
@@ -817,7 +931,18 @@ function openModal(playerId) {
     const colVar=col==='fire'?'var(--fire)':col==='gold'?'var(--gold)':'var(--green)';
     return `<div class="comp-row"><div class="comp-label"><span>${s.label}</span><div style="display:flex;gap:10px;font-size:11px;color:var(--text3)"><span>Média: <span style="color:var(--text2)">${avg}</span></span>${line?`<span>Linha: <span style="color:var(--red)">${line}</span></span>`:''}<span>Proj: <span style="color:${colVar}">${cur}</span></span></div></div><div class="comp-track"><div class="comp-avg" style="width:${avgW}%"></div><div class="comp-cur ${col}" style="width:${curW}%"></div>${lineW?`<div class="comp-line-marker" style="left:${lineW}%"></div>`:''}</div></div>`;
   }).join('');
-  const extras=[{label:'Minutos',val:'~28'},{label:'Faltas',val:(a.warnings||[]).find(w=>w.includes('falta'))?a.warnings.find(w=>w.includes('falta')).split(' ')[0]:'0-1'},{label:'+/-',val:a.pts>15?'+8':'+2'},{label:'TS%',val:'58%'},{label:'FG%',val:'52%'},{label:'3P%',val:'38%'},{label:'FT%',val:'85%'},{label:'TO',val:'1'}];
+  const ex = a.extraStats || {};
+  const fgPct = ex.fga > 0 ? Math.round((ex.fgm / ex.fga) * 100) : 0;
+  const extras=[
+    {label:'Minutos', val: ex.mins ? Math.round(ex.mins) : '—'},
+    {label:'Faltas', val: ex.pf ?? '—'},
+    {label:'+/-', val: ex.plusMinus !== undefined ? (ex.plusMinus > 0 ? `+${ex.plusMinus}` : ex.plusMinus) : '—'},
+    {label:'FG%', val: ex.fga > 0 ? `${fgPct}%` : '—'},
+    {label:'FGM/A', val: ex.fga > 0 ? `${ex.fgm}/${ex.fga}` : '—'},
+    {label:'3PM', val: ex.tpm ?? '—'},
+    {label:'TO', val: ex.to ?? '—'},
+    {label:'STL', val: ex.stl ?? '—'}
+  ];
   document.getElementById('modal-extra-stats').innerHTML=extras.map(e=>`<div class="extra-stat"><div class="extra-stat-label">${e.label}</div><div class="extra-stat-val">${e.val}</div></div>`).join('');
   const line=triggered.find(t=>t.stat==='pts')?.line||null;
   const recentPts=[a.pts+8,a.pts-3,a.pts+12,a.pts+2,a.pts-5].map(v=>Math.max(0,Math.round(v)));
