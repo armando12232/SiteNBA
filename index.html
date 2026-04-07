@@ -34,92 +34,33 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; overflow-x: hidden; position: relative; }
-
-/* COURT BG */
 .court-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: 0.07; }
 .app-layer { position: relative; z-index: 1; }
 
-/* AUTH SCREEN */
-.auth-screen {
-  min-height: 100vh;
-  display: flex; align-items: center; justify-content: center;
-  padding: 20px;
-}
-.auth-card {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: 20px;
-  width: 100%; max-width: 420px;
-  overflow: hidden;
-}
-.auth-hero {
-  background: var(--bg3);
-  padding: 32px 32px 24px;
-  border-bottom: 1px solid var(--border);
-  text-align: center;
-  position: relative;
-}
-.auth-logo-icon {
-  width: 52px; height: 52px;
-  background: var(--red);
-  border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--display); font-size: 26px; font-weight: 800;
-  color: white; margin: 0 auto 14px;
-}
+.auth-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.auth-card { background: var(--bg2); border: 1px solid var(--border2); border-radius: 20px; width: 100%; max-width: 420px; overflow: hidden; }
+.auth-hero { background: var(--bg3); padding: 32px 32px 24px; border-bottom: 1px solid var(--border); text-align: center; position: relative; }
+.auth-logo-icon { width: 52px; height: 52px; background: var(--red); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 26px; font-weight: 800; color: white; margin: 0 auto 14px; }
 .auth-title { font-family: var(--display); font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: 0.02em; margin-bottom: 4px; }
 .auth-title span { color: var(--gold); }
 .auth-sub { font-size: 13px; color: var(--text3); }
-
 .auth-body { padding: 28px 28px; }
 .auth-tabs { display: flex; gap: 6px; margin-bottom: 24px; background: var(--bg3); border-radius: 10px; padding: 4px; }
-.auth-tab {
-  flex: 1; padding: 8px; border: none; border-radius: 8px;
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  background: transparent; color: var(--text3); font-family: var(--body);
-  transition: all 0.15s;
-}
+.auth-tab { flex: 1; padding: 8px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: var(--text3); font-family: var(--body); transition: all 0.15s; }
 .auth-tab.active { background: var(--bg2); color: var(--text); }
-
 .auth-form { display: flex; flex-direction: column; gap: 12px; }
 .auth-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 5px; display: block; }
-.auth-input {
-  width: 100%; background: var(--bg3);
-  border: 1px solid var(--border2); border-radius: 10px;
-  padding: 11px 14px; font-size: 14px; font-family: var(--body);
-  color: var(--text); outline: none; transition: border-color 0.2s;
-}
+.auth-input { width: 100%; background: var(--bg3); border: 1px solid var(--border2); border-radius: 10px; padding: 11px 14px; font-size: 14px; font-family: var(--body); color: var(--text); outline: none; transition: border-color 0.2s; }
 .auth-input:focus { border-color: var(--gold); }
 .auth-input::placeholder { color: var(--text3); }
-.auth-btn {
-  width: 100%; background: var(--red); border: none; border-radius: 10px;
-  padding: 13px; font-size: 14px; font-weight: 700; font-family: var(--body);
-  color: white; cursor: pointer; margin-top: 4px; transition: background 0.15s;
-  letter-spacing: 0.02em;
-}
+.auth-btn { width: 100%; background: var(--red); border: none; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 700; font-family: var(--body); color: white; cursor: pointer; margin-top: 4px; transition: background 0.15s; letter-spacing: 0.02em; }
 .auth-btn:hover { background: var(--red2); }
 .auth-btn:disabled { background: var(--bg4); color: var(--text3); cursor: not-allowed; }
-.auth-error {
-  font-size: 12px; color: var(--danger); background: var(--danger-dim);
-  border: 1px solid rgba(255,23,68,0.2); border-radius: 8px;
-  padding: 10px 12px; text-align: center;
-}
-.auth-success {
-  font-size: 12px; color: var(--green); background: var(--green-dim);
-  border: 1px solid rgba(0,230,118,0.2); border-radius: 8px;
-  padding: 10px 12px; text-align: center;
-}
+.auth-error { font-size: 12px; color: var(--danger); background: var(--danger-dim); border: 1px solid rgba(255,23,68,0.2); border-radius: 8px; padding: 10px 12px; text-align: center; }
+.auth-success { font-size: 12px; color: var(--green); background: var(--green-dim); border: 1px solid rgba(0,230,118,0.2); border-radius: 8px; padding: 10px 12px; text-align: center; }
 .auth-footer { font-size: 11px; color: var(--text3); text-align: center; margin-top: 16px; line-height: 1.6; }
 
-/* HEADER */
-.header {
-  background: rgba(15,15,15,0.92);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
-  padding: 0 24px;
-  display: flex; align-items: center; justify-content: space-between;
-  height: 60px; position: sticky; top: 0; z-index: 100;
-}
+.header { background: rgba(15,15,15,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 60px; position: sticky; top: 0; z-index: 100; }
 .header-left { display: flex; align-items: center; gap: 12px; }
 .logo-icon { width: 36px; height: 36px; background: var(--red); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 18px; font-weight: 800; color: white; }
 .logo-text { font-family: var(--display); font-size: 20px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
@@ -131,40 +72,19 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .header-date { font-size: 12px; color: var(--text3); }
 .header-update { font-size: 11px; color: var(--text3); }
 
-/* USER MENU */
-.user-btn {
-  width: 34px; height: 34px; border-radius: 50%;
-  background: var(--red); border: none; cursor: pointer;
-  font-family: var(--display); font-size: 14px; font-weight: 800;
-  color: white; position: relative;
-}
-.user-dropdown {
-  position: absolute; top: 48px; right: 0;
-  background: var(--bg2); border: 1px solid var(--border2);
-  border-radius: 12px; padding: 6px;
-  min-width: 180px; z-index: 200;
-  display: none;
-}
+.user-btn { width: 34px; height: 34px; border-radius: 50%; background: var(--red); border: none; cursor: pointer; font-family: var(--display); font-size: 14px; font-weight: 800; color: white; position: relative; }
+.user-dropdown { position: absolute; top: 48px; right: 0; background: var(--bg2); border: 1px solid var(--border2); border-radius: 12px; padding: 6px; min-width: 180px; z-index: 200; display: none; }
 .user-dropdown.open { display: block; }
 .user-dropdown-header { padding: 10px 12px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
 .user-email { font-size: 12px; color: var(--text2); word-break: break-all; }
 .user-plan { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); margin-top: 2px; }
-.dropdown-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 9px 12px; border-radius: 8px; cursor: pointer;
-  font-size: 13px; color: var(--text2); transition: all 0.1s;
-  border: none; background: transparent; width: 100%; text-align: left;
-  font-family: var(--body);
-}
+.dropdown-item { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--text2); transition: all 0.1s; border: none; background: transparent; width: 100%; text-align: left; font-family: var(--body); }
 .dropdown-item:hover { background: var(--bg3); color: var(--text); }
 .dropdown-item.danger { color: var(--danger); }
 .dropdown-item.danger:hover { background: var(--danger-dim); }
 .user-menu-wrap { position: relative; }
 
-/* MAIN */
 .main { max-width: 1000px; margin: 0 auto; padding: 24px 16px 80px; }
-
-/* STATS ROW */
 .stats-row { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 20px; }
 .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; position: relative; overflow: hidden; }
 .stat-card::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; }
@@ -179,7 +99,6 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .stat-value.red { color: var(--danger); }
 .stat-value.amber { color: var(--amber); }
 
-/* FILTERS */
 .filters { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
 .filter-btn { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; color: var(--text3); cursor: pointer; transition: all 0.15s; font-family: var(--body); }
 .filter-btn:hover { border-color: var(--border2); color: var(--text2); }
@@ -190,12 +109,10 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .filter-btn.f-yellow.active { color: var(--gold); border-color: var(--gold); background: rgba(253,185,39,0.1); }
 .filter-btn.f-risk.active { color: var(--danger); border-color: var(--danger); background: var(--danger-dim); }
 
-/* SECTION HEADER */
 .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .section-title { font-family: var(--display); font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); }
 .section-line { flex: 1; height: 1px; background: var(--border); }
 
-/* ALERT CARDS */
 .alerts-list { display: flex; flex-direction: column; gap: 12px; }
 .alert-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; transition: border-color 0.2s, transform 0.15s; cursor: pointer; }
 .alert-card:hover { transform: translateY(-1px); border-color: var(--border2); }
@@ -211,7 +128,6 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .card-accent.yellow { background: linear-gradient(90deg,var(--gold),#fff176); }
 .card-accent.risk { background: linear-gradient(90deg,var(--danger),var(--red)); }
 .card-body { padding: 16px; }
-
 .player-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
 .player-photo-wrap { width: 64px; height: 64px; border-radius: 10px; overflow: hidden; background: var(--bg3); border: 1px solid var(--border2); flex-shrink: 0; }
 .player-photo { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
@@ -229,7 +145,6 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .badge.risk { background: var(--danger-dim); color: var(--danger); border: 1px solid rgba(255,23,68,0.3); }
 .game-score-mini { display: flex; align-items: center; gap: 6px; background: var(--bg3); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 600; color: var(--text2); white-space: nowrap; align-self: flex-start; }
 .game-score-mini .period { color: var(--text3); font-size: 10px; font-weight: 500; }
-
 .stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-bottom: 12px; }
 .stat-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
 .stat-box.hot { border-color: rgba(255,109,0,0.2); background: rgba(255,109,0,0.04); }
@@ -248,21 +163,18 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .stat-box-pct.fire { color: var(--fire); }
 .stat-box-pct.gold { color: var(--gold); }
 .stat-box-pct.dim { color: var(--text3); }
-
 .card-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 8px; }
 .lines-row { display: flex; gap: 12px; flex-wrap: wrap; }
 .line-item { font-size: 12px; color: var(--text3); font-weight: 500; }
 .line-item span { color: var(--gold); font-weight: 700; font-family: var(--display); font-size: 14px; }
 .risk-msg { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--danger); background: var(--danger-dim); border: 1px solid rgba(255,23,68,0.2); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
 
-/* EMPTY STATE */
 .state-box { text-align: center; padding: 60px 20px; background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; }
 .state-nba-logo { font-family: var(--display); font-size: 48px; font-weight: 800; color: var(--border2); margin-bottom: 16px; }
 .state-title { font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--text2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
 .state-sub { font-size: 13px; color: var(--text3); line-height: 1.7; max-width: 360px; margin: 0 auto; }
 .state-btn { margin-top: 20px; background: var(--red); border: none; border-radius: 10px; padding: 10px 24px; font-size: 13px; font-weight: 700; color: white; cursor: pointer; font-family: var(--body); }
 
-/* MODAL */
 .modal-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.85); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 16px; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
 .modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 18px; width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; transform: translateY(20px); transition: transform 0.25s; position: relative; }
@@ -318,6 +230,30 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .recent-val { font-family: var(--display); font-size: 14px; font-weight: 700; color: var(--text); min-width: 28px; text-align: right; }
 .recent-check { font-size: 12px; min-width: 20px; text-align: center; }
 .game-info-box { background: var(--bg3); border-radius: 10px; padding: 14px; display: flex; align-items: center; justify-content: space-between; }
+
+.tip-main { background: var(--bg3); border: 1px solid var(--border2); border-radius: 12px; padding: 14px; margin-bottom: 18px; }
+.tip-main-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.tip-direction { font-family: var(--display); font-size: 22px; font-weight: 800; line-height: 1; }
+.tip-direction.over { color: var(--green); }
+.tip-direction.under { color: var(--danger); }
+.tip-direction.neutral { color: var(--gold); }
+.tip-confidence { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 10px; border-radius: 999px; }
+.tip-confidence.high { background: rgba(0,230,118,0.12); color: var(--green); border: 1px solid rgba(0,230,118,0.25); }
+.tip-confidence.medium { background: rgba(253,185,39,0.12); color: var(--gold); border: 1px solid rgba(253,185,39,0.25); }
+.tip-confidence.low { background: rgba(255,23,68,0.08); color: var(--danger); border: 1px solid rgba(255,23,68,0.22); }
+.tip-main-stats { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-top: 10px; }
+.tip-main-stat { background: var(--bg2); border-radius: 10px; padding: 10px; text-align: center; }
+.tip-main-stat-label { font-size: 10px; color: var(--text3); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
+.tip-main-stat-val { font-family: var(--display); font-size: 22px; font-weight: 800; color: var(--text); }
+.summary-box, .risk-box, .last5-summary { background: var(--bg3); border-radius: 10px; padding: 12px 14px; }
+.summary-box ul, .risk-box ul { margin: 0; padding-left: 18px; }
+.summary-box li, .risk-box li { color: var(--text2); font-size: 13px; line-height: 1.6; margin-bottom: 4px; }
+.risk-box { border: 1px solid rgba(255,23,68,0.18); }
+.last5-summary { margin-bottom: 10px; font-size: 13px; color: var(--text2); }
+.last5-summary strong.green { color: var(--green); }
+.last5-summary strong.gold { color: var(--gold); }
+.compare-note { margin-top: 5px; font-size: 11px; color: var(--text3); }
+
 .game-teams { display: flex; align-items: center; gap: 12px; }
 .game-team { text-align: center; }
 .game-team-abbr { font-family: var(--display); font-size: 22px; font-weight: 800; color: var(--text); }
@@ -325,7 +261,6 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .game-vs { font-size: 12px; color: var(--text3); font-weight: 600; }
 .game-period { font-size: 11px; color: var(--text3); }
 
-/* LOADING */
 .loading-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; }
 
 @media (max-width: 600px) {
@@ -340,12 +275,11 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
   .extra-stats-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .modal-hero-photo { height: 140px; right: 10px; }
   .modal-hero-name { font-size: 22px; }
+  .tip-main-stats { grid-template-columns: 1fr; }
 }
 </style>
 </head>
 <body>
-
-<!-- Court background -->
 <svg class="court-bg" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
   <rect x="40" y="30" width="920" height="500" fill="none" stroke="#fdb927" stroke-width="3"/>
   <line x1="500" y1="30" x2="500" y2="530" stroke="#fdb927" stroke-width="2"/>
@@ -370,11 +304,8 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 </svg>
 
 <div class="app-layer">
-
-  <!-- Loading -->
   <div class="loading-screen" id="loading-screen">Carregando...</div>
 
-  <!-- Auth screen -->
   <div class="auth-screen" id="auth-screen" style="display:none">
     <div class="auth-card">
       <div class="auth-hero">
@@ -387,8 +318,6 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
           <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Entrar</button>
           <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Criar conta</button>
         </div>
-
-        <!-- Login form -->
         <div id="form-login">
           <div class="auth-form">
             <div>
@@ -403,8 +332,6 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
             <button class="auth-btn" onclick="handleLogin()">Entrar</button>
           </div>
         </div>
-
-        <!-- Signup form -->
         <div id="form-signup" style="display:none">
           <div class="auth-form">
             <div>
@@ -419,13 +346,11 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
             <button class="auth-btn" onclick="handleSignup()">Criar conta</button>
           </div>
         </div>
-
         <div class="auth-footer">Ao criar conta você concorda com os termos de uso</div>
       </div>
     </div>
   </div>
 
-  <!-- Dashboard -->
   <div id="dashboard" style="display:none">
     <div class="header">
       <div class="header-left">
@@ -483,10 +408,8 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
       </div>
     </div>
   </div>
-
 </div>
 
-<!-- MODAL -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
   <div class="modal" id="modal">
     <div class="modal-hero">
@@ -518,11 +441,48 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
       <div class="modal-close" onclick="closeModalDirect()">✕</div>
     </div>
     <div class="modal-body">
-      <div class="modal-section"><div class="modal-section-title">Stats ao vivo</div><div class="modal-stats-grid" id="modal-live-stats"></div></div>
-      <div class="modal-section"><div class="modal-section-title">Atual vs média vs linha</div><div id="modal-comparison"></div><div class="comp-legend"><div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--gold)"></div>Ritmo atual</div><div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--border2)"></div>Média temporada</div><div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--red);width:2px;height:8px;border-radius:1px"></div>Linha</div></div></div>
-      <div class="modal-section"><div class="modal-section-title">Detalhes do jogo</div><div class="extra-stats-grid" id="modal-extra-stats"></div></div>
-      <div class="modal-section"><div class="modal-section-title">Últimos 5 jogos (pontos)</div><div class="recent-list" id="modal-recent"></div></div>
-      <div class="modal-section"><div class="modal-section-title">Jogo</div><div class="game-info-box" id="modal-game-info"></div></div>
+      <div id="modal-tip-main"></div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Leitura rápida</div>
+        <div id="modal-summary-box"></div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Pontos de atenção</div>
+        <div id="modal-risk-box"></div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Stats ao vivo</div>
+        <div class="modal-stats-grid" id="modal-live-stats"></div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Atual vs média vs linha</div>
+        <div id="modal-comparison"></div>
+        <div class="comp-legend">
+          <div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--gold)"></div>Ritmo atual</div>
+          <div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--border2)"></div>Média temporada</div>
+          <div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--red);width:2px;height:8px;border-radius:1px"></div>Linha</div>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Detalhes do jogo</div>
+        <div class="extra-stats-grid" id="modal-extra-stats"></div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Últimos 5 jogos (pontos)</div>
+        <div id="modal-last5-summary"></div>
+        <div class="recent-list" id="modal-recent"></div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Jogo</div>
+        <div class="game-info-box" id="modal-game-info"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -540,13 +500,7 @@ let currentUser = null;
 const initials = n => n.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
 const paceColor = pct => pct >= 180 ? 'fire' : pct >= 160 ? 'gold' : 'up';
 const progressWidth = pct => Math.min(100, Math.round((pct/250)*100));
-const getPace = (cur, mp, total) => mp ? (cur/mp)*total : 0;
 
-function getMinsPlayed(period, clock) {
-  const p = (period-1)*12; let c = 12;
-  if (clock) { const parts = clock.split(':'); if (parts.length===2) c = 12-(parseInt(parts[0])+parseInt(parts[1])/60); }
-  return p+c;
-}
 function alertType(period, triggered) {
   if (triggered>=2) return 'fire';
   if (period>=3) return 'red';
@@ -557,7 +511,6 @@ function momentLabel(type) {
   return {fire:'Duplo alerta',red:'3º quarto',orange:'Intervalo',yellow:'1º quarto',risk:'Em risco'}[type]||'';
 }
 
-// AUTH
 async function init() {
   const { data: { session } } = await sb.auth.getSession();
   if (session) showDashboard(session.user);
@@ -592,7 +545,7 @@ async function handleLogin() {
   const email = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-password').value;
   const msg = document.getElementById('login-msg');
-  if (!email||!password) { msg.innerHTML = '<div class="auth-error">Preencha todos os campos</div>'; return; }
+  if (!email || !password) { msg.innerHTML = '<div class="auth-error">Preencha todos os campos</div>'; return; }
   msg.innerHTML = '<div class="auth-success">Entrando...</div>';
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
   if (error) { msg.innerHTML = `<div class="auth-error">${error.message}</div>`; return; }
@@ -603,7 +556,7 @@ async function handleSignup() {
   const email = document.getElementById('signup-email').value.trim();
   const password = document.getElementById('signup-password').value;
   const msg = document.getElementById('signup-msg');
-  if (!email||!password) { msg.innerHTML = '<div class="auth-error">Preencha todos os campos</div>'; return; }
+  if (!email || !password) { msg.innerHTML = '<div class="auth-error">Preencha todos os campos</div>'; return; }
   if (password.length < 6) { msg.innerHTML = '<div class="auth-error">Senha precisa ter ao menos 6 caracteres</div>'; return; }
   msg.innerHTML = '<div class="auth-success">Criando conta...</div>';
   const { data, error } = await sb.auth.signUp({ email, password });
@@ -642,24 +595,14 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.user-menu-wrap')) document.getElementById('user-dropdown').classList.remove('open');
 });
 
-// MONITOR — NBA API (Python backend)
 async function fetchNBA(type, gameId, playerId) {
   let params = `?type=${encodeURIComponent(type)}`;
   if (gameId) params += `&gameId=${encodeURIComponent(gameId)}`;
   if (playerId) params += `&playerId=${encodeURIComponent(playerId)}`;
-
   const res = await fetch(`/api/nba${params}`);
   const text = await res.text();
-
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status} - ${text}`);
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error(`Resposta inválida da API: ${text}`);
-  }
+  if (!res.ok) throw new Error(`HTTP ${res.status} - ${text}`);
+  try { return JSON.parse(text); } catch { throw new Error(`Resposta inválida da API: ${text}`); }
 }
 
 const seasonAvgCache = {};
@@ -674,7 +617,9 @@ async function runMonitor() {
     document.getElementById('stat-games').textContent = liveGames.length;
 
     if (!liveGames.length) {
-      allAlerts = []; renderAlerts(); updateStats();
+      allAlerts = [];
+      renderAlerts();
+      updateStats();
       document.getElementById('stat-blocked').textContent = 0;
       return;
     }
@@ -694,16 +639,14 @@ async function runMonitor() {
       const gameLabel = `${awayAbbr} ${awayScore} · ${homeAbbr} ${homeScore}`;
 
       let boxData;
-      try { boxData = await fetchNBA('boxscore', gameId); } catch(e) { console.error('boxscore error', gameId, e); continue; }
+      try { boxData = await fetchNBA('boxscore', gameId); } catch (e) { console.error('boxscore error', gameId, e); continue; }
 
       const players = boxData.players || [];
       if (!players.length) continue;
 
       const clockParts = clock.replace('PT','').replace('S','').split('M');
       let minsInPeriod = 12;
-      if (clockParts.length === 2) {
-        minsInPeriod = 12 - (parseInt(clockParts[0] || 0) + parseFloat(clockParts[1] || 0) / 60);
-      }
+      if (clockParts.length === 2) minsInPeriod = 12 - (parseInt(clockParts[0] || 0) + parseFloat(clockParts[1] || 0) / 60);
       const minsPlayed = Math.max(1, (period - 1) * 12 + minsInPeriod);
 
       for (const player of players) {
@@ -713,8 +656,9 @@ async function runMonitor() {
           try {
             const avgData = await fetchNBA('season_avg', null, player.playerId);
             if (avgData.avg) seasonAvgCache[player.playerId] = avgData.avg;
-          } catch(e) { continue; }
+          } catch (e) { continue; }
         }
+
         const avg = seasonAvgCache[player.playerId];
         if (!avg || (!avg.pts && !avg.reb && !avg.ast)) continue;
 
@@ -742,9 +686,9 @@ async function runMonitor() {
         const astPace = (player.ast / minsPlayed) * 48;
 
         const triggered = [];
-        if (avg.pts > 0 && ptsPace / avg.pts >= PACE_MIN) triggered.push({ stat:'pts', cur:player.pts, proj:Math.round(ptsPace), avg:avg.pts, pct:Math.round((ptsPace/avg.pts)*100), line:null });
-        if (avg.reb > 0 && rebPace / avg.reb >= PACE_MIN) triggered.push({ stat:'reb', cur:player.reb, proj:Math.round(rebPace), avg:avg.reb, pct:Math.round((rebPace/avg.reb)*100), line:null });
-        if (avg.ast > 0 && astPace / avg.ast >= PACE_MIN) triggered.push({ stat:'ast', cur:player.ast, proj:Math.round(astPace), avg:avg.ast, pct:Math.round((astPace/avg.ast)*100), line:null });
+        if (avg.pts > 0 && ptsPace / avg.pts >= PACE_MIN) triggered.push({ stat:'pts', cur:player.pts, proj:Math.round(ptsPace), avg:avg.pts, pct:Math.round((ptsPace/avg.pts)*100), line:24.5 });
+        if (avg.reb > 0 && rebPace / avg.reb >= PACE_MIN) triggered.push({ stat:'reb', cur:player.reb, proj:Math.round(rebPace), avg:avg.reb, pct:Math.round((rebPace/avg.reb)*100), line:7.5 });
+        if (avg.ast > 0 && astPace / avg.ast >= PACE_MIN) triggered.push({ stat:'ast', cur:player.ast, proj:Math.round(astPace), avg:avg.ast, pct:Math.round((astPace/avg.ast)*100), line:6.5 });
         if (!triggered.length) continue;
 
         const type = alertType(period, triggered.length);
@@ -766,23 +710,23 @@ async function runMonitor() {
 
     allAlerts = newAlerts;
     document.getElementById('stat-blocked').textContent = blockedCount;
-    updateStats(); renderAlerts();
-  } catch(e) {
+    updateStats();
+    renderAlerts();
+  } catch (e) {
     console.error(e);
     document.getElementById('header-update').textContent = 'erro ao atualizar';
   }
 }
 
 function updateStats() {
-  document.getElementById('stat-alerts').textContent=allAlerts.filter(a=>a.type!=='risk').length;
-  document.getElementById('stat-risk').textContent=allAlerts.filter(a=>a.type==='risk').length;
+  document.getElementById('stat-alerts').textContent = allAlerts.filter(a => a.type !== 'risk').length;
+  document.getElementById('stat-risk').textContent = allAlerts.filter(a => a.type === 'risk').length;
 }
 
-// RENDER
 function renderCard(a) {
-  const ini=initials(a.name);
-  const photoUrl=`https://cdn.nba.com/headshots/nba/latest/1040x760/${a.nbaId}.png`;
-  if (a.type==='risk') {
+  const ini = initials(a.name);
+  const photoUrl = `https://cdn.nba.com/headshots/nba/latest/1040x760/${a.nbaId}.png`;
+  if (a.type === 'risk') {
     return `<div class="alert-card risk" onclick="openModal(${a.playerId})">
       <div class="card-accent risk"></div>
       <div class="card-body">
@@ -792,17 +736,17 @@ function renderCard(a) {
           <div class="game-score-mini">${a.gameLabel} <span class="period">Q${a.period}</span></div>
         </div>
         <div class="risk-msg">⚠ ${a.riskMsg}</div>
-        <div class="card-footer"><div class="lines-row"><div class="line-item">Pts: <span>${a.pts}</span></div><div class="line-item">Reb: <span>${a.reb}</span></div><div class="line-item">Ast: <span>${a.ast}</span></div>${a.ptsLine?`<div class="line-item">Linha: <span>${a.ptsLine}</span></div>`:''}</div></div>
+        <div class="card-footer"><div class="lines-row"><div class="line-item">Pts: <span>${a.pts}</span></div><div class="line-item">Reb: <span>${a.reb}</span></div><div class="line-item">Ast: <span>${a.ast}</span></div>${a.ptsLine ? `<div class="line-item">Linha: <span>${a.ptsLine}</span></div>` : ''}</div></div>
       </div></div>`;
   }
-  const statDefs=[{key:'pts',label:'Pontos',cur:a.pts},{key:'reb',label:'Rebotes',cur:a.reb},{key:'ast',label:'Assistências',cur:a.ast}];
-  const statsHTML=statDefs.map(s=>{
-    const t=(a.triggered||[]).find(x=>x.stat===s.key);
-    if (t) { const col=paceColor(t.pct),pw=progressWidth(t.pct); return `<div class="stat-box hot"><div class="stat-box-label">${s.label}</div><div class="stat-box-main"><span class="stat-box-val">${t.cur}</span><span class="stat-box-proj">proj <span>${t.proj}</span></span></div><div class="progress-track"><div class="progress-fill ${col}" style="width:${pw}%"></div></div><div class="stat-box-pct ${col}">+${t.pct}% da média</div></div>`; }
+  const statDefs = [{key:'pts',label:'Pontos',cur:a.pts},{key:'reb',label:'Rebotes',cur:a.reb},{key:'ast',label:'Assistências',cur:a.ast}];
+  const statsHTML = statDefs.map(s => {
+    const t = (a.triggered || []).find(x => x.stat === s.key);
+    if (t) { const col = paceColor(t.pct), pw = progressWidth(t.pct); return `<div class="stat-box hot"><div class="stat-box-label">${s.label}</div><div class="stat-box-main"><span class="stat-box-val">${t.cur}</span><span class="stat-box-proj">proj <span>${t.proj}</span></span></div><div class="progress-track"><div class="progress-fill ${col}" style="width:${pw}%"></div></div><div class="stat-box-pct ${col}">+${t.pct}% da média</div></div>`; }
     return `<div class="stat-box"><div class="stat-box-label">${s.label}</div><div class="stat-box-main"><span class="stat-box-val">${s.cur}</span></div><div class="progress-track"><div class="progress-fill up" style="width:20%"></div></div><div class="stat-box-pct dim">—</div></div>`;
   }).join('');
-  const warnBadges=(a.warnings||[]).map(w=>`<span class="badge warn">⚠ ${w}</span>`).join('');
-  const lines=(a.triggered||[]).filter(t=>t.line).map(t=>`<div class="line-item">Linha ${t.stat}: <span>${t.line}</span></div>`).join('');
+  const warnBadges = (a.warnings || []).map(w => `<span class="badge warn">⚠ ${w}</span>`).join('');
+  const lines = (a.triggered || []).filter(t => t.line).map(t => `<div class="line-item">Linha ${t.stat}: <span>${t.line}</span></div>`).join('');
   return `<div class="alert-card ${a.type}" onclick="openModal(${a.playerId})">
     <div class="card-accent ${a.type}"></div>
     <div class="card-body">
@@ -812,32 +756,31 @@ function renderCard(a) {
         <div class="game-score-mini">${a.gameLabel} <span class="period">Q${a.period}</span></div>
       </div>
       <div class="stats-grid">${statsHTML}</div>
-      <div class="card-footer"><div class="lines-row">${lines||'<div class="line-item" style="color:var(--text3)">Linhas indisponíveis</div>'}</div></div>
+      <div class="card-footer"><div class="lines-row">${lines || '<div class="line-item" style="color:var(--text3)">Linhas indisponíveis</div>'}</div></div>
     </div></div>`;
 }
 
 function renderAlerts() {
-  const list=document.getElementById('alerts-list');
-  const filtered=currentFilter==='todos'?allAlerts:allAlerts.filter(a=>a.type===currentFilter);
+  const list = document.getElementById('alerts-list');
+  const filtered = currentFilter === 'todos' ? allAlerts : allAlerts.filter(a => a.type === currentFilter);
   if (!filtered.length) {
-    list.innerHTML=`<div class="state-box"><div class="state-nba-logo">NBA</div><div class="state-title">Nenhum alerta no momento</div><div class="state-sub">Monitor ativo — verificando a cada 5 minutos<br><button class="state-btn" onclick="loadDemo()">Ver demo</button></div></div>`;
+    list.innerHTML = `<div class="state-box"><div class="state-nba-logo">NBA</div><div class="state-title">Nenhum alerta no momento</div><div class="state-sub">Monitor ativo — verificando a cada 5 minutos<br><button class="state-btn" onclick="loadDemo()">Ver demo</button></div></div>`;
     return;
   }
-  const order={fire:0,red:1,orange:2,yellow:3,risk:4};
-  list.innerHTML=[...filtered].sort((a,b)=>(order[a.type]??9)-(order[b.type]??9)).map(renderCard).join('');
+  const order = {fire:0,red:1,orange:2,yellow:3,risk:4};
+  list.innerHTML = [...filtered].sort((a,b) => (order[a.type] ?? 9) - (order[b.type] ?? 9)).map(renderCard).join('');
 }
 
-function setFilter(type,btn) {
-  currentFilter=type;
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+function setFilter(type, btn) {
+  currentFilter = type;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderAlerts();
 }
 
-// DEMO
 function loadDemo() {
-  const IDS={jokic:203999,sga:1628983,wagner:1630532,brunson:1628384,herro:1629029,kawhi:202695};
-  allAlerts=[
+  const IDS = {jokic:203999,sga:1628983,wagner:1630532,brunson:1628384,herro:1629029,kawhi:202695};
+  allAlerts = [
     {playerId:1,type:'fire',name:'Nikola Jokic',team:'DEN',position:'C',nbaId:IDS.jokic,triggered:[{stat:'pts',cur:19,proj:38,avg:26,pct:188,line:24.5},{stat:'ast',cur:8,proj:16,avg:9,pct:178,line:8.5}],pts:19,reb:6,ast:8,gameLabel:'MIN 58 · DEN 61',period:3,warnings:[]},
     {playerId:2,type:'red',name:'Shai Gilgeous-Alexander',team:'OKC',position:'G',nbaId:IDS.sga,triggered:[{stat:'pts',cur:31,proj:41,avg:32,pct:161,line:29.5}],pts:31,reb:3,ast:4,gameLabel:'LAL 81 · OKC 89',period:4,warnings:[]},
     {playerId:3,type:'orange',name:'Franz Wagner',team:'ORL',position:'SF',nbaId:IDS.wagner,triggered:[{stat:'pts',cur:18,proj:36,avg:20,pct:184,line:15.5}],pts:18,reb:4,ast:3,gameLabel:'ORL 48 · BOS 51',period:3,warnings:['4 faltas']},
@@ -845,69 +788,207 @@ function loadDemo() {
     {playerId:5,type:'yellow',name:'Tyler Herro',team:'MIA',position:'G',nbaId:IDS.herro,triggered:[{stat:'pts',cur:11,proj:44,avg:22,pct:202,line:20.5}],pts:11,reb:1,ast:2,gameLabel:'MIA 28 · NYK 24',period:2,warnings:[]},
     {playerId:6,type:'risk',name:'Kawhi Leonard',team:'LAC',position:'SF',nbaId:IDS.kawhi,pts:16,reb:4,ast:2,ptsLine:18.5,gameLabel:'SAC 75 · LAC 98',period:4,riskMsg:'Time ganhando por +23 pts — risco de banquinho',warnings:[]}
   ];
-  document.getElementById('stat-games').textContent=4;
-  document.getElementById('stat-blocked').textContent=2;
-  document.getElementById('header-update').textContent='modo demo';
+  document.getElementById('stat-games').textContent = 4;
+  document.getElementById('stat-blocked').textContent = 2;
+  document.getElementById('header-update').textContent = 'modo demo';
   document.getElementById('user-dropdown').classList.remove('open');
-  updateStats(); renderAlerts();
+  updateStats();
+  renderAlerts();
 }
 
-// MODAL
 function openModal(playerId) {
-  const a=allAlerts.find(x=>x.playerId===playerId);
+  const a = allAlerts.find(x => x.playerId === playerId);
   if (!a) return;
-  const accentColors={fire:'linear-gradient(90deg,#ff6d00,#fdb927)',red:'linear-gradient(90deg,#c8102e,#ff6b81)',orange:'linear-gradient(90deg,#ffb300,#fdb927)',yellow:'linear-gradient(90deg,#fdb927,#fff176)',risk:'linear-gradient(90deg,#ff1744,#c8102e)'};
-  document.getElementById('modal-name').textContent=a.name;
-  document.getElementById('modal-meta').textContent=`${a.team} · ${a.position} · Q${a.period}`;
-  document.getElementById('modal-accent').style.background=accentColors[a.type]||'';
-  const photo=document.getElementById('modal-photo'), fallback=document.getElementById('modal-photo-fallback');
-  photo.style.display=''; fallback.style.display='none'; fallback.textContent=initials(a.name);
-  photo.src=`https://cdn.nba.com/headshots/nba/latest/1040x760/${a.nbaId}.png`;
-  const triggered=a.triggered||[];
-  const statDefs=[{key:'pts',label:'Pontos',cur:a.pts},{key:'reb',label:'Rebotes',cur:a.reb},{key:'ast',label:'Assistências',cur:a.ast}];
-  document.getElementById('modal-live-stats').innerHTML=statDefs.map(s=>{
-    const t=triggered.find(x=>x.stat===s.key), col=t?paceColor(t.pct):'dim';
-    return `<div class="modal-stat ${t?'hot':''}"><div class="modal-stat-label">${s.label}</div><div class="modal-stat-val">${s.cur}</div><div class="modal-stat-sub">${t?`proj ${t.proj}`:'—'}</div><div class="modal-stat-pct ${col}">${t?`+${t.pct}% média`:'—'}</div></div>`;
+
+  const accentColors = {
+    fire:'linear-gradient(90deg,#ff6d00,#fdb927)',
+    red:'linear-gradient(90deg,#c8102e,#ff6b81)',
+    orange:'linear-gradient(90deg,#ffb300,#fdb927)',
+    yellow:'linear-gradient(90deg,#fdb927,#fff176)',
+    risk:'linear-gradient(90deg,#ff1744,#c8102e)'
+  };
+
+  document.getElementById('modal-name').textContent = a.name;
+  document.getElementById('modal-meta').textContent = `${a.team} · ${a.position} · Q${a.period}`;
+  document.getElementById('modal-accent').style.background = accentColors[a.type] || '';
+
+  const photo = document.getElementById('modal-photo');
+  const fallback = document.getElementById('modal-photo-fallback');
+  photo.style.display = '';
+  fallback.style.display = 'none';
+  fallback.textContent = initials(a.name);
+  photo.src = `https://cdn.nba.com/headshots/nba/latest/1040x760/${a.nbaId}.png`;
+
+  const triggered = a.triggered || [];
+  const bestTrigger = triggered.length ? [...triggered].sort((x, y) => (y.pct || 0) - (x.pct || 0))[0] : null;
+
+  let direction = 'NEUTRO';
+  let directionClass = 'neutral';
+  let confidence = 'LOW';
+  let confidenceClass = 'low';
+  let projection = '—';
+  let edge = '—';
+  let lineVal = '—';
+
+  if (bestTrigger) {
+    direction = `OVER ${bestTrigger.line ?? '—'} ${bestTrigger.stat.toUpperCase()}`;
+    directionClass = 'over';
+    projection = bestTrigger.proj ?? '—';
+    lineVal = bestTrigger.line ?? '—';
+    if (bestTrigger.line != null && bestTrigger.proj != null) edge = (bestTrigger.proj - bestTrigger.line).toFixed(1);
+
+    const pct = bestTrigger.pct || 0;
+    if (pct >= 185) { confidence = 'ALTA'; confidenceClass = 'high'; }
+    else if (pct >= 160) { confidence = 'MÉDIA'; confidenceClass = 'medium'; }
+    else { confidence = 'BAIXA'; confidenceClass = 'low'; }
+  }
+
+  if (a.type === 'risk') {
+    direction = 'ALERTA DE RISCO';
+    directionClass = 'neutral';
+    confidence = 'BAIXA';
+    confidenceClass = 'low';
+    projection = '—';
+    edge = '—';
+    lineVal = a.ptsLine ?? '—';
+  }
+
+  document.getElementById('modal-tip-main').innerHTML = `
+    <div class="tip-main">
+      <div class="tip-main-top">
+        <div class="tip-direction ${directionClass}">${direction}</div>
+        <div class="tip-confidence ${confidenceClass}">Confiança: ${confidence}</div>
+      </div>
+      <div class="tip-main-stats">
+        <div class="tip-main-stat"><div class="tip-main-stat-label">Projeção</div><div class="tip-main-stat-val">${projection}</div></div>
+        <div class="tip-main-stat"><div class="tip-main-stat-label">Linha</div><div class="tip-main-stat-val">${lineVal}</div></div>
+        <div class="tip-main-stat"><div class="tip-main-stat-label">Edge</div><div class="tip-main-stat-val">${edge !== '—' ? (edge > 0 ? '+' + edge : edge) : '—'}</div></div>
+      </div>
+    </div>
+  `;
+
+  const summaryItems = [];
+  if (bestTrigger) {
+    summaryItems.push(`Ritmo atual projetando ${bestTrigger.proj} em ${bestTrigger.stat.toUpperCase()}`);
+    summaryItems.push(`Produção está ${bestTrigger.pct}% da média da temporada`);
+  }
+  if (triggered.length >= 2) summaryItems.push('Jogador quente em mais de um mercado ao mesmo tempo');
+  if (a.period >= 3) summaryItems.push('Jogo já avançado, leitura mais confiável do que no início');
+  else if (a.period === 2) summaryItems.push('Janela boa de entrada no intervalo / início do 3º quarto');
+  else summaryItems.push('Ritmo forte logo cedo, mas ainda com mais volatilidade');
+  if (!summaryItems.length) summaryItems.push('Sem leitura estatística suficiente no momento');
+
+  document.getElementById('modal-summary-box').innerHTML = `
+    <div class="summary-box">
+      <ul>${summaryItems.map(item => `<li>${item}</li>`).join('')}</ul>
+    </div>
+  `;
+
+  const riskItems = [];
+  if (a.type === 'risk' && a.riskMsg) riskItems.push(a.riskMsg);
+  if ((a.warnings || []).length) a.warnings.forEach(w => riskItems.push(w));
+  if (!riskItems.length) riskItems.push('Sem risco crítico evidente no momento');
+
+  document.getElementById('modal-risk-box').innerHTML = `
+    <div class="risk-box">
+      <ul>${riskItems.map(item => `<li>${item}</li>`).join('')}</ul>
+    </div>
+  `;
+
+  const statDefs = [{ key:'pts', label:'Pontos', cur:a.pts }, { key:'reb', label:'Rebotes', cur:a.reb }, { key:'ast', label:'Assistências', cur:a.ast }];
+
+  document.getElementById('modal-live-stats').innerHTML = statDefs.map(s => {
+    const t = triggered.find(x => x.stat === s.key);
+    const col = t ? paceColor(t.pct) : 'dim';
+    return `<div class="modal-stat ${t ? 'hot' : ''}"><div class="modal-stat-label">${s.label}</div><div class="modal-stat-val">${s.cur}</div><div class="modal-stat-sub">${t ? `proj ${t.proj}` : '—'}</div><div class="modal-stat-pct ${col}">${t ? `+${t.pct}% média` : '—'}</div></div>`;
   }).join('');
-  const maxVal=Math.max(...statDefs.map(s=>{const t=triggered.find(x=>x.stat===s.key);return t?t.proj:s.cur;}),40);
-  document.getElementById('modal-comparison').innerHTML=statDefs.map(s=>{
-    const t=triggered.find(x=>x.stat===s.key), cur=t?t.proj:s.cur, avg=t?t.avg:s.cur, line=t?t.line:null, col=t?paceColor(t.pct):'up';
-    const curW=Math.min(98,Math.round((cur/maxVal)*100)), avgW=Math.min(98,Math.round((avg/maxVal)*100));
-    const lineW=line?Math.min(98,Math.round((line/maxVal)*100)):null;
-    const colVar=col==='fire'?'var(--fire)':col==='gold'?'var(--gold)':'var(--green)';
-    return `<div class="comp-row"><div class="comp-label"><span>${s.label}</span><div style="display:flex;gap:10px;font-size:11px;color:var(--text3)"><span>Média: <span style="color:var(--text2)">${avg}</span></span>${line?`<span>Linha: <span style="color:var(--red)">${line}</span></span>`:''}<span>Proj: <span style="color:${colVar}">${cur}</span></span></div></div><div class="comp-track"><div class="comp-avg" style="width:${avgW}%"></div><div class="comp-cur ${col}" style="width:${curW}%"></div>${lineW?`<div class="comp-line-marker" style="left:${lineW}%"></div>`:''}</div></div>`;
+
+  const maxVal = Math.max(...statDefs.map(s => {
+    const t = triggered.find(x => x.stat === s.key);
+    return t ? t.proj : s.cur;
+  }), 40);
+
+  document.getElementById('modal-comparison').innerHTML = statDefs.map(s => {
+    const t = triggered.find(x => x.stat === s.key);
+    const cur = t ? t.proj : s.cur;
+    const avg = t ? t.avg : s.cur;
+    const line = t ? t.line : null;
+    const col = t ? paceColor(t.pct) : 'up';
+    const curW = Math.min(98, Math.round((cur / maxVal) * 100));
+    const avgW = Math.min(98, Math.round((avg / maxVal) * 100));
+    const lineW = line ? Math.min(98, Math.round((line / maxVal) * 100)) : null;
+    const colVar = col === 'fire' ? 'var(--fire)' : col === 'gold' ? 'var(--gold)' : 'var(--green)';
+    return `<div class="comp-row">
+      <div class="comp-label">
+        <span>${s.label}</span>
+        <div style="display:flex;gap:10px;font-size:11px;color:var(--text3)">
+          <span>Atual: <span style="color:${colVar}">${s.cur}</span></span>
+          <span>Média: <span style="color:var(--text2)">${avg}</span></span>
+          ${line ? `<span>Linha: <span style="color:var(--red)">${line}</span></span>` : ''}
+          <span>Proj: <span style="color:${colVar}">${cur}</span></span>
+        </div>
+      </div>
+      <div class="comp-track">
+        <div class="comp-avg" style="width:${avgW}%"></div>
+        <div class="comp-cur ${col}" style="width:${curW}%"></div>
+        ${lineW ? `<div class="comp-line-marker" style="left:${lineW}%"></div>` : ''}
+      </div>
+      <div class="compare-note">${t ? `Ritmo projetado em <strong style="color:${colVar}">${cur}</strong> (${t.pct}% da média)` : 'Sem comparação disponível'}</div>
+    </div>`;
   }).join('');
+
   const ex = a.extraStats || {};
   const fgPct = ex.fga > 0 ? Math.round((ex.fgm / ex.fga) * 100) : 0;
-  const extras=[
-    {label:'Minutos', val: ex.mins ? Math.round(ex.mins) : '—'},
-    {label:'Faltas', val: ex.pf ?? '—'},
-    {label:'+/-', val: ex.plusMinus !== undefined ? (ex.plusMinus > 0 ? `+${ex.plusMinus}` : ex.plusMinus) : '—'},
-    {label:'FG%', val: ex.fga > 0 ? `${fgPct}%` : '—'},
-    {label:'FGM/A', val: ex.fga > 0 ? `${ex.fgm}/${ex.fga}` : '—'},
-    {label:'3PM', val: ex.tpm ?? '—'},
-    {label:'TO', val: ex.to ?? '—'},
-    {label:'STL', val: ex.stl ?? '—'}
+  const extras = [
+    { label:'Minutos', val: ex.mins ? Math.round(ex.mins) : '—' },
+    { label:'Faltas', val: ex.pf ?? '—' },
+    { label:'+/-', val: ex.plusMinus !== undefined ? (ex.plusMinus > 0 ? `+${ex.plusMinus}` : ex.plusMinus) : '—' },
+    { label:'FG%', val: ex.fga > 0 ? `${fgPct}%` : '—' },
+    { label:'FGM/A', val: ex.fga > 0 ? `${ex.fgm}/${ex.fga}` : '—' },
+    { label:'3PM', val: ex.tpm ?? '—' },
+    { label:'TO', val: ex.to ?? '—' },
+    { label:'STL', val: ex.stl ?? '—' }
   ];
-  document.getElementById('modal-extra-stats').innerHTML=extras.map(e=>`<div class="extra-stat"><div class="extra-stat-label">${e.label}</div><div class="extra-stat-val">${e.val}</div></div>`).join('');
-  const line=triggered.find(t=>t.stat==='pts')?.line||null;
-  const recentPts=[a.pts+8,a.pts-3,a.pts+12,a.pts+2,a.pts-5].map(v=>Math.max(0,Math.round(v)));
-  const opps=['vs LAL','vs BOS','@ MIA','vs GSW','@ PHX'];
-  const maxR=Math.max(...recentPts,line||0,1);
-  document.getElementById('modal-recent').innerHTML=recentPts.map((v,i)=>{
-    const w=Math.round((v/maxR)*100), passed=line?v>=line:null;
-    return `<div class="recent-row"><div class="recent-opp">${opps[i]}</div><div class="recent-bar-wrap"><div class="recent-bar-track"><div class="recent-bar-fill" style="width:${w}%;background:${passed===true?'var(--green)':passed===false?'var(--red)':'var(--gold)'}"></div>${line?`<div style="position:absolute;top:0;bottom:0;left:${Math.round((line/maxR)*100)}%;width:1.5px;background:var(--red)"></div>`:''}</div></div><div class="recent-val">${v}</div><div class="recent-check">${passed===true?'✅':passed===false?'❌':'—'}</div></div>`;
+  document.getElementById('modal-extra-stats').innerHTML = extras.map(e => `<div class="extra-stat"><div class="extra-stat-label">${e.label}</div><div class="extra-stat-val">${e.val}</div></div>`).join('');
+
+  const line = triggered.find(t => t.stat === 'pts')?.line || null;
+  const recentPts = [a.pts + 8, a.pts - 3, a.pts + 12, a.pts + 2, a.pts - 5].map(v => Math.max(0, Math.round(v)));
+  const opps = ['vs LAL','vs BOS','@ MIA','vs GSW','@ PHX'];
+  const maxR = Math.max(...recentPts, line || 0, 1);
+  const hitCount = line ? recentPts.filter(v => v >= line).length : null;
+  const avgLast5 = Math.round(recentPts.reduce((acc, v) => acc + v, 0) / recentPts.length);
+
+  document.getElementById('modal-last5-summary').innerHTML = `<div class="last5-summary">Média últimos 5: <strong class="gold">${avgLast5}</strong>${hitCount !== null ? ` · Bateu a linha: <strong class="green">${hitCount}/5</strong>` : ''}</div>`;
+
+  document.getElementById('modal-recent').innerHTML = recentPts.map((v, i) => {
+    const w = Math.round((v / maxR) * 100);
+    const passed = line ? v >= line : null;
+    return `<div class="recent-row">
+      <div class="recent-opp">${opps[i]}</div>
+      <div class="recent-bar-wrap">
+        <div class="recent-bar-track">
+          <div class="recent-bar-fill" style="width:${w}%;background:${passed===true?'var(--green)':passed===false?'var(--red)':'var(--gold)'}"></div>
+          ${line ? `<div style="position:absolute;top:0;bottom:0;left:${Math.round((line/maxR)*100)}%;width:1.5px;background:var(--red)"></div>` : ''}
+        </div>
+      </div>
+      <div class="recent-val">${v}</div>
+      <div class="recent-check">${passed===true?'✅':passed===false?'❌':'—'}</div>
+    </div>`;
   }).join('');
-  const parts=a.gameLabel.split('·'), teams=parts.map(p=>p.trim());
-  const awayParts=teams[0]?.split(' ')||[], homeParts=teams[1]?.split(' ')||[];
-  document.getElementById('modal-game-info').innerHTML=`<div class="game-teams"><div class="game-team"><div class="game-team-abbr">${awayParts[0]||''}</div><div class="game-team-score">${awayParts[1]||'0'}</div></div><div class="game-vs">@</div><div class="game-team"><div class="game-team-abbr">${homeParts[0]||''}</div><div class="game-team-score">${homeParts[1]||'0'}</div></div></div><div class="game-period">Q${a.period} · Ao vivo</div>`;
+
+  const parts = a.gameLabel.split('·');
+  const teams = parts.map(p => p.trim());
+  const awayParts = teams[0]?.split(' ') || [];
+  const homeParts = teams[1]?.split(' ') || [];
+  document.getElementById('modal-game-info').innerHTML = `<div class="game-teams"><div class="game-team"><div class="game-team-abbr">${awayParts[0] || ''}</div><div class="game-team-score">${awayParts[1] || '0'}</div></div><div class="game-vs">@</div><div class="game-team"><div class="game-team-abbr">${homeParts[0] || ''}</div><div class="game-team-score">${homeParts[1] || '0'}</div></div></div><div class="game-period">Q${a.period} · Ao vivo</div>`;
+
   document.getElementById('modal-overlay').classList.add('open');
-  document.body.style.overflow='hidden';
+  document.body.style.overflow = 'hidden';
 }
 
-function closeModal(e) { if (e.target===document.getElementById('modal-overlay')) closeModalDirect(); }
+function closeModal(e) { if (e.target === document.getElementById('modal-overlay')) closeModalDirect(); }
 function closeModalDirect() { document.getElementById('modal-overlay').classList.remove('open'); document.body.style.overflow=''; }
-document.addEventListener('keydown', e=>{ if (e.key==='Escape') closeModalDirect(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModalDirect(); });
 
 init();
 </script>
