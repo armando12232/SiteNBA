@@ -612,10 +612,25 @@ async function handleSignup() {
   if (data.session) showDashboard(data.user);
 }
 
+function startMonitor() {
+  if (isRunning) return;
+  isRunning = true;
+  runMonitor();
+  if (monitorInterval) clearInterval(monitorInterval);
+  monitorInterval = setInterval(runMonitor, 300000);
+}
+
+function stopMonitor() {
+  if (monitorInterval) {
+    clearInterval(monitorInterval);
+    monitorInterval = null;
+  }
+  isRunning = false;
+}
+
 async function handleLogout() {
   await sb.auth.signOut();
-  clearInterval(monitorInterval);
-  isRunning = false;
+  stopMonitor();
   allAlerts = [];
   showAuth();
 }
@@ -629,12 +644,22 @@ document.addEventListener('click', e => {
 
 // MONITOR — NBA API (Python backend)
 async function fetchNBA(type, gameId, playerId) {
-  let params = `?type=${type}`;
-  if (gameId) params += `&gameId=${gameId}`;
-  if (playerId) params += `&playerId=${playerId}`;
+  let params = `?type=${encodeURIComponent(type)}`;
+  if (gameId) params += `&gameId=${encodeURIComponent(gameId)}`;
+  if (playerId) params += `&playerId=${encodeURIComponent(playerId)}`;
+
   const res = await fetch(`/api/nba${params}`);
-  if (!res.ok) throw new Error(res.status);
-  return res.json();
+  const text = await res.text();
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} - ${text}`);
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Resposta inválida da API: ${text}`);
+  }
 }
 
 const seasonAvgCache = {};
@@ -746,8 +771,6 @@ async function runMonitor() {
     console.error(e);
     document.getElementById('header-update').textContent = 'erro ao atualizar';
   }
-}
-
 }
 
 function updateStats() {
