@@ -744,10 +744,10 @@ async function runMonitor() {
       const gameLabel = `${awayAbbr} ${awayScore} · ${homeAbbr} ${homeScore}`;
 
       let boxData;
-      try { boxData = await fetchESPN('boxscore', gameId); } catch { continue; }
+      try { boxData = await fetchESPN('boxscore', gameId); } catch(e) { console.error('boxscore error', gameId, e); continue; }
 
       const players = parseESPNStats(boxData?.boxscore);
-      if (!players.length) continue;
+      console.log(`[${gameId}] players parsed:`, players.length, players.slice(0,2));
 
       const clockParts = clock.replace(/"/g, '').split(':');
       let minsInPeriod = 12;
@@ -760,7 +760,8 @@ async function runMonitor() {
         if (player.mins < 3) continue;
 
         const avg = await getSeasonAvg(player.id);
-        if (!avg || (!avg.pts && !avg.reb && !avg.ast)) continue;
+        if (!avg || (!avg.pts && !avg.reb && !avg.ast)) { console.log('no avg for', player.name); continue; }
+        console.log(`${player.name}: pts=${player.pts} avg.pts=${avg?.pts} pace=${((player.pts/minsPlayed)*48).toFixed(1)}`);
 
         const isHomePlayer = player.teamId === homeTeam?.team?.id;
         const teamScore = isHomePlayer ? homeScore : awayScore;
