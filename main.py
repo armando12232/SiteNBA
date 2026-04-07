@@ -2,7 +2,8 @@ from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-import requests
+from nba_api.stats.static import players
+from nba_api.stats.endpoints import playercareerstats
 
 app = FastAPI(
     title="Site NBA API",
@@ -18,9 +19,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-NBA_API_BASE = "https://www.balldontlie.io/v1"
-REQUEST_TIMEOUT = 15
-
 
 @app.get("/")
 def root() -> Dict[str, str]:
@@ -32,33 +30,11 @@ def health() -> Dict[str, str]:
     return {"status": "healthy"}
 
 
-def fetch_json(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
-    try:
-        response = requests.get(url, params=params, timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-        return response.json()
-    except requests.Timeout:
-        raise HTTPException(
-            status_code=504,
-            detail="A consulta demorou demais para responder."
-        )
-    except requests.HTTPError:
-        raise HTTPException(
-            status_code=response.status_code,
-            detail=f"Erro ao consultar API externa: {response.text}"
-        )
-    except Exception as exc:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro interno: {str(exc)}"
-        )
-
-
 @app.get("/pregame")
 def pregame(
     playerId: Optional[int] = Query(
         default=None,
-        description="ID do jogador. Se não informar, a rota retorna uma mensagem padrão."
+        description="ID do jogador. Ex.: 2544 para LeBron James"
     )
 ) -> Dict[str, Any]:
     if playerId is None:
@@ -68,14 +44,38 @@ def pregame(
             "example": "/pregame?playerId=2544"
         }
 
-    player_url = f"{NBA_API_BASE}/players/{playerId}"
-    player_data = fetch_json(player_url)
+    try:
+        all_players = players.get_players()
+        player_info = next((p for p in all_players if p["id"] == playerId), None)
 
-    return {
-        "status": "ok",
-        "playerId": playerId,
-        "player": player_data
-    }
+        if not player_info:
+            raise HTTPException(status_code=404, detail="Jogador não encontrado.")
+
+        career = playercareerstats.PlayerCareerStats(player_id=playerId)
+        dfs = career.get_data_frames()
+
+        career_stats = []
+        if dfs and len(dfs) > 0:
+            df = dfs[0]
+            career_stats = df.tail(5).to_dict(orient="records")
+
+        return {
+            "status": "ok",
+            "playerId": playerId,
+            "player": {
+                "id": player_info["id"],
+                "full_name": player_info["full_name"],
+                "first_name": player_info["first_name"],
+                "last_name": player_info["last_name"],
+                "is_active": player_info["is_active"],
+            },
+            "recent_seasons": career_stats
+        }
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(exc)}")
 
 
 @app.get("/pregame/tips")
