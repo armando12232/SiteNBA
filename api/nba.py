@@ -47,9 +47,9 @@ def get_boxscore(game_id):
             s = p.get("statistics", {})
             mins_str = s.get("minutesCalculated", "PT00M00S")
             try:
-                mins = float(mins_str.replace("PT", "").replace("M", ".").replace("S", ""))
-                mins = int(mins_str.replace("PT","").split("M")[0])
-            except:
+                mins_part = mins_str.replace("PT", "").split("M")[0]
+                mins = int(mins_part) if mins_part.isdigit() else 0
+            except Exception:
                 mins = 0
 
             players.append({
@@ -89,7 +89,7 @@ def get_season_averages(player_id):
             "reb": row.get("REB", 0) or 0,
             "ast": row.get("AST", 0) or 0,
         }
-    except:
+    except Exception:
         return None
 
 
@@ -100,42 +100,72 @@ class handler(BaseHTTPRequestHandler):
         params = parse_qs(parsed.query)
         req_type = params.get("type", [""])[0]
 
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-
         try:
             if req_type == "scoreboard":
                 result = get_live_games()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
                 self.wfile.write(json.dumps({"games": result}).encode())
+                return
 
             elif req_type == "boxscore":
                 game_id = params.get("gameId", [""])[0]
                 if not game_id:
+                    self.send_response(400)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.end_headers()
                     self.wfile.write(json.dumps({"error": "missing gameId"}).encode())
                     return
+
                 players = get_boxscore(game_id)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
                 self.wfile.write(json.dumps({"players": players}).encode())
+                return
 
             elif req_type == "season_avg":
                 player_id = params.get("playerId", [""])[0]
                 if not player_id:
+                    self.send_response(400)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.end_headers()
                     self.wfile.write(json.dumps({"error": "missing playerId"}).encode())
                     return
+
                 avg = get_season_averages(player_id)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
                 self.wfile.write(json.dumps({"avg": avg}).encode())
+                return
 
             else:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
                 self.wfile.write(json.dumps({"error": "invalid type"}).encode())
+                return
 
         except Exception as e:
+            self.send_response(500)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode())
 
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET,OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
     def log_message(self, format, *args):
