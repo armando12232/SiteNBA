@@ -277,6 +277,167 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
   .modal-hero-name { font-size: 22px; }
   .tip-main-stats { grid-template-columns: 1fr; }
 }
+
+/* NAV VIEW */
+.view-switch {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.view-btn {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text3);
+  cursor: pointer;
+  font-family: var(--body);
+  transition: all 0.15s;
+}
+.view-btn.active {
+  color: var(--text);
+  background: var(--bg3);
+  border-color: var(--border2);
+}
+.pregame-wrap { display: none; }
+.pregame-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap: 12px;
+}
+.pregame-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.pregame-card:hover { border-color: var(--border2); }
+.pregame-top {
+  padding: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.pregame-body { padding: 14px; }
+.pregame-player-photo-wrap {
+  width: 58px;
+  height: 58px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  flex-shrink: 0;
+}
+.pregame-player-photo { width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+.pregame-name {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.pregame-meta {
+  font-size: 12px;
+  color: var(--text3);
+}
+.pregame-main-tip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.pregame-tip-line {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--green);
+}
+.pregame-conf {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 8px;
+  border-radius: 999px;
+}
+.pregame-conf.high {
+  background: rgba(0,230,118,0.12);
+  color: var(--green);
+  border: 1px solid rgba(0,230,118,0.25);
+}
+.pregame-conf.medium {
+  background: rgba(253,185,39,0.12);
+  color: var(--gold);
+  border: 1px solid rgba(253,185,39,0.25);
+}
+.pregame-conf.low {
+  background: rgba(255,23,68,0.08);
+  color: var(--danger);
+  border: 1px solid rgba(255,23,68,0.22);
+}
+.pregame-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.pregame-stat {
+  background: var(--bg3);
+  border-radius: 10px;
+  padding: 10px 8px;
+  text-align: center;
+}
+.pregame-stat-label {
+  font-size: 9px;
+  color: var(--text3);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.pregame-stat-val {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 800;
+}
+.pregame-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pregame-hitrate {
+  font-size: 12px;
+  color: var(--text2);
+}
+.pregame-hitrate strong { color: var(--green); }
+.pregame-summary {
+  font-size: 12px;
+  color: var(--text3);
+  line-height: 1.5;
+}
+.pregame-loading {
+  text-align: center;
+  padding: 50px 20px;
+  color: var(--text3);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+@media (max-width: 800px) {
+  .pregame-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .pregame-stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+
 </style>
 </head>
 <body>
@@ -385,6 +546,12 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
         <div class="stat-card s-blocked"><div class="stat-label">bloqueados</div><div class="stat-value amber" id="stat-blocked">—</div></div>
       </div>
 
+      <div class="view-switch">
+        <button class="view-btn active" id="view-live-btn" onclick="switchView('live')">Ao vivo</button>
+        <button class="view-btn" id="view-pregame-btn" onclick="switchView('pregame')">Pré-jogo</button>
+      </div>
+
+      <div id="live-view">
       <div class="filters">
         <button class="filter-btn active" onclick="setFilter('todos',this)">Todos</button>
         <button class="filter-btn f-fire" onclick="setFilter('fire',this)">🔥 Duplo/Triplo</button>
@@ -405,6 +572,16 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
           <div class="state-title">Iniciando monitor</div>
           <div class="state-sub">Buscando jogos ao vivo...</div>
         </div>
+      </div>
+      </div>
+
+      <div class="pregame-wrap" id="pregame-view">
+        <div class="section-header">
+          <span class="section-title">Radar pré-jogo</span>
+          <div class="section-line"></div>
+        </div>
+        <div class="pregame-loading" id="pregame-loading">Carregando radar pré-jogo...</div>
+        <div class="pregame-grid" id="pregame-grid" style="display:none"></div>
       </div>
     </div>
   </div>
@@ -989,6 +1166,121 @@ function openModal(playerId) {
 function closeModal(e) { if (e.target === document.getElementById('modal-overlay')) closeModalDirect(); }
 function closeModalDirect() { document.getElementById('modal-overlay').classList.remove('open'); document.body.style.overflow=''; }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModalDirect(); });
+
+
+let currentView = 'live';
+const PREGAME_PLAYERS = [
+  { id: 203999, name: 'Nikola Jokic' },
+  { id: 1628983, name: 'Shai Gilgeous-Alexander' },
+  { id: 1628384, name: 'Jalen Brunson' },
+  { id: 1629029, name: 'Tyler Herro' },
+  { id: 1630532, name: 'Franz Wagner' },
+  { id: 202695, name: 'Kawhi Leonard' }
+];
+
+function switchView(view) {
+  currentView = view;
+  const liveBtn = document.getElementById('view-live-btn');
+  const preBtn = document.getElementById('view-pregame-btn');
+  const liveView = document.getElementById('live-view');
+  const preView = document.getElementById('pregame-view');
+
+  liveBtn.classList.toggle('active', view === 'live');
+  preBtn.classList.toggle('active', view === 'pregame');
+  liveView.style.display = view === 'live' ? 'block' : 'none';
+  preView.style.display = view === 'pregame' ? 'block' : 'none';
+
+  if (view === 'pregame') loadPregame();
+}
+
+function confidenceFromEdge(edge) {
+  if (edge >= 5) return { text: 'Alta', cls: 'high' };
+  if (edge >= 2.5) return { text: 'Média', cls: 'medium' };
+  return { text: 'Baixa', cls: 'low' };
+}
+
+async function loadPregame() {
+  const loading = document.getElementById('pregame-loading');
+  const grid = document.getElementById('pregame-grid');
+  loading.style.display = 'block';
+  grid.style.display = 'none';
+  grid.innerHTML = '';
+
+  try {
+    const results = await Promise.all(
+      PREGAME_PLAYERS.map(async p => {
+        try {
+          return await fetchNBA('pregame', null, p.id);
+        } catch (e) {
+          return { error: String(e), player_id: p.id, player_name: p.name };
+        }
+      })
+    );
+
+    const valid = results.filter(r => !r.error && r.player_name);
+    if (!valid.length) {
+      loading.innerHTML = 'Não foi possível carregar o radar pré-jogo agora.';
+      return;
+    }
+
+    grid.innerHTML = valid.map(renderPregameCard).join('');
+    loading.style.display = 'none';
+    grid.style.display = 'grid';
+  } catch (e) {
+    console.error(e);
+    loading.innerHTML = 'Erro ao carregar radar pré-jogo.';
+  }
+}
+
+function renderPregameCard(p) {
+  const photoUrl = `https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png`;
+  const conf = confidenceFromEdge(p.edge_points || 0);
+
+  return `
+    <div class="pregame-card">
+      <div class="card-accent fire"></div>
+      <div class="pregame-top">
+        <div class="pregame-player-photo-wrap">
+          <img class="pregame-player-photo" src="${photoUrl}" alt="${p.player_name}" onerror="this.style.display='none'">
+        </div>
+        <div>
+          <div class="pregame-name">${p.player_name}</div>
+          <div class="pregame-meta">${p.team_abbr || 'NBA'} · ${p.next_game || 'Próximo jogo'}</div>
+        </div>
+      </div>
+      <div class="pregame-body">
+        <div class="pregame-main-tip">
+          <div class="pregame-tip-line">OVER ${p.synthetic_lines?.pts ?? '—'} PTS</div>
+          <div class="pregame-conf ${conf.cls}">${conf.text}</div>
+        </div>
+
+        <div class="pregame-stats">
+          <div class="pregame-stat">
+            <div class="pregame-stat-label">Temporada</div>
+            <div class="pregame-stat-val">${p.season_avg?.pts ?? '—'}</div>
+          </div>
+          <div class="pregame-stat">
+            <div class="pregame-stat-label">Últ. 5</div>
+            <div class="pregame-stat-val">${p.last5_avg?.pts ?? '—'}</div>
+          </div>
+          <div class="pregame-stat">
+            <div class="pregame-stat-label">Últ. 10</div>
+            <div class="pregame-stat-val">${p.last10_avg?.pts ?? '—'}</div>
+          </div>
+          <div class="pregame-stat">
+            <div class="pregame-stat-label">Edge</div>
+            <div class="pregame-stat-val">${p.edge_points > 0 ? '+' : ''}${p.edge_points ?? '—'}</div>
+          </div>
+        </div>
+
+        <div class="pregame-footer">
+          <div class="pregame-hitrate">Hit rate L10: <strong>${p.hit_rates?.pts_last10 ?? '—'}%</strong></div>
+          <div class="pregame-summary">${p.summary || ''}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
 
 init();
 </script>
