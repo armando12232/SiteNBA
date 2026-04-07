@@ -1,102 +1,129 @@
+from typing import Any, Dict, Optional
+
 from fastapi import FastAPI, HTTPException, Query
-from nba_api.stats.endpoints import playercareerstats, playergamelog
-import logging
-import time
+from fastapi.middleware.cors import CORSMiddleware
+import httpx
 
-app = FastAPI()
+app = FastAPI(
+    title="Site NBA API",
+    version="1.0.0",
+    description="API de apoio ao frontend do projeto NBA"
+)
 
-logger = logging.getLogger(__name__)
+# Libera acesso do frontend. Depois você pode trocar "*" pelo domínio do Vercel.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-cache = {}
-CACHE_TTL = 600
-
-
-class UpstreamDataError(Exception):
-    """Raised when upstream NBA data is missing or invalid."""
-
-
-def _error_payload(code: str, message: str) -> dict:
-    return {"error": {"code": code, "message": message}}
-
-
-def _avg_pts(rows: list[dict]) -> float:
-    if not rows:
-        raise UpstreamDataError("No game rows available to compute average")
-    return round(sum(float(r["PTS"]) for r in rows) / len(rows), 1)
+NBA_API_BASE = "https://www.balldontlie.io/v1"
+REQUEST_TIMEOUT = 15.0
 
 
-def _compute_line(season_pts: float) -> float:
-    return round((season_pts - 1.5) * 2) / 2
+@app.get("/")
+def root() -> Dict[str, str]:
+    return {"status": "ok", "message": "API NBA online"}
 
 
-def get_season_avg(player_id: int) -> float:
-    career = playercareerstats.PlayerCareerStats(player_id=player_id)
-    data = career.get_dict()
+@app.get("/health")
+def health() -> Dict[str, str]:
+    return {"status": "healthy"}
 
-    reg = next(
-        (s for s in data.get("resultSets", []) if s.get("name") == "SeasonTotalsRegularSeason"),
-        None,
-    )
-    if not reg or not reg.get("rowSet"):
-        raise UpstreamDataError("Season totals not available for player")
 
-    headers = reg["headers"]
-    last = reg["rowSet"][-1]
-    row = dict(zip(headers, last))
-    return float(row.get("PTS", 0))
+async def fetch_json(url: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    """Faz request com timeout e erro controlado para evitar loading infinito."""
+    try:
+        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+            return response.json()
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail="A consulta demorou demais para responder."
+        )
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=exc.response.status_code,
+            detail=f"Erro ao consultar API externa: {exc.response.text}"
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro interno: {str(exc)}"
+        )
 
 
 @app.get("/pregame")
-def pregame(playerId: int = Query(..., gt=0)):
-    now = time.time()
+async def pregame(
+    playerId: Optional[int] = Query(
+        default=None,
+        description="ID do jogador. Se não informar, a rota retorna uma mensagem padrão."
+    )
+) -> Dict[str, Any]:
+    """
+    Rota segura para evitar travamentos:
+    - sem playerId: responde normalmente
+    - com playerId: busca dados do jogador
+    """
 
-    if playerId in cache:
-        data, ts = cache[playerId]
-        if now - ts < CACHE_TTL:
-            return data
-
-    try:
-        season_pts = get_season_avg(playerId)
-
-        log = playergamelog.PlayerGameLog(player_id=playerId)
-        data = log.get_dict()
-
-        result_set = data.get("resultSets", [{}])[0]
-        rows = result_set.get("rowSet", [])
-        headers = result_set.get("headers", [])
-        rows = [dict(zip(headers, r)) for r in rows]
-
-        if len(rows) < 10:
-            raise UpstreamDataError("Insufficient game log data (need at least 10 games)")
-
-        last10 = rows[:10]
-        last5 = rows[:5]
-
-        last5_pts = _avg_pts(last5)
-        last10_pts = _avg_pts(last10)
-
-        line = _compute_line(season_pts)
-
-        hits = sum(1 for r in last10 if float(r["PTS"]) >= line)
-        hit_rate = int((hits / len(last10)) * 100)
-
-        edge = round(last5_pts - line, 1)
-
-        result = {
-            "player_id": playerId,
-            "season_avg": season_pts,
-            "last5": last5_pts,
-            "last10": last10_pts,
-            "line": line,
-            "hit_rate": hit_rate,
-            "edge": edge,
+    if playerId is None:
+        return {
+            "status": "ok",
+            "message": "Envie o parâmetro playerId para consultar um jogador específico.",
+            "example": "/pregame?playerId=237"
         }
 
-        cache[playerId] = (result, now)
-        return result
-    except UpstreamDataError as exc:
-        logger.warning("Upstream data issue for playerId=%s: %s", playerId, exc)
-        raise HTTPException(status_code=502, detail=_error_payload("UPSTREAM_DATA_ERROR", str(exc)))
-    except Exception as exc:
-        logger.exception("Unhandled pregame error for playerId=%s", playerId)
-        raise HTTPException(status_code=500, detail=_error_payload("INTERNAL_ERROR", str(exc)))
+    player_url = f"{NBA_API_BASE}/players/{playerId}"
+    player_data = await fetch_json(player_url)
+
+    return {
+        "status": "ok",
+        "playerId": playerId,
+        "player": player_data
+    }
+
+
+@app.get("/pregame/player-stats")
+async def pregame_player_stats(
+    playerId: int = Query(..., description="ID do jogador")
+) -> Dict[str, Any]:
+    """
+    Exemplo de rota separada para estatísticas.
+    Você pode adaptar depois para a API que estiver usando.
+    """
+    stats_url = f"{NBA_API_BASE}/stats"
+    stats_data = await fetch_json(stats_url, params={"player_ids[]": playerId, "per_page": 10})
+
+    return {
+        "status": "ok",
+        "playerId": playerId,
+        "stats": stats_data
+    }
+
+
+@app.get("/pregame/tips")
+def pregame_tips() -> Dict[str, Any]:
+    """
+    Rota pronta para o frontend consumir sem depender de playerId.
+    """
+    return {
+        "status": "ok",
+        "tips": [
+            {
+                "game": "Lakers vs Warriors",
+                "market": "Over 228.5",
+                "odd": 1.85,
+                "confidence": "Alta"
+            },
+            {
+                "game": "Celtics vs Heat",
+                "market": "Celtics ML",
+                "odd": 1.62,
+                "confidence": "Média"
+            }
+        ]
+    }
