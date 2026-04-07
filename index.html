@@ -1,20 +1,92 @@
-<!-- FAST FRONT -->
-<script>
-const PREGAME_PLAYERS = [
-  {id:203999},
-  {id:1628983},
-  {id:1628384}
-];
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SiteNBA • Pregame</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: Inter, Arial, sans-serif; margin: 0; padding: 24px; background: #0b1220; color: #edf2f7; }
+    h1 { margin-top: 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 12px; }
+    .card { background: #111a2e; border: 1px solid #23304f; border-radius: 10px; padding: 14px; }
+    .muted { color: #9fb0d8; font-size: 14px; }
+    .metric { display:flex; justify-content:space-between; margin:6px 0; }
+    .ok { color: #6ee7b7; }
+    .bad { color: #fda4af; }
+    .error { border-color: #7f1d1d; background: #2a1010; }
+  </style>
+</head>
+<body>
+  <h1>Pregame NBA</h1>
+  <p class="muted">Análise rápida dos últimos jogos por jogador.</p>
+  <div id="status" class="muted">Carregando...</div>
+  <section id="cards" class="grid"></section>
 
-async function loadPregame(){
-  const results=[]
-  for(const p of PREGAME_PLAYERS){
-    try{
-      const r=await fetch(`/api/nba?type=pregame&playerId=${p.id}`).then(r=>r.json())
-      results.push(r)
-    }catch(e){console.error(e)}
-  }
-  console.log(results)
-}
-loadPregame()
-</script>
+  <script>
+    const PREGAME_PLAYERS = [
+      { id: 203999, name: "Nikola Jokic" },
+      { id: 1628983, name: "Shai Gilgeous-Alexander" },
+      { id: 1628384, name: "Lauri Markkanen" }
+    ];
+
+    function metric(label, value, className = "") {
+      return `<div class="metric ${className}"><span>${label}</span><strong>${value}</strong></div>`;
+    }
+
+    function renderCard(player, data) {
+      const edgeClass = data.edge >= 0 ? "ok" : "bad";
+      return `
+        <article class="card">
+          <h3>${player.name}</h3>
+          <div class="muted">ID ${data.player_id}</div>
+          ${metric("Season", data.season_avg)}
+          ${metric("Last 5", data.last5)}
+          ${metric("Last 10", data.last10)}
+          ${metric("Linha", data.line)}
+          ${metric("Hit rate", `${data.hit_rate}%`)}
+          ${metric("Edge", data.edge, edgeClass)}
+          <div class="muted">${data.summary}</div>
+        </article>`;
+    }
+
+    function renderError(player, message) {
+      return `
+        <article class="card error">
+          <h3>${player.name}</h3>
+          <div class="muted">Falha ao buscar dados.</div>
+          <div>${message}</div>
+        </article>`;
+    }
+
+    async function loadPregame() {
+      const cards = document.getElementById("cards");
+      const status = document.getElementById("status");
+
+      const requests = PREGAME_PLAYERS.map(async (player) => {
+        const response = await fetch(`/api/nba?type=pregame&playerId=${player.id}`);
+        const payload = await response.json();
+
+        if (!response.ok || payload.error) {
+          throw { player, message: payload.error || "Erro desconhecido" };
+        }
+
+        return { player, payload };
+      });
+
+      const settled = await Promise.allSettled(requests);
+      cards.innerHTML = settled.map((item) => {
+        if (item.status === "fulfilled") {
+          return renderCard(item.value.player, item.value.payload);
+        }
+        return renderError(item.reason.player, item.reason.message);
+      }).join("");
+
+      const okCount = settled.filter((x) => x.status === "fulfilled").length;
+      status.textContent = `${okCount}/${PREGAME_PLAYERS.length} jogadores carregados`;
+    }
+
+    loadPregame();
+  </script>
+</body>
+</html>
