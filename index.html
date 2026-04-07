@@ -628,8 +628,10 @@ document.addEventListener('click', e => {
 });
 
 // MONITOR — ESPN API (gratuita)
-async function fetchESPN(type, gameId) {
-  const params = gameId ? `?type=${type}&gameId=${gameId}` : `?type=${type}`;
+async function fetchESPN(type, gameId, athleteId) {
+  let params = `?type=${type}`;
+  if (gameId) params += `&gameId=${gameId}`;
+  if (athleteId) params += `&athleteId=${athleteId}`;
   const res = await fetch(`/api/nba${params}`);
   if (!res.ok) throw new Error(res.status);
   return res.json();
@@ -691,8 +693,7 @@ const seasonAvgCache = {};
 async function getSeasonAvg(playerId) {
   if (seasonAvgCache[playerId]) return seasonAvgCache[playerId];
   try {
-    const res = await fetch(`https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${playerId}/stats`);
-    const data = await res.json();
+    const data = await fetchESPN('athlete_stats', null, playerId);
     const cats = data?.splits?.categories;
     if (!cats) return null;
     const general = cats.find(c => c.name === 'general');
@@ -701,7 +702,7 @@ async function getSeasonAvg(playerId) {
     const avg = { pts: get('avgPoints'), reb: get('avgRebounds'), ast: get('avgAssists') };
     seasonAvgCache[playerId] = avg;
     return avg;
-  } catch { return null; }
+  } catch(e) { console.error('getSeasonAvg error', playerId, e); return null; }
 }
 
 async function runMonitor() {
