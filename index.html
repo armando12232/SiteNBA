@@ -10,7 +10,7 @@ async function loadPregame(){
   const results=[]
   for(const p of PREGAME_PLAYERS){
     try{
-      const r=await fetch(`/api/nba?type=pregame&playerId=${p.id}`).then(r=>r.json())
+      const r=await fetch('https://sitenba-production.up.railway.app/pregame?playerId=' + p.id).then(r=>r.json())
       results.push(r)
     }catch(e){console.error(e)}
   }
