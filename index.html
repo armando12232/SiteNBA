@@ -722,6 +722,19 @@ document.addEventListener('click', e => {
   if (!e.target.closest('.user-menu-wrap')) document.getElementById('user-dropdown').classList.remove('open');
 });
 
+function startMonitor() {
+  if (isRunning) return;
+  isRunning = true;
+  runMonitor();
+  if (monitorInterval) clearInterval(monitorInterval);
+  monitorInterval = setInterval(runMonitor, 300000);
+}
+function stopMonitor() {
+  if (monitorInterval) clearInterval(monitorInterval);
+  monitorInterval = null;
+  isRunning = false;
+}
+
 // MONITOR — NBA API (Python backend)
 async function fetchNBA(type, gameId, playerId) {
   let params = `?type=${type}`;
