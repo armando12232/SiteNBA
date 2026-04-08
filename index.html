@@ -553,22 +553,20 @@ const PREGAME_PLAYERS = [
   { id: 1628983, name: 'Shai Gilgeous-Alexander' },
   { id: 1628384, name: 'Jalen Brunson' },
   { id: 4065648, name: 'Jayson Tatum' },
-  { id: 3934673, name: 'Donovan Mitchell' },
   { id: 203076,  name: 'Anthony Davis' },
-  { id: 2544,    name: 'LeBron James' },
   { id: 1629029, name: 'Luka Doncic' },
   { id: 1629027, name: 'Trae Young' },
   { id: 1629630, name: 'Ja Morant' },
   { id: 203507,  name: 'Giannis Antetokounmpo' },
-  { id: 1628389, name: 'Bam Adebayo' },
+  { id: 1630178, name: 'Anthony Edwards' },
+  { id: 203954,  name: 'Joel Embiid' },
+  { id: 1631096, name: 'Cade Cunningham' },
   { id: 1629628, name: 'Zion Williamson' },
   { id: 1630169, name: 'LaMelo Ball' },
   { id: 1629057, name: 'Jaren Jackson Jr.' },
-  { id: 1631096, name: 'Cade Cunningham' },
-  { id: 1630178, name: 'Anthony Edwards' },
-  { id: 1629029, name: 'Luka Doncic' },
-  { id: 203954,  name: 'Joel Embiid' },
-  { id: 1628467, name: 'Donovan Mitchell' },
+  { id: 1628389, name: 'Bam Adebayo' },
+  { id: 2544,    name: 'LeBron James' },
+  { id: 3934673, name: 'Donovan Mitchell' },
 ];
 
 let currentView = 'live';
@@ -592,20 +590,25 @@ async function loadPregame() {
   const loading = document.getElementById('pregame-loading');
   const grid = document.getElementById('pregame-grid');
   loading.style.display = 'block';
+  loading.textContent = 'Carregando radar...';
   grid.style.display = 'none';
   grid.innerHTML = '';
   try {
     const seen = new Set();
     const unique = PREGAME_PLAYERS.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
-    const results = [];
-    for (const p of unique) {
-      try {
-        const data = await fetchNBA('pregame', null, p.id);
-        if (!data.error) { data.player_name = p.name; results.push(data); }
-        else console.error('pregame error', p.name, data.error);
-      } catch(e) { console.error(e); }
-    }
-    if (!results.length) { loading.innerHTML = 'Não foi possível carregar o radar pré-jogo agora.'; return; }
+
+    // Busca todos em paralelo
+    const promises = unique.map(p =>
+      fetchNBA('pregame', null, p.id)
+        .then(data => ({ ...data, player_name: p.name }))
+        .catch(() => null)
+    );
+    const settled = await Promise.allSettled(promises);
+    const results = settled
+      .filter(r => r.status === 'fulfilled' && r.value && !r.value.error)
+      .map(r => r.value);
+
+    if (!results.length) { loading.textContent = 'Não foi possível carregar o radar pré-jogo agora.'; return; }
     results.sort((a, b) => (b.edge_points || 0) - (a.edge_points || 0));
     grid.innerHTML = results.map(p => {
       const photoUrl = `https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png`;
