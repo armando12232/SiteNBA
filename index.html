@@ -586,6 +586,73 @@ function confidenceFromEdge(edge) {
   return { text: 'Baixa', cls: 'low' };
 }
 
+const NBA_HEADERS = {
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Origin': 'https://www.nba.com',
+  'Referer': 'https://www.nba.com/',
+  'x-nba-stats-origin': 'stats',
+  'x-nba-stats-token': 'true',
+};
+
+// Cache local para não buscar o mesmo jogador duas vezes
+const pregameCache = {};
+
+async function fetchPlayerPregame(playerId, playerName) {
+  if (pregameCache[playerId]) return pregameCache[playerId];
+
+  // Médias da temporada
+  const careerUrl = `https://stats.nba.com/stats/playercareerstats?PlayerID=${playerId}&PerMode=PerGame&LeagueID=00`;
+  const careerData = await fetch(careerUrl, { headers: NBA_HEADERS }).then(r => r.json());
+  const rs = careerData.resultSets[0];
+  const headers = rs.headers;
+  const rows = rs.rowSet;
+  if (!rows.length) throw new Error('no data');
+
+  const last = Object.fromEntries(headers.map((h,i) => [h, rows[rows.length-1][i]]));
+  const season_pts = Math.round(parseFloat(last.PTS || 0) * 10) / 10;
+  const season_reb = Math.round(parseFloat(last.REB || 0) * 10) / 10;
+  const season_ast = Math.round(parseFloat(last.AST || 0) * 10) / 10;
+  const seasonId = last.SEASON_ID;
+
+  // Game log
+  const logUrl = `https://stats.nba.com/stats/playergamelog?PlayerID=${playerId}&Season=${seasonId}&SeasonType=Regular+Season&LeagueID=00`;
+  const logData = await fetch(logUrl, { headers: NBA_HEADERS }).then(r => r.json());
+  const rs2 = logData.resultSets[0];
+  const gameRows = rs2.rowSet.map(r => Object.fromEntries(rs2.headers.map((h,i) => [h, r[i]])));
+  if (gameRows.length < 5) throw new Error('insufficient games');
+
+  const last5 = gameRows.slice(0,5);
+  const last10 = gameRows.slice(0,10);
+  const last5_pts  = Math.round(last5.reduce((s,r)  => s + parseFloat(r.PTS), 0) / last5.length  * 10) / 10;
+  const last10_pts = Math.round(last10.reduce((s,r) => s + parseFloat(r.PTS), 0) / last10.length * 10) / 10;
+  const line = Math.round((season_pts - 1.5) * 2) / 2;
+  const hits = last10.filter(r => parseFloat(r.PTS) >= line).length;
+  const hit_rate = Math.round((hits / last10.length) * 100);
+  const edge = Math.round((last5_pts - line) * 10) / 10;
+
+  const result = {
+    player_id: playerId,
+    player_name: playerName,
+    season_avg: { pts: season_pts, reb: season_reb, ast: season_ast },
+    last5_avg:  { pts: last5_pts },
+    last10_avg: { pts: last10_pts },
+    synthetic_lines: { pts: line },
+    hit_rates: { pts_last10: hit_rate },
+    edge_points: edge,
+    last5_games: last5.map(r => ({
+      opp: r.MATCHUP,
+      pts: parseFloat(r.PTS),
+      reb: parseFloat(r.REB),
+      ast: parseFloat(r.AST),
+      hit: parseFloat(r.PTS) >= line
+    })),
+    summary: `L5 ${last5_pts} pts · L10 hit ${hit_rate}%`
+  };
+  pregameCache[playerId] = result;
+  return result;
+}
+
 async function loadPregame() {
   const loading = document.getElementById('pregame-loading');
   const grid = document.getElementById('pregame-grid');
@@ -597,16 +664,13 @@ async function loadPregame() {
     const seen = new Set();
     const unique = PREGAME_PLAYERS.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
 
-    // Busca todos em paralelo
+    // Busca direto do browser em paralelo — sem bloqueio da NBA
     const promises = unique.map(p =>
-      fetch(`/api/pregame?playerId=${p.id}`)
-        .then(r => r.json())
-        .then(data => ({ ...data, player_name: p.name }))
-        .catch(() => null)
+      fetchPlayerPregame(p.id, p.name).catch(e => { console.error(p.name, e); return null; })
     );
     const settled = await Promise.allSettled(promises);
     const results = settled
-      .filter(r => r.status === 'fulfilled' && r.value && !r.value.error)
+      .filter(r => r.status === 'fulfilled' && r.value)
       .map(r => r.value);
 
     if (!results.length) { loading.textContent = 'Não foi possível carregar o radar pré-jogo agora.'; return; }
