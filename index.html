@@ -664,9 +664,11 @@ async function loadPregame() {
     const seen = new Set();
     const unique = PREGAME_PLAYERS.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
 
-    // Busca direto do browser em paralelo — sem bloqueio da NBA
+    // Busca via servidor (nba_api) em paralelo
     const promises = unique.map(p =>
-      fetchPlayerPregame(p.id, p.name).catch(e => { console.error(p.name, e); return null; })
+      fetchNBA('pregame', null, p.id)
+        .then(data => ({ ...data, player_name: p.name }))
+        .catch(e => { console.error(p.name, e); return null; })
     );
     const settled = await Promise.allSettled(promises);
     const results = settled
