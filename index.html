@@ -492,7 +492,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
       <div id="pregame-view" style="display:none">
         <div class="section-header"><span class="section-title">Radar pré-jogo</span><div class="section-line"></div></div>
         <div id="pregame-loading" style="text-align:center;padding:40px;color:var(--text3)">Carregando radar...</div>
-        <div id="pregame-grid" style="display:none;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px"></div>
+        <div id="pregame-grid" style="display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px"></div>
       </div>
 
     </div>
@@ -549,12 +549,26 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const RAILWAY_URL = 'https://sitenba-production.up.railway.app';
 const PREGAME_PLAYERS = [
-  { id: 203999, name: 'Nikola Jokic' },
+  { id: 203999,  name: 'Nikola Jokic' },
   { id: 1628983, name: 'Shai Gilgeous-Alexander' },
   { id: 1628384, name: 'Jalen Brunson' },
   { id: 4065648, name: 'Jayson Tatum' },
   { id: 3934673, name: 'Donovan Mitchell' },
-  { id: 4278073, name: 'Shai Gilgeous-Alexander' },
+  { id: 203076,  name: 'Anthony Davis' },
+  { id: 2544,    name: 'LeBron James' },
+  { id: 1629029, name: 'Luka Doncic' },
+  { id: 1629027, name: 'Trae Young' },
+  { id: 1629630, name: 'Ja Morant' },
+  { id: 203507,  name: 'Giannis Antetokounmpo' },
+  { id: 1628389, name: 'Bam Adebayo' },
+  { id: 1629628, name: 'Zion Williamson' },
+  { id: 1630169, name: 'LaMelo Ball' },
+  { id: 1629057, name: 'Jaren Jackson Jr.' },
+  { id: 1631096, name: 'Cade Cunningham' },
+  { id: 1630178, name: 'Anthony Edwards' },
+  { id: 1629029, name: 'Luka Doncic' },
+  { id: 203954,  name: 'Joel Embiid' },
+  { id: 1628467, name: 'Donovan Mitchell' },
 ];
 
 let currentView = 'live';
@@ -602,21 +616,58 @@ async function loadPregame() {
       const hitRate = p.hit_rates?.pts_last10 ?? '—';
       const edge = p.edge_points ?? 0;
       const conf = confidenceFromEdge(Number(edge) || 0);
-      return `<div class="pregame-card">
-        <div class="card-accent fire"></div>
-        <div class="pregame-body">
-          <div class="pregame-top" style="margin-bottom:12px">
-            <div class="pregame-player-photo-wrap"><img class="pregame-player-photo" src="${photoUrl}" alt="${p.player_name}" onerror="this.style.display='none'"></div>
-            <div><div class="pregame-name">${p.player_name}</div><div class="pregame-meta">Radar pré-jogo</div></div>
+      // Mini barras últimos 5 jogos
+      const last5Games = p.last5_games || [];
+      const maxPts = Math.max(...last5Games.map(g => g.pts), Number(line) || 20, 1);
+      const barsHTML = last5Games.map(g => {
+        const w = Math.round((g.pts / maxPts) * 100);
+        const col = g.hit ? 'var(--green)' : 'var(--danger)';
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+          <div style="font-size:9px;font-weight:700;color:${col}">${g.pts}</div>
+          <div style="width:100%;height:28px;background:var(--bg4);border-radius:3px;position:relative;overflow:hidden">
+            <div style="position:absolute;bottom:0;left:0;right:0;height:${w}%;background:${col};opacity:.8"></div>
           </div>
-          <div class="pregame-main-tip"><div class="pregame-tip-line">OVER ${line} PTS</div><div class="pregame-conf ${conf.cls}">${conf.text}</div></div>
-          <div class="pregame-stats">
-            <div class="pregame-stat"><div class="pregame-stat-label">Temporada</div><div class="pregame-stat-val">${seasonPts}</div></div>
-            <div class="pregame-stat"><div class="pregame-stat-label">Últ. 5</div><div class="pregame-stat-val">${last5Pts}</div></div>
-            <div class="pregame-stat"><div class="pregame-stat-label">Últ. 10</div><div class="pregame-stat-val">${last10Pts}</div></div>
-            <div class="pregame-stat"><div class="pregame-stat-label">Edge</div><div class="pregame-stat-val">${edge > 0 ? '+' : ''}${edge}</div></div>
+        </div>`;
+      }).join('');
+      const lineW = line !== '—' ? Math.round((Number(line) / maxPts) * 100) : 0;
+      return `<div class="pregame-card" style="cursor:default">
+        <div class="card-accent ${conf.cls === 'high' ? 'fire' : conf.cls === 'medium' ? 'orange' : 'yellow'}"></div>
+        <div style="padding:10px 12px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;background:var(--bg3);flex-shrink:0">
+              <img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover;object-position:top" onerror="this.style.display='none'">
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-family:var(--display);font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.player_name}</div>
+              <div style="display:flex;align-items:center;gap:5px;margin-top:2px">
+                <span style="font-family:var(--display);font-size:13px;font-weight:700;color:var(--green)">OVER ${line}</span>
+                <span class="pregame-conf ${conf.cls}" style="font-size:9px;padding:2px 6px">${conf.text}</span>
+              </div>
+            </div>
           </div>
-          <div class="pregame-footer"><div class="pregame-hitrate">Hit rate L10: <strong>${hitRate}%</strong></div><div class="pregame-summary">${p.summary || ''}</div></div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:8px">
+            <div style="background:var(--bg3);border-radius:6px;padding:5px 4px;text-align:center">
+              <div style="font-size:9px;color:var(--text3);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px">Temp</div>
+              <div style="font-family:var(--display);font-size:16px;font-weight:800">${seasonPts}</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:6px;padding:5px 4px;text-align:center">
+              <div style="font-size:9px;color:var(--text3);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px">L5</div>
+              <div style="font-family:var(--display);font-size:16px;font-weight:800;color:${Number(last5Pts)>Number(line)?'var(--green)':'var(--text)'}">${last5Pts}</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:6px;padding:5px 4px;text-align:center">
+              <div style="font-size:9px;color:var(--text3);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px">Hit</div>
+              <div style="font-family:var(--display);font-size:16px;font-weight:800;color:${Number(hitRate)>=60?'var(--green)':Number(hitRate)>=40?'var(--gold)':'var(--danger)'}">${hitRate}%</div>
+            </div>
+            <div style="background:var(--bg3);border-radius:6px;padding:5px 4px;text-align:center">
+              <div style="font-size:9px;color:var(--text3);font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px">Edge</div>
+              <div style="font-family:var(--display);font-size:16px;font-weight:800;color:${edge>0?'var(--green)':edge<0?'var(--danger)':'var(--text)'}">${edge>0?'+':''}${edge}</div>
+            </div>
+          </div>
+          ${last5Games.length ? `<div style="display:flex;gap:3px;align-items:flex-end;height:50px;position:relative">
+            ${barsHTML}
+            ${lineW ? `<div style="position:absolute;bottom:${lineW}%;left:0;right:0;height:1px;background:var(--red);opacity:.8"></div>` : ''}
+          </div>
+          <div style="font-size:9px;color:var(--text3);margin-top:3px;text-align:center">Últimos 5 jogos · linha: ${line} pts</div>` : ''}
         </div>
       </div>`;
     }).join('');
