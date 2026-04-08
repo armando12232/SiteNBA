@@ -586,9 +586,9 @@ async function loadPregame() {
     const results = [];
     for (const p of unique) {
       try {
-        const res = await fetch(`${RAILWAY_URL}/pregame?playerId=${p.id}`);
-        const data = await res.json();
+        const data = await fetchNBA('pregame', null, p.id);
         if (!data.error) { data.player_name = p.name; results.push(data); }
+        else console.error('pregame error', p.name, data.error);
       } catch(e) { console.error(e); }
     }
     if (!results.length) { loading.innerHTML = 'Não foi possível carregar o radar pré-jogo agora.'; return; }
