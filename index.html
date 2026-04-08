@@ -843,8 +843,6 @@ async function runMonitor() {
   }
 }
 
-}
-
 function updateStats() {
   document.getElementById('stat-alerts').textContent=allAlerts.filter(a=>a.type!=='risk').length;
   document.getElementById('stat-risk').textContent=allAlerts.filter(a=>a.type==='risk').length;
