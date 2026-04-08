@@ -599,7 +599,8 @@ async function loadPregame() {
 
     // Busca todos em paralelo
     const promises = unique.map(p =>
-      fetchNBA('pregame', null, p.id)
+      fetch(`/api/pregame?playerId=${p.id}`)
+        .then(r => r.json())
         .then(data => ({ ...data, player_name: p.name }))
         .catch(() => null)
     );
