@@ -1,7 +1,5 @@
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
-from nba_api.live.nba.endpoints import scoreboard, boxscore
-from nba_api.stats.endpoints import playercareerstats
 import json
 import time
 
@@ -22,39 +20,43 @@ def _cache_set(key, data):
 
 
 def get_live_games():
+    from nba_api.live.nba.endpoints import scoreboard
     board = scoreboard.ScoreBoard()
     data = board.get_dict()
     games = data.get("scoreboard", {}).get("games", [])
     live = []
     for g in games:
         if g.get("gameStatus") == 2:
+            ht = g.get("homeTeam", {})
+            at = g.get("awayTeam", {})
             live.append({
                 "gameId": g.get("gameId"),
                 "period": g.get("period", 1),
                 "gameClock": g.get("gameClock", "PT12M00S"),
                 "gameStatusText": g.get("gameStatusText", ""),
                 "homeTeam": {
-                    "teamId": g["homeTeam"]["teamId"],
-                    "teamAbbreviation": g["homeTeam"]["teamAbbreviation"],
-                    "score": g["homeTeam"]["score"],
+                    "teamId": ht.get("teamId"),
+                    "teamAbbreviation": ht.get("teamTricode", ht.get("teamAbbreviation", "HME")),
+                    "score": ht.get("score", 0),
                 },
                 "awayTeam": {
-                    "teamId": g["awayTeam"]["teamId"],
-                    "teamAbbreviation": g["awayTeam"]["teamAbbreviation"],
-                    "score": g["awayTeam"]["score"],
+                    "teamId": at.get("teamId"),
+                    "teamAbbreviation": at.get("teamTricode", at.get("teamAbbreviation", "AWY")),
+                    "score": at.get("score", 0),
                 },
             })
     return live
 
 
 def get_boxscore(game_id):
+    from nba_api.live.nba.endpoints import boxscore
     bs = boxscore.BoxScore(game_id=game_id)
     data = bs.get_dict()
     game = data.get("game", {})
     players = []
     for team_key in ["homeTeam", "awayTeam"]:
         team = game.get(team_key, {})
-        team_abbr = team.get("teamAbbreviation", "")
+        team_abbr = team.get("teamTricode", team.get("teamAbbreviation", "???"))
         team_id = team.get("teamId")
         for p in team.get("players", []):
             s = p.get("statistics", {})
@@ -89,6 +91,7 @@ def get_season_avg(player_id):
     if cached:
         return cached
     try:
+        from nba_api.stats.endpoints import playercareerstats
         career = playercareerstats.PlayerCareerStats(
             player_id=player_id, per_mode36="PerGame"
         )
@@ -109,7 +112,7 @@ def get_season_avg(player_id):
         }
         _cache_set(f"avg_{player_id}", avg)
         return avg
-    except:
+    except Exception as e:
         return None
 
 
@@ -134,7 +137,7 @@ class handler(BaseHTTPRequestHandler):
                 self._send(200, {"avg": get_season_avg(int(player_id))})
 
             else:
-                self._send(400, {"error": f"invalid type: {req_type}"})
+                self._send(400, {"error": f"type invalido: '{req_type}'. Use scoreboard, boxscore ou season_avg"})
 
         except Exception as e:
             self._send(500, {"error": str(e)})
