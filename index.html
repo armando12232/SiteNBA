@@ -907,9 +907,21 @@ async function runMonitor() {
 
       // Formatar clock: PT05M30.00S → 5:30
       let clockDisplay = '';
+      let minsRemaining = 0;
       if (clock) {
         const m = clock.match(/PT(\d+)M([\d.]+)S/);
-        if (m) clockDisplay = `${parseInt(m[1])}:${Math.floor(parseFloat(m[2])).toString().padStart(2,'0')}`;
+        if (m) {
+          const mins = parseInt(m[1]);
+          const secs = Math.floor(parseFloat(m[2]));
+          clockDisplay = `${mins}:${secs.toString().padStart(2,'0')}`;
+          minsRemaining = mins + secs / 60;
+        }
+      }
+
+      // 🚫 FILTRO Q4: bloquear alertas nos últimos 8 minutos do 4º quarto
+      if (period === 4 && minsRemaining <= 8) {
+        console.log(`[${gameLabel}] Q4 com ${clockDisplay} — bloqueando alertas (bets fechadas)`);
+        continue;
       }
 
       let boxData;
@@ -918,12 +930,19 @@ async function runMonitor() {
       const players = boxData.players || [];
       if (!players.length) continue;
 
+      // Minutos jogados no jogo
       const clockParts = clock.replace('PT','').replace('S','').split('M');
       let minsInPeriod = 12;
       if (clockParts.length === 2) {
         minsInPeriod = 12 - (parseInt(clockParts[0] || 0) + parseFloat(clockParts[1] || 0) / 60);
       }
       const minsPlayed = Math.max(1, (period - 1) * 12 + minsInPeriod);
+      const minsLeft = Math.max(1, (4 - period) * 12 + minsRemaining);
+
+      // 🏃 RITMO DO JOGO (pace): pontos totais projetados vs média NBA de ~215 pts/jogo
+      const totalScorePace = ((homeScore + awayScore) / minsPlayed) * 48;
+      const NBA_AVG_PACE = 215;
+      const paceFactor = Math.min(1.15, Math.max(0.85, totalScorePace / NBA_AVG_PACE));
 
       for (const player of players) {
         if (!player.mins || player.mins < 3) continue;
@@ -956,14 +975,65 @@ async function runMonitor() {
           continue;
         }
 
-        const ptsPace = (player.pts / minsPlayed) * 48;
-        const rebPace = (player.reb / minsPlayed) * 48;
-        const astPace = (player.ast / minsPlayed) * 48;
+        // 📊 PROJEÇÃO com pace do jogo aplicado
+        const ptsPace  = (player.pts / minsPlayed) * 48 * paceFactor;
+        const rebPace  = (player.reb / minsPlayed) * 48; // rebotes menos afetados pelo pace
+        const astPace  = (player.ast / minsPlayed) * 48 * paceFactor;
+
+        // 📈 L10: usar média dos últimos 10 jogos se disponível
+        const l10 = avg.l10 || avg; // fallback para avg da temporada
+        const baseRef = {
+          pts: l10.pts || avg.pts,
+          reb: l10.reb || avg.reb,
+          ast: l10.ast || avg.ast,
+        };
+
+        // 🎯 INTERVALO DE CONFIANÇA baseado no desvio dos L10
+        const stdDev = avg.stdDev || { pts: baseRef.pts * 0.25, reb: baseRef.reb * 0.3, ast: baseRef.ast * 0.3 };
+        const consistencyScore = (base, sd) => {
+          const cv = sd / (base || 1); // coeficiente de variação
+          if (cv < 0.2) return { label: '🟢 Alta', cls: 'high' };
+          if (cv < 0.35) return { label: '🟡 Média', cls: 'medium' };
+          return { label: '🔴 Baixa', cls: 'low' };
+        };
 
         const triggered = [];
-        if (avg.pts > 0 && ptsPace / avg.pts >= PACE_MIN) triggered.push({ stat:'pts', cur:player.pts, proj:Math.round(ptsPace), avg:avg.pts, pct:Math.round((ptsPace/avg.pts)*100), line:null });
-        if (avg.reb > 0 && rebPace / avg.reb >= PACE_MIN) triggered.push({ stat:'reb', cur:player.reb, proj:Math.round(rebPace), avg:avg.reb, pct:Math.round((rebPace/avg.reb)*100), line:null });
-        if (avg.ast > 0 && astPace / avg.ast >= PACE_MIN) triggered.push({ stat:'ast', cur:player.ast, proj:Math.round(astPace), avg:avg.ast, pct:Math.round((astPace/avg.ast)*100), line:null });
+        if (baseRef.pts > 0 && ptsPace / baseRef.pts >= PACE_MIN) {
+          const consistency = consistencyScore(baseRef.pts, stdDev.pts);
+          triggered.push({
+            stat: 'pts', cur: player.pts,
+            proj: Math.round(ptsPace),
+            projLow: Math.round(ptsPace - stdDev.pts * 0.8),
+            projHigh: Math.round(ptsPace + stdDev.pts * 0.8),
+            avg: baseRef.pts, avgSeason: avg.pts,
+            pct: Math.round((ptsPace / baseRef.pts) * 100),
+            consistency, line: null
+          });
+        }
+        if (baseRef.reb > 0 && rebPace / baseRef.reb >= PACE_MIN) {
+          const consistency = consistencyScore(baseRef.reb, stdDev.reb);
+          triggered.push({
+            stat: 'reb', cur: player.reb,
+            proj: Math.round(rebPace),
+            projLow: Math.round(rebPace - stdDev.reb * 0.8),
+            projHigh: Math.round(rebPace + stdDev.reb * 0.8),
+            avg: baseRef.reb, avgSeason: avg.reb,
+            pct: Math.round((rebPace / baseRef.reb) * 100),
+            consistency, line: null
+          });
+        }
+        if (baseRef.ast > 0 && astPace / baseRef.ast >= PACE_MIN) {
+          const consistency = consistencyScore(baseRef.ast, stdDev.ast);
+          triggered.push({
+            stat: 'ast', cur: player.ast,
+            proj: Math.round(astPace),
+            projLow: Math.round(astPace - stdDev.ast * 0.8),
+            projHigh: Math.round(astPace + stdDev.ast * 0.8),
+            avg: baseRef.ast, avgSeason: avg.ast,
+            pct: Math.round((astPace / baseRef.ast) * 100),
+            consistency, line: null
+          });
+        }
         if (!triggered.length) continue;
 
         const type = alertType(period, triggered.length);
@@ -971,6 +1041,7 @@ async function runMonitor() {
         if (player.pf >= 3 && period <= 2) warnings.push(`${player.pf} faltas`);
         if (player.pf >= 4 && period === 3) warnings.push(`${player.pf} faltas`);
         if (diff >= BLOWOUT && !winning) warnings.push('adversário em blowout');
+        if (paceFactor > 1.08) warnings.push(`jogo acelerado (${Math.round(totalScorePace)} pts/jogo)`);
 
         newAlerts.push({
           playerId: player.playerId, type,
@@ -978,6 +1049,8 @@ async function runMonitor() {
           position: player.position || '—', nbaId: player.playerId,
           triggered, pts: player.pts, reb: player.reb, ast: player.ast,
           gameLabel, period, clock: clockDisplay, warnings,
+          paceFactor: Math.round(paceFactor * 100),
+          minsLeft: Math.round(minsLeft),
           extraStats: { mins: player.mins, fgm: player.fgm, fga: player.fga, tpm: player.tpm, pf: player.pf, to: player.to, plusMinus: player.plusMinus }
         });
       }
@@ -1025,11 +1098,26 @@ function renderCard(a) {
   const statDefs=[{key:'pts',label:'Pontos',cur:a.pts},{key:'reb',label:'Rebotes',cur:a.reb},{key:'ast',label:'Assistências',cur:a.ast}];
   const statsHTML=statDefs.map(s=>{
     const t=(a.triggered||[]).find(x=>x.stat===s.key);
-    if (t) { const col=paceColor(t.pct),pw=progressWidth(t.pct); return `<div class="stat-box hot"><div class="stat-box-label">${s.label}</div><div class="stat-box-main"><span class="stat-box-val">${t.cur}</span><span class="stat-box-proj">proj <span>${t.proj}</span></span></div><div class="progress-track"><div class="progress-fill ${col}" style="width:${pw}%"></div></div><div class="stat-box-pct ${col}">+${t.pct}% da média</div></div>`; }
+    if (t) {
+        const col=paceColor(t.pct), pw=progressWidth(t.pct);
+        const rangeHTML = (t.projLow && t.projHigh) ? `<span style="font-size:10px;color:var(--text3)">${t.projLow}–${t.projHigh}</span>` : '';
+        const consistencyHTML = t.consistency ? `<span style="font-size:9px;font-weight:700;letter-spacing:.04em">${t.consistency.label}</span>` : '';
+        return `<div class="stat-box hot">
+          <div class="stat-box-label">${s.label}</div>
+          <div class="stat-box-main"><span class="stat-box-val">${t.cur}</span><span class="stat-box-proj">proj <span>${t.proj}</span></span></div>
+          ${rangeHTML ? `<div style="font-size:10px;color:var(--text3);margin-bottom:3px">range ${rangeHTML}</div>` : ''}
+          <div class="progress-track"><div class="progress-fill ${col}" style="width:${pw}%"></div></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px">
+            <div class="stat-box-pct ${col}">+${t.pct}%</div>
+            ${consistencyHTML}
+          </div>
+        </div>`;
+      }
     return `<div class="stat-box"><div class="stat-box-label">${s.label}</div><div class="stat-box-main"><span class="stat-box-val">${s.cur}</span></div><div class="progress-track"><div class="progress-fill up" style="width:20%"></div></div><div class="stat-box-pct dim">—</div></div>`;
   }).join('');
   const warnBadges=(a.warnings||[]).map(w=>`<span class="badge warn">⚠ ${w}</span>`).join('');
   const lines=(a.triggered||[]).filter(t=>t.line).map(t=>`<div class="line-item">Linha ${t.stat}: <span>${t.line}</span></div>`).join('');
+  const paceInfo = a.paceFactor ? `<div style="font-size:10px;color:${a.paceFactor>108?'var(--amber)':a.paceFactor<92?'var(--text3)':'var(--text3)'};font-weight:600">⚡ Pace ${a.paceFactor}%${a.minsLeft?' · ~'+a.minsLeft+'min restantes':''}</div>` : '';
   return `<div class="alert-card ${a.type}" onclick="openModal(${a.playerId})">
     <div class="card-accent ${a.type}"></div>
     <div class="card-body">
@@ -1045,7 +1133,7 @@ function renderCard(a) {
           </div>
       </div>
       <div class="stats-grid">${statsHTML}</div>
-      <div class="card-footer"><div class="lines-row">${lines||'<div class="line-item" style="color:var(--text3)">Linhas indisponíveis</div>'}</div></div>
+      <div class="card-footer"><div class="lines-row">${lines||'<div class="line-item" style="color:var(--text3)">Linhas indisponíveis</div>'}</div>${paceInfo}</div>
     </div></div>`;
 }
 
