@@ -867,6 +867,8 @@ async function fetchNBA(type, gameId, playerId) {
 }
 
 const seasonAvgCache = {};
+const BLOWOUT = 20;
+const PACE_MIN = 1.3; // 130% da média — mais sensível que 150%
 
 async function runMonitor() {
   try {
@@ -978,8 +980,10 @@ async function runMonitor() {
 }
 
 function updateStats() {
-  document.getElementById('stat-alerts').textContent=allAlerts.filter(a=>a.type!=='risk').length;
-  document.getElementById('stat-risk').textContent=allAlerts.filter(a=>a.type==='risk').length;
+  const alertCount = allAlerts.filter(a => a.type !== 'risk').length;
+  const riskCount = allAlerts.filter(a => a.type === 'risk').length;
+  document.getElementById('stat-alerts').textContent = alertCount;
+  document.getElementById('stat-risk').textContent = riskCount;
 }
 
 // RENDER
