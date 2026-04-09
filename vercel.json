@@ -1,10 +1,7 @@
 {
   "functions": {
-    "api/nba.py": {
-      "maxDuration": 30
-    },
-    "api/pregame.py": {
-      "maxDuration": 30
-    }
+    "api/nba.py": { "maxDuration": 30 },
+    "api/pregame.py": { "maxDuration": 30 },
+    "api/analyze.py": { "maxDuration": 25 }
   }
 }
