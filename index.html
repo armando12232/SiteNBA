@@ -897,12 +897,20 @@ async function runMonitor() {
       const gameId = game.gameId;
       const period = game.period || 1;
       const clock = game.gameClock || '';
+      const gameStatusText = game.gameStatusText || '';
       const homeScore = game.homeTeam?.score || 0;
       const awayScore = game.awayTeam?.score || 0;
       const diff = Math.abs(homeScore - awayScore);
       const homeAbbr = game.homeTeam?.teamAbbreviation || '';
       const awayAbbr = game.awayTeam?.teamAbbreviation || '';
       const gameLabel = `${awayAbbr} ${awayScore} · ${homeAbbr} ${homeScore}`;
+
+      // Formatar clock: PT05M30.00S → 5:30
+      let clockDisplay = '';
+      if (clock) {
+        const m = clock.match(/PT(\d+)M([\d.]+)S/);
+        if (m) clockDisplay = `${parseInt(m[1])}:${Math.floor(parseFloat(m[2])).toString().padStart(2,'0')}`;
+      }
 
       let boxData;
       try { boxData = await fetchNBA('boxscore', gameId); } catch(e) { console.error('boxscore error', gameId, e); continue; }
@@ -940,7 +948,7 @@ async function runMonitor() {
               name: player.name, team: player.teamAbbr,
               position: player.position || '—', nbaId: player.playerId,
               pts: player.pts, reb: player.reb, ast: player.ast,
-              gameLabel, period,
+              gameLabel, period, clock: clockDisplay,
               riskMsg: `Time ganhando por +${tdiff} pts — risco de banquinho`,
               warnings: []
             });
@@ -969,7 +977,7 @@ async function runMonitor() {
           name: player.name, team: player.teamAbbr,
           position: player.position || '—', nbaId: player.playerId,
           triggered, pts: player.pts, reb: player.reb, ast: player.ast,
-          gameLabel, period, warnings,
+          gameLabel, period, clock: clockDisplay, warnings,
           extraStats: { mins: player.mins, fgm: player.fgm, fga: player.fga, tpm: player.tpm, pf: player.pf, to: player.to, plusMinus: player.plusMinus }
         });
       }
@@ -1002,7 +1010,13 @@ function renderCard(a) {
         <div class="player-row">
           <div class="player-photo-wrap"><img class="player-photo" src="${photoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="player-photo-fallback" style="display:none">${ini}</div></div>
           <div class="player-info"><div class="player-name">${a.name}</div><div class="player-meta">${a.team} · ${a.position}</div><div class="player-badges"><span class="badge risk">⚠ Em risco</span></div></div>
-          <div class="game-score-mini">${a.gameLabel} <span class="period">Q${a.period}</span></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:4px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:4px 8px">
+              <span style="font-family:var(--display);font-size:13px;font-weight:800;color:var(--gold)">Q${a.period}</span>
+              ${a.clock ? `<span style="font-size:11px;color:var(--text3)">${a.clock}</span>` : ''}
+            </div>
+            <div style="font-size:10px;font-weight:600;color:var(--text3);white-space:nowrap">${a.gameLabel}</div>
+          </div>
         </div>
         <div class="risk-msg">⚠ ${a.riskMsg}</div>
         <div class="card-footer"><div class="lines-row"><div class="line-item">Pts: <span>${a.pts}</span></div><div class="line-item">Reb: <span>${a.reb}</span></div><div class="line-item">Ast: <span>${a.ast}</span></div>${a.ptsLine?`<div class="line-item">Linha: <span>${a.ptsLine}</span></div>`:''}</div></div>
@@ -1022,7 +1036,13 @@ function renderCard(a) {
       <div class="player-row">
         <div class="player-photo-wrap"><img class="player-photo" src="${photoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="player-photo-fallback" style="display:none">${ini}</div></div>
         <div class="player-info"><div class="player-name">${a.name}</div><div class="player-meta">${a.team} · ${a.position}</div><div class="player-badges"><span class="badge ${a.type}">${momentLabel(a.type)}</span>${warnBadges}</div></div>
-        <div class="game-score-mini">${a.gameLabel} <span class="period">Q${a.period}</span></div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:4px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:4px 8px">
+              <span style="font-family:var(--display);font-size:13px;font-weight:800;color:var(--gold)">Q${a.period}</span>
+              ${a.clock ? `<span style="font-size:11px;color:var(--text3)">${a.clock}</span>` : ''}
+            </div>
+            <div style="font-size:10px;font-weight:600;color:var(--text3);white-space:nowrap">${a.gameLabel}</div>
+          </div>
       </div>
       <div class="stats-grid">${statsHTML}</div>
       <div class="card-footer"><div class="lines-row">${lines||'<div class="line-item" style="color:var(--text3)">Linhas indisponíveis</div>'}</div></div>
@@ -1071,7 +1091,13 @@ function openModal(playerId) {
   if (!a) return;
   const accentColors={fire:'linear-gradient(90deg,#ff6d00,#fdb927)',red:'linear-gradient(90deg,#c8102e,#ff6b81)',orange:'linear-gradient(90deg,#ffb300,#fdb927)',yellow:'linear-gradient(90deg,#fdb927,#fff176)',risk:'linear-gradient(90deg,#ff1744,#c8102e)'};
   document.getElementById('modal-name').textContent=a.name;
-  document.getElementById('modal-meta').textContent=`${a.team} · ${a.position} · Q${a.period}`;
+  document.getElementById('modal-meta').innerHTML=`
+    <span>${a.team} · ${a.position}</span>
+    <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(253,185,39,.15);border:1px solid rgba(253,185,39,.3);border-radius:6px;padding:2px 8px;margin-left:8px">
+      <span style="font-family:var(--display);font-size:13px;font-weight:800;color:var(--gold)">Q${a.period}</span>
+      ${a.clock ? `<span style="font-size:11px;color:rgba(253,185,39,.7)">${a.clock}</span>` : ''}
+    </span>
+  `;
   document.getElementById('modal-accent').style.background=accentColors[a.type]||'';
   const photo=document.getElementById('modal-photo'), fallback=document.getElementById('modal-photo-fallback');
   photo.style.display=''; fallback.style.display='none'; fallback.textContent=initials(a.name);
@@ -1113,7 +1139,24 @@ function openModal(playerId) {
   }).join('');
   const parts=a.gameLabel.split('·'), teams=parts.map(p=>p.trim());
   const awayParts=teams[0]?.split(' ')||[], homeParts=teams[1]?.split(' ')||[];
-  document.getElementById('modal-game-info').innerHTML=`<div class="game-teams"><div class="game-team"><div class="game-team-abbr">${awayParts[0]||''}</div><div class="game-team-score">${awayParts[1]||'0'}</div></div><div class="game-vs">@</div><div class="game-team"><div class="game-team-abbr">${homeParts[0]||''}</div><div class="game-team-score">${homeParts[1]||'0'}</div></div></div><div class="game-period">Q${a.period} · Ao vivo</div>`;
+  document.getElementById('modal-game-info').innerHTML=`
+    <div style="display:flex;align-items:center;gap:16px;flex:1">
+      <div style="text-align:center">
+        <div style="font-family:var(--display);font-size:22px;font-weight:800">${awayParts[0]||''}</div>
+        <div style="font-family:var(--display);font-size:18px;font-weight:700;color:var(--gold)">${awayParts[1]||'0'}</div>
+      </div>
+      <div style="text-align:center;flex:1">
+        <div style="font-size:10px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">ao vivo</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px">
+          <span style="font-family:var(--display);font-size:16px;font-weight:800;color:var(--gold)">Q${a.period}</span>
+          ${a.clock ? `<span style="font-size:13px;color:var(--text2);font-weight:600">${a.clock}</span>` : ''}
+        </div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-family:var(--display);font-size:22px;font-weight:800">${homeParts[0]||''}</div>
+        <div style="font-family:var(--display);font-size:18px;font-weight:700;color:var(--gold)">${homeParts[1]||'0'}</div>
+      </div>
+    </div>`;
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow='hidden';
 
