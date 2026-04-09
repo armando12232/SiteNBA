@@ -126,6 +126,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .logo-text span { color: var(--gold); }
 .live-pill { display: flex; align-items: center; gap: 5px; background: rgba(200,16,46,0.15); border: 1px solid rgba(200,16,46,0.4); border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--red2); text-transform: uppercase; }
 .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red2); animation: blink 1.2s infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 .header-right { display: flex; align-items: center; gap: 12px; }
 .header-date { font-size: 12px; color: var(--text3); }
@@ -532,6 +533,10 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
       <div class="modal-close" onclick="closeModalDirect()">✕</div>
     </div>
     <div class="modal-body">
+      <div class="modal-section" id="modal-claude-section">
+        <div class="modal-section-title">✦ Análise Claude AI</div>
+        <div id="modal-claude-analysis" style="background:var(--bg3);border:1px solid rgba(253,185,39,.2);border-radius:10px;padding:14px;min-height:40px"></div>
+      </div>
       <div class="modal-section"><div class="modal-section-title">Stats ao vivo</div><div class="modal-stats-grid" id="modal-live-stats"></div></div>
       <div class="modal-section"><div class="modal-section-title">Atual vs média vs linha</div><div id="modal-comparison"></div><div class="comp-legend"><div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--gold)"></div>Ritmo atual</div><div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--border2)"></div>Média temporada</div><div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--red);width:2px;height:8px;border-radius:1px"></div>Linha</div></div></div>
       <div class="modal-section"><div class="modal-section-title">Detalhes do jogo</div><div class="extra-stats-grid" id="modal-extra-stats"></div></div>
@@ -1111,6 +1116,35 @@ function openModal(playerId) {
   document.getElementById('modal-game-info').innerHTML=`<div class="game-teams"><div class="game-team"><div class="game-team-abbr">${awayParts[0]||''}</div><div class="game-team-score">${awayParts[1]||'0'}</div></div><div class="game-vs">@</div><div class="game-team"><div class="game-team-abbr">${homeParts[0]||''}</div><div class="game-team-score">${homeParts[1]||'0'}</div></div></div><div class="game-period">Q${a.period} · Ao vivo</div>`;
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow='hidden';
+
+  // Análise do Claude AI
+  const analysisBox = document.getElementById('modal-claude-analysis');
+  if (analysisBox && a.type !== 'risk') {
+    analysisBox.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--text3);font-size:12px"><div style="width:16px;height:16px;border:2px solid var(--gold);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>Analisando com Claude AI...</div>`;
+    fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: a.name, team: a.team, period: a.period,
+        pts: a.pts, reb: a.reb, ast: a.ast,
+        mins: a.extraStats?.mins || 0,
+        gameLabel: a.gameLabel,
+        warnings: a.warnings || [],
+        triggered: a.triggered || []
+      })
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.analysis) {
+        analysisBox.innerHTML = `
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <div style="width:28px;height:28px;background:var(--gold);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px">✦</div>
+            <div style="font-size:13px;color:var(--text2);line-height:1.6">${d.analysis}</div>
+          </div>`;
+      }
+    })
+    .catch(() => { analysisBox.innerHTML = ''; });
+  }
 }
 
 function closeModal(e) { if (e.target===document.getElementById('modal-overlay')) closeModalDirect(); }
