@@ -266,7 +266,8 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 /* MODAL */
 .modal-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.85); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 16px; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
-.modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 18px; width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; transform: translateY(20px); transition: transform 0.25s; position: relative; }
+.modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 18px; width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; overflow-x: hidden; transform: translateY(20px); transition: transform 0.25s; position: relative; scrollbar-width: none; -ms-overflow-style: none; }
+.modal::-webkit-scrollbar { display: none; }
 .modal-overlay.open .modal { transform: translateY(0); }
 .modal-hero { position: relative; height: 180px; overflow: hidden; border-radius: 18px 18px 0 0; }
 .modal-hero-bg { position: absolute; inset: 0; background: linear-gradient(135deg,#0f0f0f 0%,#1a1a1a 100%); }
