@@ -232,11 +232,11 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .game-score-mini .period { color: var(--text3); font-size: 10px; font-weight: 500; }
 
 .stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-bottom: 12px; }
-.stat-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
-.stat-box.hot { border-color: rgba(255,109,0,0.2); background: rgba(255,109,0,0.04); }
-.stat-box-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; }
-.stat-box-main { display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; }
-.stat-box-val { font-family: var(--display); font-size: 26px; font-weight: 800; color: var(--text); line-height: 1; }
+.stat-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; aspect-ratio: 1; display: flex; flex-direction: column; justify-content: space-between; }
+.stat-box.hot { border-color: rgba(255,109,0,0.25); background: rgba(255,109,0,0.05); }
+.stat-box-label { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); }
+.stat-box-main { display: flex; align-items: baseline; gap: 4px; }
+.stat-box-val { font-family: var(--display); font-size: 30px; font-weight: 800; color: var(--text); line-height: 1; }
 .stat-box-proj { font-size: 11px; color: var(--text3); font-weight: 500; }
 .stat-box-proj span { color: var(--text2); }
 .progress-track { height: 3px; background: var(--bg4); border-radius: 2px; overflow: hidden; margin-bottom: 4px; }
@@ -1101,20 +1101,22 @@ function renderCard(a) {
     const t=(a.triggered||[]).find(x=>x.stat===s.key);
     if (t) {
         const col=paceColor(t.pct), pw=progressWidth(t.pct);
-        const rangeHTML = (t.projLow && t.projHigh) ? `<span style="font-size:10px;color:var(--text3)">${t.projLow}–${t.projHigh}</span>` : '';
-        const consistencyHTML = t.consistency ? `<span style="font-size:9px;font-weight:700;letter-spacing:.04em">${t.consistency.label}</span>` : '';
+        const rangeHTML = (t.projLow && t.projHigh) ? `${t.projLow}–${t.projHigh}` : '';
+        const consistencyHTML = t.consistency ? t.consistency.label : '';
         return `<div class="stat-box hot">
           <div class="stat-box-label">${s.label}</div>
-          <div class="stat-box-main"><span class="stat-box-val">${t.cur}</span><span class="stat-box-proj">proj <span>${t.proj}</span></span></div>
-          ${rangeHTML ? `<div style="font-size:10px;color:var(--text3);margin-bottom:3px">range ${rangeHTML}</div>` : ''}
-          <div class="progress-track"><div class="progress-fill ${col}" style="width:${pw}%"></div></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px">
-            <div class="stat-box-pct ${col}">+${t.pct}%</div>
-            ${consistencyHTML}
+          <div class="stat-box-main"><span class="stat-box-val">${t.cur}</span></div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <div style="font-size:10px;color:var(--text3)">proj <span style="color:var(--text2);font-weight:700">${t.proj}</span>${rangeHTML ? ` <span style="color:var(--text3);font-size:9px">(${rangeHTML})</span>` : ''}</div>
+            <div class="progress-track" style="margin:0"><div class="progress-fill ${col}" style="width:${pw}%"></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span class="stat-box-pct ${col}" style="font-size:10px">+${t.pct}%</span>
+              ${consistencyHTML ? `<span style="font-size:9px">${consistencyHTML}</span>` : ''}
+            </div>
           </div>
         </div>`;
       }
-    return `<div class="stat-box"><div class="stat-box-label">${s.label}</div><div class="stat-box-main"><span class="stat-box-val">${s.cur}</span></div><div class="progress-track"><div class="progress-fill up" style="width:20%"></div></div><div class="stat-box-pct dim">—</div></div>`;
+    return `<div class="stat-box"><div class="stat-box-label">${s.label}</div><div class="stat-box-main"><span class="stat-box-val">${s.cur}</span></div><div><div class="progress-track" style="margin:0"><div class="progress-fill up" style="width:20%"></div></div><span class="stat-box-pct dim" style="font-size:10px">—</span></div></div>`;
   }).join('');
   const warnBadges=(a.warnings||[]).map(w=>`<span class="badge warn">⚠ ${w}</span>`).join('');
   const lines=(a.triggered||[]).filter(t=>t.line).map(t=>`<div class="line-item">Linha ${t.stat}: <span>${t.line}</span></div>`).join('');
