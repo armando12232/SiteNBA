@@ -26,7 +26,7 @@ def analyze_alert(player_data: dict) -> str:
 
     prompt = f"""Você é um analista especialista em apostas esportivas da NBA, focado em props de jogadores.
 
-Analise este alerta ao vivo e dê uma recomendação direta em português brasileiro, máximo 3 frases curtas:
+Analise este alerta ao vivo e dê uma recomendação em português brasileiro. Seja direto e use no máximo 2-3 frases curtas. NÃO use markdown, asteriscos, hashtags ou formatação especial. Escreva texto simples e direto.
 
 Jogador: {name} ({team})
 Jogo: {game} — Q{period}
@@ -35,7 +35,8 @@ Stats ao vivo: PTS {pts} | REB {reb} | AST {ast}
 Ritmos acima da média: {stats_text}
 Alertas de risco: {warnings_text}
 
-Seja direto: vale apostar Over? Por quê? Considere o momento do jogo, volume de minutos restantes e consistência do ritmo."""
+Formato obrigatório — duas partes separadas por ||| :
+VEREDICTO (uma frase curta: ex "Over PTS recomendado" ou "Aguardar mais dados") ||| MOTIVO (1-2 frases explicando o ritmo, minutos e contexto do jogo)"""
 
     payload = json.dumps({
         "model": "claude-haiku-4-5-20251001",
