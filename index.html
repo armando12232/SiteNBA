@@ -197,13 +197,13 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .section-line { flex: 1; height: 1px; background: var(--border); }
 
 /* ALERT CARDS */
-.alerts-list { display: flex; flex-direction: column; gap: 12px; }
+.alerts-list { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
 .alert-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; transition: border-color 0.2s, transform 0.15s; cursor: pointer; }
-.alert-card:hover { transform: translateY(-1px); border-color: var(--border2); }
-.alert-card.fire { border-color: rgba(255,109,0,0.3); }
-.alert-card.red { border-color: rgba(255,107,129,0.25); }
-.alert-card.orange { border-color: rgba(255,179,0,0.25); }
-.alert-card.yellow { border-color: rgba(253,185,39,0.2); }
+.alert-card:hover { transform: translateY(-2px); border-color: var(--border2); }
+.alert-card.fire { border-color: rgba(255,109,0,0.35); }
+.alert-card.red { border-color: rgba(255,107,129,0.3); }
+.alert-card.orange { border-color: rgba(255,179,0,0.3); }
+.alert-card.yellow { border-color: rgba(253,185,39,0.25); }
 .alert-card.risk { border-color: rgba(255,23,68,0.3); background: rgba(255,23,68,0.04); }
 .card-accent { height: 3px; }
 .card-accent.fire { background: linear-gradient(90deg,var(--fire),var(--gold)); }
@@ -1075,69 +1075,73 @@ function updateStats() {
 
 // RENDER
 function renderCard(a) {
-  const ini=initials(a.name);
-  const photoUrl=`https://cdn.nba.com/headshots/nba/latest/1040x760/${a.nbaId}.png`;
-  if (a.type==='risk') {
-    return `<div class="alert-card risk" onclick="openModal(${a.playerId})">
-      <div class="card-accent risk"></div>
-      <div class="card-body">
-        <div class="player-row">
-          <div class="player-photo-wrap"><img class="player-photo" src="${photoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="player-photo-fallback" style="display:none">${ini}</div></div>
-          <div class="player-info"><div class="player-name">${a.name}</div><div class="player-meta">${a.team} · ${a.position}</div><div class="player-badges"><span class="badge risk">⚠ Em risco</span></div></div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
-            <div style="display:flex;align-items:center;gap:4px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:4px 8px">
-              <span style="font-family:var(--display);font-size:13px;font-weight:800;color:var(--gold)">Q${a.period}</span>
-              ${a.clock ? `<span style="font-size:11px;color:var(--text3)">${a.clock}</span>` : ''}
-            </div>
-            <div style="font-size:10px;font-weight:600;color:var(--text3);white-space:nowrap">${a.gameLabel}</div>
+  const ini = initials(a.name);
+  const photoUrl = `https://cdn.nba.com/headshots/nba/latest/1040x760/${a.nbaId}.png`;
+  const accentColors = { fire:'#ff6d00', red:'#c8102e', orange:'#ffb300', yellow:'#fdb927', risk:'#ff1744' };
+  const accent = accentColors[a.type] || '#fdb927';
+
+  if (a.type === 'risk') {
+    return `<div class="alert-card risk" onclick="openModal(${a.playerId})" style="padding:0">
+      <div style="height:3px;background:linear-gradient(90deg,#ff1744,#c8102e)"></div>
+      <div style="padding:12px;display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;background:var(--bg3);flex-shrink:0">
+            <img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover;object-position:top" onerror="this.style.display='none'">
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:var(--display);font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.name}</div>
+            <div style="font-size:10px;color:var(--text3)">${a.team} · Q${a.period}${a.clock ? " · " + a.clock : ""}</div>
           </div>
         </div>
-        <div class="risk-msg">⚠ ${a.riskMsg}</div>
-        <div class="card-footer"><div class="lines-row"><div class="line-item">Pts: <span>${a.pts}</span></div><div class="line-item">Reb: <span>${a.reb}</span></div><div class="line-item">Ast: <span>${a.ast}</span></div>${a.ptsLine?`<div class="line-item">Linha: <span>${a.ptsLine}</span></div>`:''}</div></div>
-      </div></div>`;
-  }
-  const statDefs=[{key:'pts',label:'Pontos',cur:a.pts},{key:'reb',label:'Rebotes',cur:a.reb},{key:'ast',label:'Assistências',cur:a.ast}];
-  const statsHTML=statDefs.map(s=>{
-    const t=(a.triggered||[]).find(x=>x.stat===s.key);
-    if (t) {
-        const col=paceColor(t.pct), pw=progressWidth(t.pct);
-        const rangeHTML = (t.projLow && t.projHigh) ? `${t.projLow}–${t.projHigh}` : '';
-        const consistencyHTML = t.consistency ? t.consistency.label : '';
-        return `<div class="stat-box hot">
-          <div class="stat-box-label">${s.label}</div>
-          <div class="stat-box-main"><span class="stat-box-val">${t.cur}</span></div>
-          <div style="display:flex;flex-direction:column;gap:3px">
-            <div style="font-size:10px;color:var(--text3)">proj <span style="color:var(--text2);font-weight:700">${t.proj}</span>${rangeHTML ? ` <span style="color:var(--text3);font-size:9px">(${rangeHTML})</span>` : ''}</div>
-            <div class="progress-track" style="margin:0"><div class="progress-fill ${col}" style="width:${pw}%"></div></div>
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <span class="stat-box-pct ${col}" style="font-size:10px">+${t.pct}%</span>
-              ${consistencyHTML ? `<span style="font-size:9px">${consistencyHTML}</span>` : ''}
-            </div>
-          </div>
-        </div>`;
-      }
-    return `<div class="stat-box"><div class="stat-box-label">${s.label}</div><div class="stat-box-main"><span class="stat-box-val">${s.cur}</span></div><div><div class="progress-track" style="margin:0"><div class="progress-fill up" style="width:20%"></div></div><span class="stat-box-pct dim" style="font-size:10px">—</span></div></div>`;
-  }).join('');
-  const warnBadges=(a.warnings||[]).map(w=>`<span class="badge warn">⚠ ${w}</span>`).join('');
-  const lines=(a.triggered||[]).filter(t=>t.line).map(t=>`<div class="line-item">Linha ${t.stat}: <span>${t.line}</span></div>`).join('');
-  const paceInfo = a.paceFactor ? `<div style="font-size:10px;color:${a.paceFactor>108?'var(--amber)':a.paceFactor<92?'var(--text3)':'var(--text3)'};font-weight:600">⚡ Pace ${a.paceFactor}%${a.minsLeft?' · ~'+a.minsLeft+'min restantes':''}</div>` : '';
-  return `<div class="alert-card ${a.type}" onclick="openModal(${a.playerId})">
-    <div class="card-accent ${a.type}"></div>
-    <div class="card-body">
-      <div class="player-row">
-        <div class="player-photo-wrap"><img class="player-photo" src="${photoUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt=""><div class="player-photo-fallback" style="display:none">${ini}</div></div>
-        <div class="player-info"><div class="player-name">${a.name}</div><div class="player-meta">${a.team} · ${a.position}</div><div class="player-badges"><span class="badge ${a.type}">${momentLabel(a.type)}</span>${warnBadges}</div></div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
-            <div style="display:flex;align-items:center;gap:4px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:4px 8px">
-              <span style="font-family:var(--display);font-size:13px;font-weight:800;color:var(--gold)">Q${a.period}</span>
-              ${a.clock ? `<span style="font-size:11px;color:var(--text3)">${a.clock}</span>` : ''}
-            </div>
-            <div style="font-size:10px;font-weight:600;color:var(--text3);white-space:nowrap">${a.gameLabel}</div>
-          </div>
+        <div style="font-size:11px;color:var(--danger);background:rgba(255,23,68,.08);border-radius:6px;padding:6px 8px;line-height:1.4">⚠ ${a.riskMsg}</div>
       </div>
-      <div class="stats-grid">${statsHTML}</div>
-      <div class="card-footer"><div class="lines-row">${lines||'<div class="line-item" style="color:var(--text3)">Linhas indisponíveis</div>'}</div>${paceInfo}</div>
-    </div></div>`;
+    </div>`;
+  }
+
+  const statDefs = [{key:'pts',label:'PTS',cur:a.pts},{key:'reb',label:'REB',cur:a.reb},{key:'ast',label:'AST',cur:a.ast}];
+  const topTrigger = (a.triggered||[]).sort((x,y) => (y.pct||0)-(x.pct||0))[0];
+  const col = topTrigger ? paceColor(topTrigger.pct) : 'up';
+  const colVar = col === 'fire' ? '#ff6d00' : col === 'gold' ? '#fdb927' : 'var(--green)';
+
+  const statsRow = statDefs.map(s => {
+    const t = (a.triggered||[]).find(x => x.stat === s.key);
+    return `<div style="text-align:center;flex:1">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:3px">${s.label}</div>
+      <div style="font-family:var(--display);font-size:22px;font-weight:800;line-height:1;color:${t ? colVar : "var(--text)"}">${s.cur}</div>
+      <div style="font-size:9px;color:var(--text3);margin-top:2px">${t ? "→ " + t.proj : "—"}</div>
+    </div>`;
+  }).join('<div style="width:1px;background:var(--border);margin:2px 0"></div>');
+
+  const warnings = (a.warnings||[]).length ? `<div style="font-size:9px;color:var(--amber)">⚠ ${a.warnings.join(' · ')}</div>` : '';
+  const paceInfo = a.paceFactor && a.paceFactor !== 100 ? `⚡${a.paceFactor}%` : '';
+  const pctInfo = topTrigger ? `+${topTrigger.pct}%` : '';
+
+  return `<div class="alert-card ${a.type}" onclick="openModal(${a.playerId})" style="padding:0">
+    <div style="height:3px;background:linear-gradient(90deg,${accent},${accent}66)"></div>
+    <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:42px;height:42px;border-radius:10px;overflow:hidden;background:var(--bg3);flex-shrink:0;border:1px solid var(--border)">
+          <img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover;object-position:top" onerror="this.style.display='none'">
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:var(--display);font-size:14px;font-weight:800;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.name}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">${a.team} · ${a.position}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-family:var(--display);font-size:14px;font-weight:800;color:var(--gold)">Q${a.period}</div>
+          ${a.clock ? `<div style="font-size:10px;color:var(--text3)">${a.clock}</div>` : ""}
+        </div>
+      </div>
+      <div style="display:flex;background:var(--bg3);border-radius:10px;padding:10px 8px;gap:0">
+        ${statsRow}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span class="badge ${a.type}" style="font-size:9px;padding:2px 6px">${momentLabel(a.type)}</span>
+        <span style="font-size:10px;color:${colVar};font-weight:700">${pctInfo}${paceInfo ? " · " + paceInfo : ""}</span>
+      </div>
+      ${warnings}
+    </div>
+  </div>`;
 }
 
 function renderAlerts() {
