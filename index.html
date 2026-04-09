@@ -1120,7 +1120,7 @@ function openModal(playerId) {
   // Análise do Claude AI
   const analysisBox = document.getElementById('modal-claude-analysis');
   if (analysisBox && a.type !== 'risk') {
-    analysisBox.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--text3);font-size:12px"><div style="width:16px;height:16px;border:2px solid var(--gold);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite"></div>Analisando com Claude AI...</div>`;
+    analysisBox.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--text3);font-size:12px"><div style="width:14px;height:14px;border:2px solid var(--gold);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>Analisando...</div>`;
     fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1136,14 +1136,22 @@ function openModal(playerId) {
     .then(r => r.json())
     .then(d => {
       if (d.analysis) {
+        const parts = d.analysis.split('|||');
+        const veredicto = parts[0]?.trim() || d.analysis;
+        const motivo = parts[1]?.trim() || '';
+        const isOver = veredicto.toLowerCase().includes('over') || veredicto.toLowerCase().includes('sim') || veredicto.toLowerCase().includes('recomend');
+        const cor = isOver ? 'var(--green)' : 'var(--amber)';
         analysisBox.innerHTML = `
-          <div style="display:flex;align-items:flex-start;gap:10px">
-            <div style="width:28px;height:28px;background:var(--gold);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px">✦</div>
-            <div style="font-size:13px;color:var(--text2);line-height:1.6">${d.analysis}</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:32px;height:32px;background:rgba(253,185,39,.12);border:1px solid rgba(253,185,39,.3);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px">✦</div>
+              <div style="font-family:var(--display);font-size:16px;font-weight:800;color:${cor}">${veredicto}</div>
+            </div>
+            ${motivo ? `<div style="font-size:13px;color:var(--text2);line-height:1.6;padding-left:42px">${motivo}</div>` : ''}
           </div>`;
       }
     })
-    .catch(() => { analysisBox.innerHTML = ''; });
+    .catch(() => { analysisBox.innerHTML = '<div style="font-size:12px;color:var(--text3)">Análise indisponível</div>'; });
   }
 }
 
