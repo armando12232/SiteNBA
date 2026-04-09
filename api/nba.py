@@ -84,21 +84,37 @@ def get_season_avg(player_id):
     cached = _cache_get(f"avg_{player_id}")
     if cached:
         return cached
-    from nba_api.stats.endpoints import playercareerstats
-    career = playercareerstats.PlayerCareerStats(player_id=player_id, per_mode36="PerGame")
-    data = career.get_dict()
-    reg = next((s for s in data.get("resultSets", []) if s.get("name") == "SeasonTotalsRegularSeason"), None)
-    if not reg or not reg.get("rowSet"):
+    try:
+        import urllib.request
+        url = "https://cdn.nba.com/static/json/staticData/playerIndex.json"
+        req = urllib.request.Request(url, headers={
+            'User-Agent': 'Mozilla/5.0',
+            'Origin': 'https://www.nba.com',
+            'Referer': 'https://www.nba.com/',
+        })
+        with urllib.request.urlopen(req, timeout=10) as r:
+            import json as _json
+            data = _json.loads(r.read())
+        rs = data.get("resultSets", [{}])[0]
+        headers = rs.get("headers", [])
+        rows = rs.get("rowSet", [])
+        # Achar o jogador pelo ID (primeira coluna = PERSON_ID)
+        pid_idx = headers.index("PERSON_ID") if "PERSON_ID" in headers else 0
+        pts_idx = headers.index("PTS") if "PTS" in headers else -1
+        reb_idx = headers.index("REB") if "REB" in headers else -1
+        ast_idx = headers.index("AST") if "AST" in headers else -1
+        row = next((r for r in rows if r[pid_idx] == player_id), None)
+        if not row:
+            return None
+        avg = {
+            "pts": float(row[pts_idx] or 0) if pts_idx >= 0 else 0,
+            "reb": float(row[reb_idx] or 0) if reb_idx >= 0 else 0,
+            "ast": float(row[ast_idx] or 0) if ast_idx >= 0 else 0,
+        }
+        _cache_set(f"avg_{player_id}", avg)
+        return avg
+    except Exception as e:
         return None
-    headers = reg["headers"]
-    last_row = dict(zip(headers, reg["rowSet"][-1]))
-    avg = {
-        "pts": float(last_row.get("PTS", 0) or 0),
-        "reb": float(last_row.get("REB", 0) or 0),
-        "ast": float(last_row.get("AST", 0) or 0),
-    }
-    _cache_set(f"avg_{player_id}", avg)
-    return avg
 
 def get_pregame(player_id):
     cached = _cache_get(f"pregame_{player_id}")
