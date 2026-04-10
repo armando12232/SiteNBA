@@ -197,7 +197,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .section-line { flex: 1; height: 1px; background: var(--border); }
 
 /* ALERT CARDS */
-.alerts-list { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; }
+.alerts-list { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
 .alert-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; transition: border-color 0.2s, transform 0.15s; cursor: pointer; }
 .alert-card:hover { transform: translateY(-2px); border-color: var(--border2); }
 .alert-card.fire { border-color: rgba(255,109,0,0.35); }
@@ -1082,7 +1082,7 @@ function renderCard(a) {
 
   if (a.type === 'risk') {
     return `<div class="alert-card risk" onclick="openModal(${a.playerId})" style="padding:0">
-      <div style="height:3px;background:linear-gradient(90deg,#ff1744,#c8102e)"></div>
+      <div style="height:4px;background:linear-gradient(90deg,#ff1744,#c8102e)"></div>
       <div style="padding:12px;display:flex;flex-direction:column;gap:8px">
         <div style="display:flex;align-items:center;gap:8px">
           <div style="width:36px;height:36px;border-radius:8px;overflow:hidden;background:var(--bg3);flex-shrink:0">
@@ -1106,37 +1106,37 @@ function renderCard(a) {
   const statsRow = statDefs.map(s => {
     const t = (a.triggered||[]).find(x => x.stat === s.key);
     return `<div style="text-align:center;flex:1">
-      <div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:3px">${s.label}</div>
-      <div style="font-family:var(--display);font-size:22px;font-weight:800;line-height:1;color:${t ? colVar : "var(--text)"}">${s.cur}</div>
-      <div style="font-size:9px;color:var(--text3);margin-top:2px">${t ? "→ " + t.proj : "—"}</div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;margin-bottom:3px">${s.label}</div>
+      <div style="font-family:var(--display);font-size:26px;font-weight:800;line-height:1;color:${t ? colVar : "var(--text)"}">${s.cur}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px">${t ? "→ " + t.proj : "—"}</div>
     </div>`;
   }).join('<div style="width:1px;background:var(--border);margin:2px 0"></div>');
 
-  const warnings = (a.warnings||[]).length ? `<div style="font-size:9px;color:var(--amber)">⚠ ${a.warnings.join(' · ')}</div>` : '';
+  const warnings = (a.warnings||[]).length ? `<div style="font-size:10px;color:var(--amber)">⚠ ${a.warnings.join(' · ')}</div>` : '';
   const paceInfo = a.paceFactor && a.paceFactor !== 100 ? `⚡${a.paceFactor}%` : '';
   const pctInfo = topTrigger ? `+${topTrigger.pct}%` : '';
 
   return `<div class="alert-card ${a.type}" onclick="openModal(${a.playerId})" style="padding:0">
-    <div style="height:3px;background:linear-gradient(90deg,${accent},${accent}66)"></div>
-    <div style="padding:12px;display:flex;flex-direction:column;gap:10px">
+    <div style="height:4px;background:linear-gradient(90deg,${accent},${accent}66)"></div>
+    <div style="padding:14px;display:flex;flex-direction:column;gap:12px">
       <div style="display:flex;align-items:center;gap:8px">
-        <div style="width:42px;height:42px;border-radius:10px;overflow:hidden;background:var(--bg3);flex-shrink:0;border:1px solid var(--border)">
+        <div style="width:50px;height:50px;border-radius:12px;overflow:hidden;background:var(--bg3);flex-shrink:0;border:1px solid var(--border)">
           <img src="${photoUrl}" style="width:100%;height:100%;object-fit:cover;object-position:top" onerror="this.style.display='none'">
         </div>
         <div style="flex:1;min-width:0">
-          <div style="font-family:var(--display);font-size:14px;font-weight:800;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.name}</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px">${a.team} · ${a.position}</div>
+          <div style="font-family:var(--display);font-size:16px;font-weight:800;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.name}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">${a.team} · ${a.position}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <div style="font-family:var(--display);font-size:14px;font-weight:800;color:var(--gold)">Q${a.period}</div>
-          ${a.clock ? `<div style="font-size:10px;color:var(--text3)">${a.clock}</div>` : ""}
+          <div style="font-family:var(--display);font-size:16px;font-weight:800;color:var(--gold)">Q${a.period}</div>
+          ${a.clock ? `<div style="font-size:11px;color:var(--text3)">${a.clock}</div>` : ""}
         </div>
       </div>
-      <div style="display:flex;background:var(--bg3);border-radius:10px;padding:10px 8px;gap:0">
+      <div style="display:flex;background:var(--bg3);border-radius:10px;padding:12px 10px;gap:0">
         ${statsRow}
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between">
-        <span class="badge ${a.type}" style="font-size:9px;padding:2px 6px">${momentLabel(a.type)}</span>
+        <span class="badge ${a.type}" style="font-size:10px;padding:3px 8px">${momentLabel(a.type)}</span>
         <span style="font-size:10px;color:${colVar};font-weight:700">${pctInfo}${paceInfo ? " · " + paceInfo : ""}</span>
       </div>
       ${warnings}
