@@ -221,50 +221,83 @@ def get_pregame(player_id):
 
 
 # Cache longo para dados de defesa (mudam pouco)
-def get_today_schedule():
-    """Busca jogos do dia via nba_api live scoreboard + schedule CDN."""
-    cached = _cache_get("schedule_today")
+def get_upcoming_schedule(days_ahead=7):
+    """Busca próximos jogos via schedule CDN da NBA (suporta dias sem jogo)."""
+    cached = _cache_get("schedule_upcoming")
     if cached:
         return cached
 
     try:
-        from nba_api.live.nba.endpoints import scoreboard as sb_endpoint
-        board = sb_endpoint.ScoreBoard()
-        data  = board.get_dict()
-        games_raw = data.get("scoreboard", {}).get("games", [])
+        from datetime import datetime, timedelta, timezone
 
-        games = []
-        for g in games_raw:
-            ht = g.get("homeTeam", {})
-            at = g.get("awayTeam", {})
-            status = g.get("gameStatus", 1)  # 1=scheduled, 2=live, 3=final
+        # 1. Tentar via nba_api scoreboard (jogos de hoje)
+        today_games = []
+        try:
+            from nba_api.live.nba.endpoints import scoreboard as sb_endpoint
+            board = sb_endpoint.ScoreBoard()
+            sdata = board.get_dict()
+            raw   = sdata.get("scoreboard", {}).get("games", [])
+            for g in raw:
+                ht = g.get("homeTeam", {}); at = g.get("awayTeam", {})
+                today_games.append({
+                    "gameId":      g.get("gameId"),
+                    "status":      g.get("gameStatus", 1),
+                    "statusText":  g.get("gameStatusText", ""),
+                    "gameTimeUTC": g.get("gameTimeUTC", ""),
+                    "gameDateLabel": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                    "homeTeam": {"teamId": ht.get("teamId"), "abbr": ht.get("teamTricode","HME"), "name": ht.get("teamName",""), "score": ht.get("score",0)},
+                    "awayTeam": {"teamId": at.get("teamId"), "abbr": at.get("teamTricode","AWY"), "name": at.get("teamName",""), "score": at.get("score",0)},
+                })
+        except Exception:
+            pass
 
-            # Horário em UTC
-            game_time_utc = g.get("gameTimeUTC", "")
+        # 2. Buscar schedule dos próximos dias via CDN
+        future_games = []
+        try:
+            url = "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json"
+            sched_data = _nba_fetch(url, timeout=9)
+            game_dates  = sched_data.get("leagueSchedule", {}).get("gameDates", [])
 
-            games.append({
-                "gameId":     g.get("gameId"),
-                "status":     status,
-                "statusText": g.get("gameStatusText", ""),
-                "gameTimeUTC": game_time_utc,
-                "homeTeam": {
-                    "teamId":   ht.get("teamId"),
-                    "abbr":     ht.get("teamTricode", "HME"),
-                    "name":     ht.get("teamName", ""),
-                    "score":    ht.get("score", 0),
-                },
-                "awayTeam": {
-                    "teamId":   at.get("teamId"),
-                    "abbr":     at.get("teamTricode", "AWY"),
-                    "name":     at.get("teamName", ""),
-                    "score":    at.get("score", 0),
-                },
-            })
+            now_utc  = datetime.now(timezone.utc)
+            tomorrow = (now_utc + timedelta(days=1)).strftime("%m/%d/%Y")
+            end_date = (now_utc + timedelta(days=days_ahead)).strftime("%m/%d/%Y")
 
-        # Cache curto: 5 min durante jogos, 30 min sem jogos
-        ttl = 300 if any(g["status"] == 2 for g in games) else 1800
-        _cache_set("schedule_today", games)
-        return games
+            from datetime import datetime as dt2
+            for gd in game_dates:
+                game_date_str = gd.get("gameDate", "")
+                if not game_date_str:
+                    continue
+                try:
+                    gd_dt = dt2.strptime(game_date_str.split(" ")[0], "%m/%d/%Y")
+                    now_d  = dt2.strptime(now_utc.strftime("%m/%d/%Y"), "%m/%d/%Y")
+                    end_d  = dt2.strptime(end_date, "%m/%d/%Y")
+                    # Apenas dias futuros (não hoje — já coberto pelo scoreboard)
+                    if not (now_d < gd_dt <= end_d):
+                        continue
+                except ValueError:
+                    continue
+
+                for g in gd.get("games", []):
+                    ht = g.get("homeTeam", {}); at = g.get("awayTeam", {})
+                    game_time_utc = g.get("gameDateTimeUTC", "")
+                    future_games.append({
+                        "gameId":        g.get("gameId", ""),
+                        "status":        1,  # scheduled
+                        "statusText":    "Agendado",
+                        "gameTimeUTC":   game_time_utc,
+                        "gameDateLabel": gd_dt.strftime("%Y-%m-%d"),
+                        "homeTeam": {"teamId": ht.get("teamId"), "abbr": ht.get("teamTricode","HME"), "name": ht.get("teamCityName",""), "score": 0},
+                        "awayTeam": {"teamId": at.get("teamId"), "abbr": at.get("teamTricode","AWY"), "name": at.get("teamCityName",""), "score": 0},
+                    })
+        except Exception as e:
+            pass  # CDN falhou, só usa hoje
+
+        all_games = today_games + future_games
+
+        # Cache: 5min se tem ao vivo, 30min senão
+        has_live = any(g.get("status") == 2 for g in all_games)
+        _cache_set("schedule_upcoming", all_games)
+        return all_games
 
     except Exception as e:
         return {"error": str(e)}
@@ -362,7 +395,7 @@ class handler(BaseHTTPRequestHandler):
                 self._send(200, get_pregame(int(player_id)))
 
             elif req_type == "schedule":
-                result = get_today_schedule()
+                result = get_upcoming_schedule()
                 self._send(200, {"games": result} if isinstance(result, list) else result)
 
             elif req_type == "defense":
