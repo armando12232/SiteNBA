@@ -29,8 +29,9 @@ def build_prompt(d: dict) -> str:
     b2b       = d.get('isB2B', False)
     mins_l5   = d.get('minsL5', None)
     pace_factor = d.get('paceFactor', 100)
-    prop_score  = d.get('propScore', None)  # score da equação (ex: 1.65 = 165)
-    hit_rate_direct = d.get('hitRate', None)  # hit rate direto do payload
+    prop_score  = d.get('propScore', None)
+    hit_rate_direct = d.get('hitRate', None)
+    defense     = d.get('defenseRanking', None)  # ranking defensivo do adversario
 
     triggered_lines = []
     for t in triggered:
@@ -94,6 +95,7 @@ Back-to-back: {b2b_text}
 Minutos medios: {mins_l5_txt}
 Pace do jogo: {pace_txt}
 PropScore da equacao: {f"{round(prop_score*100)}pts/100" if prop_score else "nao calculado"} (>=130=alerta, >=150=forte, >=180=excelente)
+Ranking defensivo do adversario: {f"{defense['team']} permite {defense['pts_allowed']}pts/jogo a {defense['category']} - {defense['rank']}o pior de {defense['total']} ({defense['rating']} defesa)" if defense and not defense.get('error') else "nao disponivel"}
 Riscos: {warnings_text}
 
 Responda APENAS em portugues brasileiro. SEM markdown, SEM asteriscos, SEM emojis. Texto simples.
