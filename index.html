@@ -222,8 +222,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 @media (max-width: 600px) { .game-group-cards { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; } }
 
 /* ALERT CARDS */
-.alerts-list { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
-@media (max-width: 600px) { .alerts-list { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; } }
+.alerts-list { display: block; }
 .alert-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; transition: border-color 0.2s, transform 0.15s; cursor: pointer; }
 .alert-card:hover { transform: translateY(-2px); border-color: var(--border2); }
 .alert-card.fire { border-color: rgba(255,109,0,0.35); }
