@@ -197,6 +197,103 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .section-line { flex: 1; height: 1px; background: var(--border); }
 
 /* GAME GROUP */
+/* JOGOS DO DIA */
+.today-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+@media (max-width: 700px) { .today-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; } }
+@media (max-width: 420px) { .today-grid { grid-template-columns: 1fr; } }
+
+.today-game-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 18px; overflow: hidden;
+  transition: border-color 0.2s, transform 0.15s;
+  position: relative;
+}
+.today-game-card:hover { transform: translateY(-2px); border-color: var(--border2); }
+.today-game-card.live  { border-color: rgba(200,16,46,0.5); }
+.today-game-card.final { opacity: 0.65; }
+
+.today-card-top {
+  position: relative; height: 110px;
+  background: linear-gradient(135deg, var(--bg3) 0%, var(--bg4) 100%);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  overflow: hidden;
+}
+.today-card-top::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 120%, rgba(253,185,39,0.05) 0%, transparent 70%);
+}
+.today-team-side {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 6px; z-index: 1;
+}
+.today-team-logo {
+  width: 52px; height: 52px; object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+}
+.today-team-abbr {
+  font-family: var(--display); font-size: 13px; font-weight: 800;
+  color: var(--text2); letter-spacing: 0.04em;
+}
+.today-score-center { display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 1; }
+.today-score-nums {
+  font-family: var(--display); font-size: 28px; font-weight: 800;
+  color: var(--text); line-height: 1; letter-spacing: 0.02em;
+}
+.today-score-sep { color: var(--text3); margin: 0 6px; font-weight: 400; }
+.today-status-pill {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; padding: 3px 10px; border-radius: 20px;
+}
+.today-status-pill.scheduled { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+.today-status-pill.live {
+  background: rgba(200,16,46,0.15); color: var(--red2);
+  border: 1px solid rgba(200,16,46,0.4);
+  animation: none;
+}
+.today-status-pill.final { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+
+/* Faixas de jogadores no bottom do card */
+.today-card-players {
+  display: flex; gap: 0; height: 72px; overflow: hidden;
+  border-top: 1px solid var(--border);
+}
+.today-player-slot {
+  flex: 1; position: relative; overflow: hidden;
+  background: var(--bg3);
+}
+.today-player-slot + .today-player-slot { border-left: 1px solid var(--border); }
+.today-player-img {
+  width: 100%; height: 100%; object-fit: cover;
+  object-position: top center;
+  transform: scale(1.15) translateY(4px);
+}
+.today-player-name {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.85));
+  padding: 12px 4px 4px;
+  font-size: 9px; font-weight: 700; color: var(--text2);
+  text-align: center; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.today-card-footer {
+  padding: 10px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-top: 1px solid var(--border);
+}
+.today-time { font-size: 12px; color: var(--text3); font-weight: 600; }
+.today-live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--red2); animation: blink 1.2s infinite;
+  display: inline-block; margin-right: 5px;
+}
+
 /* GAME CARDS GRID */
 .games-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; margin-bottom: 24px; }
 @media (max-width: 700px) { .games-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; } }
@@ -543,8 +640,18 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
       </div>
 
       <div style="display:flex;gap:8px;margin-bottom:18px">
-        <button id="view-live-btn" onclick="switchView('live')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--body)">Ao vivo</button>
-        <button id="view-pregame-btn" onclick="switchView('pregame')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">Pré-jogo</button>
+        <button id="view-today-btn" onclick="switchView('today')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">📅 Jogos do Dia</button>
+        <button id="view-live-btn" onclick="switchView('live')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--body)">🔴 Ao vivo</button>
+        <button id="view-pregame-btn" onclick="switchView('pregame')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">📊 Pré-jogo</button>
+      </div>
+
+      <div id="today-view" style="display:none">
+        <div class="section-header">
+          <span class="section-title" id="today-section-title">Jogos de hoje</span>
+          <div class="section-line"></div>
+        </div>
+        <div id="today-loading" style="text-align:center;padding:40px;color:var(--text3)">Carregando jogos...</div>
+        <div class="today-grid" id="today-grid" style="display:none"></div>
       </div>
 
       <div id="live-view">
@@ -682,11 +789,21 @@ function teamLogoUrl(abbr) {
 
 function switchView(view) {
   currentView = view;
-  document.getElementById('view-live-btn').classList.toggle('active', view === 'live');
-  document.getElementById('view-pregame-btn').classList.toggle('active', view === 'pregame');
-  document.getElementById('live-view').style.display = view === 'live' ? 'block' : 'none';
+  const btns = ['today','live','pregame'];
+  btns.forEach(v => {
+    const btn = document.getElementById(`view-${v}-btn`);
+    if (btn) {
+      const active = v === view;
+      btn.style.color     = active ? 'var(--text)' : 'var(--text3)';
+      btn.style.borderColor = active ? 'var(--border2)' : 'var(--border)';
+      btn.style.background  = active ? 'var(--bg3)' : 'var(--bg2)';
+    }
+  });
+  document.getElementById('today-view').style.display   = view === 'today'   ? 'block' : 'none';
+  document.getElementById('live-view').style.display    = view === 'live'    ? 'block' : 'none';
   document.getElementById('pregame-view').style.display = view === 'pregame' ? 'block' : 'none';
   if (view === 'pregame') loadPregame();
+  if (view === 'today')   loadTodayGames();
 }
 
 function confidenceFromEdge(edge) {
@@ -760,6 +877,157 @@ async function fetchPlayerPregame(playerId, playerName) {
   };
   pregameCache[playerId] = result;
   return result;
+}
+
+
+// ─── JOGOS DO DIA ────────────────────────────────────────────────────────────
+
+// Jogadores estrela por time (para mostrar fotos nos cards)
+const STAR_PLAYERS = {
+  ATL:[1628384,1629029], BOS:[1628384,4065648], BKN:[1627742,1628425],
+  CHA:[1630169,3934673], CHI:[1628386,203897],  CLE:[3934673,203897],
+  DAL:[1629029,1627783], DEN:[203999,1628384],  DET:[1631096,1628389],
+  GSW:[201939,1626172],  HOU:[1628374,1630162], IND:[1629627,1628386],
+  LAC:[202695,203488],   LAL:[2544,1629029],    MEM:[1629630,1628386],
+  MIA:[1629029,203076],  MIL:[203507,1628384],  MIN:[1630178,1629631],
+  NOP:[1630559,1629629], NYK:[1628384,1629628],  OKC:[1628983,1629621],
+  ORL:[1630532,1628384], PHI:[203954,1627742],  PHX:[1629627,203932],
+  POR:[1629008,1628407], SAC:[1628983,203076],  SAS:[1629029,1628425],
+  TOR:[1629628,1629029], UTA:[1629627,203932],  WAS:[1631096,1628384],
+};
+
+let todayGamesCache = null;
+
+async function loadTodayGames() {
+  const loading = document.getElementById('today-loading');
+  const grid    = document.getElementById('today-grid');
+  const title   = document.getElementById('today-section-title');
+
+  // Se já carregou, só re-renderizar
+  if (todayGamesCache) {
+    renderTodayGames(todayGamesCache);
+    return;
+  }
+
+  loading.style.display = 'block';
+  loading.textContent   = 'Carregando jogos...';
+  grid.style.display    = 'none';
+
+  try {
+    const data = await fetchNBA('schedule');
+    const games = data.games || [];
+
+    // Atualizar título com a data
+    const today = new Date();
+    const opts  = { weekday:'long', day:'numeric', month:'long' };
+    title.textContent = `Jogos — ${today.toLocaleDateString('pt-BR', opts)}`;
+
+    todayGamesCache = games;
+    renderTodayGames(games);
+  } catch(e) {
+    loading.textContent = 'Erro ao carregar jogos do dia.';
+    console.error(e);
+  }
+}
+
+function renderTodayGames(games) {
+  const loading = document.getElementById('today-loading');
+  const grid    = document.getElementById('today-grid');
+
+  if (!games.length) {
+    loading.style.display = 'block';
+    loading.innerHTML = `<div class="state-box">
+      <div class="state-nba-logo">NBA</div>
+      <div class="state-title">Sem jogos hoje</div>
+      <div class="state-sub">A NBA não tem jogos programados para hoje.</div>
+    </div>`;
+    grid.style.display = 'none';
+    return;
+  }
+
+  loading.style.display = 'none';
+  grid.style.display    = 'grid';
+  grid.innerHTML = games.map(renderTodayCard).join('');
+}
+
+function renderTodayCard(g) {
+  const home = g.homeTeam, away = g.awayTeam;
+  const status = g.status; // 1=scheduled, 2=live, 3=final
+
+  const homeLogo = teamLogoUrl(home.abbr);
+  const awayLogo = teamLogoUrl(away.abbr);
+
+  const logoEl = (logo, abbr) => logo
+    ? `<img class="today-team-logo" src="${logo}" onerror="this.style.display='none'" alt="${abbr}">`
+    : `<div class="today-team-logo" style="display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:16px;font-weight:800;color:var(--text3)">${abbr}</div>`;
+
+  // Placar ou horário
+  let centerContent = '';
+  let statusCls = 'scheduled';
+  let statusLabel = '';
+
+  if (status === 2) {
+    // Ao vivo
+    statusCls = 'live';
+    statusLabel = `<span class="today-live-dot"></span>${g.statusText || 'Ao vivo'}`;
+    centerContent = `
+      <div class="today-score-nums">
+        ${away.score}<span class="today-score-sep">·</span>${home.score}
+      </div>
+      <div class="today-status-pill live">${statusLabel}</div>`;
+  } else if (status === 3) {
+    // Final
+    statusCls = 'final';
+    centerContent = `
+      <div class="today-score-nums">
+        ${away.score}<span class="today-score-sep">·</span>${home.score}
+      </div>
+      <div class="today-status-pill final">Final</div>`;
+  } else {
+    // Agendado — mostrar horário
+    statusCls = 'scheduled';
+    let timeStr = '—';
+    if (g.gameTimeUTC) {
+      const d = new Date(g.gameTimeUTC);
+      timeStr = d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Sao_Paulo' });
+    }
+    centerContent = `
+      <div class="today-score-nums" style="font-size:22px;color:var(--text2)">${timeStr}</div>
+      <div class="today-status-pill scheduled">Horário de Brasília</div>`;
+  }
+
+  // Fotos dos jogadores estrela (2 por time)
+  const homeStars = (STAR_PLAYERS[home.abbr] || []).slice(0,2);
+  const awayStars = (STAR_PLAYERS[away.abbr] || []).slice(0,2);
+  const allStars  = [...awayStars, ...homeStars].slice(0,4);
+
+  const playerSlots = allStars.map(pid => `
+    <div class="today-player-slot">
+      <img class="today-player-img"
+           src="https://cdn.nba.com/headshots/nba/latest/1040x760/${pid}.png"
+           onerror="this.parentElement.style.background='var(--bg4)'">
+    </div>`).join('');
+
+  // Badge do card
+  const cardCls = status === 2 ? 'live' : status === 3 ? 'final' : '';
+
+  return `
+    <div class="today-game-card ${cardCls}">
+      <div class="today-card-top">
+        <div class="today-team-side">
+          ${logoEl(awayLogo, away.abbr)}
+          <span class="today-team-abbr">${away.abbr}</span>
+        </div>
+        <div class="today-score-center">
+          ${centerContent}
+        </div>
+        <div class="today-team-side">
+          ${logoEl(homeLogo, home.abbr)}
+          <span class="today-team-abbr">${home.abbr}</span>
+        </div>
+      </div>
+      ${playerSlots ? `<div class="today-card-players">${playerSlots}</div>` : ''}
+    </div>`;
 }
 
 async function loadPregame() {
