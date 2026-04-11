@@ -640,13 +640,13 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
       </div>
 
       <div style="display:flex;gap:8px;margin-bottom:18px">
-        <button id="view-today-btn" onclick="switchView('today')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">📅 Jogos do Dia</button>
+        <button id="view-today-btn" onclick="switchView('today')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">📅 Próximos Jogos</button>
         <button id="view-live-btn" onclick="switchView('live')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--body)">🔴 Ao vivo</button>
       </div>
 
       <div id="today-view" style="display:none">
         <div class="section-header">
-          <span class="section-title" id="today-section-title">Jogos de hoje</span>
+          <span class="section-title" id="today-section-title">Próximos jogos</span>
           <div class="section-line"></div>
         </div>
         <div id="today-loading" style="text-align:center;padding:40px;color:var(--text3)">Carregando jogos...</div>
@@ -909,11 +909,6 @@ async function loadTodayGames() {
     const data = await fetchNBA('schedule');
     const games = data.games || [];
 
-    // Atualizar título com a data
-    const today = new Date();
-    const opts  = { weekday:'long', day:'numeric', month:'long' };
-    title.textContent = `Jogos — ${today.toLocaleDateString('pt-BR', opts)}`;
-
     todayGamesCache = games;
     renderTodayGames(games);
     // Buscar pré-jogo de todos os jogos em paralelo (silencioso)
@@ -932,16 +927,53 @@ function renderTodayGames(games) {
     loading.style.display = 'block';
     loading.innerHTML = `<div class="state-box">
       <div class="state-nba-logo">NBA</div>
-      <div class="state-title">Sem jogos hoje</div>
-      <div class="state-sub">A NBA não tem jogos programados para hoje.</div>
+      <div class="state-title">Sem jogos nos próximos dias</div>
+      <div class="state-sub">Verifique novamente em breve.</div>
     </div>`;
     grid.style.display = 'none';
     return;
   }
 
+  // Agrupar por data
+  const byDate = {};
+  for (const g of games) {
+    const dateKey = g.gameDateLabel || 'hoje';
+    if (!byDate[dateKey]) byDate[dateKey] = [];
+    byDate[dateKey].push(g);
+  }
+
   loading.style.display = 'none';
-  grid.style.display    = 'grid';
-  grid.innerHTML = games.map(renderTodayCard).join('');
+  grid.style.display    = 'block'; // block pra suportar section headers entre grids
+
+  const dateLabels = {
+    [new Date().toISOString().slice(0,10)]: 'Hoje',
+    [new Date(Date.now()+86400000).toISOString().slice(0,10)]: 'Amanhã',
+  };
+
+  const weekDays = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const months   = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  grid.innerHTML = Object.entries(byDate).map(([date, dayGames]) => {
+    // Label da data
+    let label = dateLabels[date];
+    if (!label) {
+      const d = new Date(date + 'T12:00:00');
+      label = `${weekDays[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
+    }
+    const isToday = date === new Date().toISOString().slice(0,10);
+
+    return `
+      <div style="margin-bottom:28px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <span style="font-family:var(--display);font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:${isToday ? 'var(--gold)' : 'var(--text3)'}">${label}</span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <span style="font-size:11px;color:var(--text3)">${dayGames.length} ${dayGames.length===1?'jogo':'jogos'}</span>
+        </div>
+        <div class="today-grid" style="margin-bottom:0">
+          ${dayGames.map(renderTodayCard).join('')}
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // Cache de pré-jogo por jogo
