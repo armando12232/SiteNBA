@@ -24,6 +24,8 @@ def build_prompt(d: dict) -> str:
     hit_rate  = d.get('hitRate', None)
     l5_pts    = d.get('l5Pts', None)
     h2h       = d.get('h2h', [])
+    line_real = d.get('line', None)      # linha sintética do pré-jogo
+    edge_real = d.get('edge', None)      # edge real L5 vs linha
     b2b       = d.get('isB2B', False)
     mins_l5   = d.get('minsL5', None)
     pace_factor = d.get('paceFactor', 100)
@@ -38,9 +40,10 @@ def build_prompt(d: dict) -> str:
         line  = t.get('line', None)
         low   = t.get('projLow', proj)
         high  = t.get('projHigh', proj)
-        line_txt = f", linha {line}" if line else ""
+        line_txt = f", linha {line}" if line else (f", linha sintetica {line_real}" if line_real else "")
+        edge_txt = f" (edge L5: +{edge_real}pts)" if edge_real and edge_real > 0 else ""
         triggered_lines.append(
-            f"  - {stat}: {cur} atual -> proj {proj} (IC: {low}-{high}), {pct}% acima media {avg}{line_txt}"
+            f"  - {stat}: {cur} atual -> proj {proj} (IC: {low}-{high}), {pct}% acima media {avg}{line_txt}{edge_txt}"
         )
     triggered_text = '\n'.join(triggered_lines) if triggered_lines else '  nenhum'
 
