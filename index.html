@@ -197,6 +197,83 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .section-line { flex: 1; height: 1px; background: var(--border); }
 
 /* GAME GROUP */
+/* GAME MODAL */
+.game-modal-overlay {
+  position: fixed; inset: 0; z-index: 1001;
+  background: rgba(0,0,0,0.88); backdrop-filter: blur(8px);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 0; opacity: 0; pointer-events: none;
+  transition: opacity 0.25s;
+}
+.game-modal-overlay.open { opacity: 1; pointer-events: all; }
+.game-modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 24px 24px 0 0; width: 100%; max-width: 640px;
+  max-height: 92vh; overflow-y: auto; scrollbar-width: none;
+  transform: translateY(40px); transition: transform 0.28s;
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+.game-modal::-webkit-scrollbar { display: none; }
+.game-modal-overlay.open .game-modal { transform: translateY(0); }
+
+.game-modal-hero {
+  position: relative; padding: 28px 24px 20px;
+  background: linear-gradient(180deg, var(--bg3) 0%, var(--bg2) 100%);
+  border-bottom: 1px solid var(--border);
+}
+.game-modal-close {
+  position: absolute; top: 14px; right: 14px;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--bg4); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--text2); font-size: 16px;
+  transition: all 0.15s;
+}
+.game-modal-close:hover { background: var(--bg3); color: var(--text); }
+.game-modal-teams {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.game-modal-team { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.game-modal-team img { width: 64px; height: 64px; object-fit: contain; }
+.game-modal-team-name { font-family: var(--display); font-size: 22px; font-weight: 800; }
+.game-modal-team-city { font-size: 11px; color: var(--text3); }
+.game-modal-center { text-align: center; }
+.game-modal-score { font-family: var(--display); font-size: 42px; font-weight: 800; line-height: 1; letter-spacing: 0.02em; }
+.game-modal-score .sep { color: var(--text3); margin: 0 8px; font-size: 28px; }
+.game-modal-status { margin-top: 6px; }
+.game-modal-body { padding: 20px; }
+.game-modal-section-title {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--text3); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.game-modal-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* Linha de jogador no modal */
+.gm-player-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.1s; border-radius: 8px;
+  padding: 10px 8px;
+}
+.gm-player-row:hover { background: var(--bg3); }
+.gm-player-row:last-child { border-bottom: none; }
+.gm-player-photo {
+  width: 44px; height: 44px; border-radius: 10px;
+  object-fit: cover; object-position: top; background: var(--bg3); flex-shrink: 0;
+}
+.gm-player-info { flex: 1; min-width: 0; }
+.gm-player-name { font-family: var(--display); font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gm-player-team { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.gm-player-stats { display: flex; gap: 12px; align-items: center; }
+.gm-stat { text-align: center; }
+.gm-stat-val { font-family: var(--display); font-size: 16px; font-weight: 800; line-height: 1; }
+.gm-stat-lbl { font-size: 9px; color: var(--text3); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.gm-over-badge {
+  font-family: var(--display); font-size: 13px; font-weight: 800;
+  color: var(--green); white-space: nowrap;
+}
+
 /* JOGOS DO DIA */
 .today-grid {
   display: grid;
@@ -684,6 +761,20 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 
 </div>
 
+<!-- GAME MODAL -->
+<div class="game-modal-overlay" id="game-modal-overlay" onclick="closeGameModal(event)">
+  <div class="game-modal" id="game-modal">
+    <div class="game-modal-hero">
+      <div class="game-modal-close" onclick="closeGameModalDirect()">✕</div>
+      <div class="game-modal-teams" id="gm-teams"></div>
+      <div class="game-modal-status" id="gm-status"></div>
+    </div>
+    <div class="game-modal-body" id="gm-body">
+      <div style="text-align:center;padding:40px;color:var(--text3)">Carregando...</div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
   <div class="modal" id="modal">
@@ -876,16 +967,36 @@ async function fetchPlayerPregame(playerId, playerName) {
 
 // Jogadores estrela por time (para mostrar fotos nos cards)
 const STAR_PLAYERS = {
-  ATL:[1628384,1629029], BOS:[1628384,4065648], BKN:[1627742,1628425],
-  CHA:[1630169,3934673], CHI:[1628386,203897],  CLE:[3934673,203897],
-  DAL:[1629029,1627783], DEN:[203999,1628384],  DET:[1631096,1628389],
-  GSW:[201939,1626172],  HOU:[1628374,1630162], IND:[1629627,1628386],
-  LAC:[202695,203488],   LAL:[2544,1629029],    MEM:[1629630,1628386],
-  MIA:[1629029,203076],  MIL:[203507,1628384],  MIN:[1630178,1629631],
-  NOP:[1630559,1629629], NYK:[1628384,1629628],  OKC:[1628983,1629621],
-  ORL:[1630532,1628384], PHI:[203954,1627742],  PHX:[1629627,203932],
-  POR:[1629008,1628407], SAC:[1628983,203076],  SAS:[1629029,1628425],
-  TOR:[1629628,1629029], UTA:[1629627,203932],  WAS:[1631096,1628384],
+  ATL:[1629027, 1628960],  // Trae Young (1629027), Bogdanovic
+  BOS:[4065648, 1627759],  // Tatum, Jaylen Brown
+  BKN:[1630202, 1629655],  // Cam Thomas, Dennis
+  CHA:[1630169, 1631117],  // LaMelo, Brandon Miller
+  CHI:[1628386, 1629655],  // LaVine, Coby White
+  CLE:[3934673, 1629631],  // Donovan Mitchell, Evan Mobley
+  DAL:[202681,  1629021],  // Kyrie Irving, PJ Washington
+  DEN:[203999,  1628374],  // Jokic, Jamal Murray
+  DET:[1631096, 1629019],  // Cade Cunningham, Jaden Ivey
+  GSW:[201939,  203110],   // Curry, Draymond Green
+  HOU:[1630162, 1629638],  // Jalen Green, Sengun
+  IND:[1629627, 1628386],  // Haliburton, Siakam
+  LAC:[202695,  201935],   // Kawhi, James Harden
+  LAL:[2544,    1629029],  // LeBron, Luka Doncic
+  MEM:[1629630, 1629028],  // Ja Morant, Desmond Bane
+  MIA:[1628423, 1628389],  // Tyler Herro, Bam Adebayo
+  MIL:[203507,  1628425],  // Giannis, Damian Lillard
+  MIN:[1630178, 1629631],  // Edwards, Gobert
+  NOP:[1630559, 203076],   // Zion, CJ McCollum
+  NYK:[1628384, 1629003],  // Brunson, Mikal Bridges
+  OKC:[1628983, 1629621],  // SGA, Chet Holmgren
+  ORL:[1628960, 1630532],  // Banchero, Franz Wagner
+  PHI:[203954,  1627742],  // Embiid, Paul George
+  PHX:[203954,  203932],   // Booker, Kevin Durant
+  POR:[1629008, 1628407],  // Simons, Jerami Grant
+  SAC:[203500,  1628384],  // Sabonis, De'Aaron Fox
+  SAS:[1641705, 1628425],  // Wembanyama, Chris Paul
+  TOR:[1629628, 1629029],  // Scottie Barnes, RJ Barrett
+  UTA:[1628978, 1629720],  // Markkanen, Jordan Clarkson
+  WAS:[203552,  1629628],  // Kyle Kuzma, Jordan Poole
 };
 
 let todayGamesCache = null;
@@ -910,6 +1021,12 @@ async function loadTodayGames() {
     const games = data.games || [];
 
     todayGamesCache = games;
+    // Indexar por gameKey para acesso rápido
+    window._gameByKey = {};
+    games.forEach(g => {
+      const key = g.gameId || (g.awayTeam.abbr + g.homeTeam.abbr);
+      window._gameByKey[key] = g;
+    });
     renderTodayGames(games);
     // Buscar pré-jogo de todos os jogos em paralelo (silencioso)
     games.forEach(g => loadGamePregame(g).catch(() => {}));
@@ -1063,7 +1180,7 @@ function renderTodayCard(g) {
        </div>`;
 
   return `
-    <div class="today-game-card ${cardCls}">
+    <div class="today-game-card ${cardCls}" onclick="openGameModal('${gameKey}')" style="cursor:pointer">
       <div class="today-card-top">
         <div class="today-team-side">${logoEl(awayLogo, away.abbr)}<span class="today-team-abbr">${away.abbr}</span></div>
         <div class="today-score-center">${centerContent}</div>
@@ -1079,10 +1196,159 @@ function renderTodayCard(g) {
     </div>`;
 }
 
+// ─── GAME MODAL ─────────────────────────────────────────────────────────────
+function openGameModal(gameKey) {
+  const g = (window._gameByKey || {})[gameKey];
+  if (!g) return;
+
+  const overlay = document.getElementById('game-modal-overlay');
+  const home = g.homeTeam, away = g.awayTeam;
+  const status = g.status;
+
+  // Header com times e placar/horário
+  const homeLogo = teamLogoUrl(home.abbr);
+  const awayLogo = teamLogoUrl(away.abbr);
+
+  const logoEl = (logo, abbr) => logo
+    ? `<img src="${logo}" style="width:64px;height:64px;object-fit:contain" onerror="this.style.display='none'">`
+    : `<div style="width:64px;height:64px;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:20px;font-weight:800;color:var(--text3)">${abbr}</div>`;
+
+  let scoreHtml = '';
+  if (status === 2) {
+    scoreHtml = `<div class="game-modal-score">${away.score}<span class="sep">·</span>${home.score}</div>`;
+    document.getElementById('gm-status').innerHTML = `<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px"><div style="width:8px;height:8px;border-radius:50%;background:var(--red2);animation:blink 1.2s infinite"></div><span style="font-size:12px;color:var(--red2);font-weight:700">${g.statusText || 'Ao vivo'}</span></div>`;
+  } else if (status === 3) {
+    scoreHtml = `<div class="game-modal-score">${away.score}<span class="sep">·</span>${home.score}</div>`;
+    document.getElementById('gm-status').innerHTML = `<div style="text-align:center;margin-top:8px;font-size:12px;color:var(--text3);font-weight:600">Final</div>`;
+  } else {
+    let timeStr = '—';
+    if (g.gameTimeUTC) timeStr = new Date(g.gameTimeUTC).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Sao_Paulo' });
+    scoreHtml = `<div class="game-modal-score" style="font-size:32px;color:var(--text2)">${timeStr}</div>`;
+    document.getElementById('gm-status').innerHTML = `<div style="text-align:center;margin-top:6px;font-size:11px;color:var(--text3)">Horário de Brasília</div>`;
+  }
+
+  document.getElementById('gm-teams').innerHTML = `
+    <div class="game-modal-team">
+      ${logoEl(awayLogo, away.abbr)}
+      <div class="game-modal-team-name">${away.abbr}</div>
+      <div class="game-modal-team-city">${away.name || ''}</div>
+    </div>
+    <div class="game-modal-center">${scoreHtml}</div>
+    <div class="game-modal-team">
+      ${logoEl(homeLogo, home.abbr)}
+      <div class="game-modal-team-name">${home.abbr}</div>
+      <div class="game-modal-team-city">${home.name || ''}</div>
+    </div>`;
+
+  // Body — pré-jogo dos jogadores
+  const pregameData = (window._todayPregameCache || {})[gameKey] || [];
+  renderGameModalBody(gameKey, g, pregameData);
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Buscar dados se não tiver
+  if (!pregameData.length) {
+    loadGamePregame(g).then(() => {
+      const fresh = (window._todayPregameCache || {})[gameKey] || [];
+      renderGameModalBody(gameKey, g, fresh);
+    });
+  }
+}
+
+function renderGameModalBody(gameKey, g, players) {
+  const body = document.getElementById('gm-body');
+  const away = g.awayTeam, home = g.homeTeam;
+
+  if (!players.length) {
+    body.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">Carregando dados...</div>`;
+    return;
+  }
+
+  // Separar por time
+  const awayStarIds = new Set(STAR_PLAYERS[away.abbr] || []);
+  const homeStarIds = new Set(STAR_PLAYERS[home.abbr] || []);
+
+  const awayPlayers = players.filter(p => awayStarIds.has(p.player_id));
+  const homePlayers = players.filter(p => homeStarIds.has(p.player_id));
+
+  const playerRow = (p, teamAbbr) => {
+    const line  = p.synthetic_lines?.pts ?? '—';
+    const l5    = p.last5_avg?.pts ?? '—';
+    const l10   = p.last10_avg?.pts ?? '—';
+    const hit   = p.hit_rates?.pts_last10 ?? '—';
+    const edge  = p.edge_points ?? 0;
+    const edgeCol = edge > 0 ? 'var(--green)' : edge < 0 ? 'var(--danger)' : 'var(--text3)';
+    const hitCol  = Number(hit) >= 70 ? 'var(--green)' : Number(hit) >= 50 ? 'var(--gold)' : 'var(--danger)';
+    const arrow   = edge > 2 ? '↑' : edge < -2 ? '↓' : '→';
+
+    // L5 mini barras
+    const last5 = p.last5_games || [];
+    const maxPts = Math.max(...last5.map(x => x.pts), Number(line) || 20, 1);
+    const bars = last5.map(x => {
+      const w = Math.round((x.pts / maxPts) * 100);
+      const col = x.hit ? 'var(--green)' : 'var(--danger)';
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
+        <div style="font-size:8px;font-weight:700;color:${col}">${x.pts}</div>
+        <div style="width:100%;height:22px;background:var(--bg4);border-radius:2px;overflow:hidden;position:relative">
+          <div style="position:absolute;bottom:0;left:0;right:0;height:${w}%;background:${col};opacity:.85"></div>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `
+      <div class="gm-player-row" onclick="openModal(${p.player_id})" style="cursor:pointer">
+        <img class="gm-player-photo" src="https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png" onerror="this.style.background='var(--bg4)';this.style.display='block'">
+        <div class="gm-player-info">
+          <div class="gm-player-name">${p.player_name}</div>
+          <div class="gm-player-team">${teamAbbr}</div>
+          <div style="display:flex;gap:8px;margin-top:6px;font-family:var(--display);font-size:12px;font-weight:700">
+            <span style="color:var(--text3)">L5 <span style="color:var(--text)">${l5}</span></span>
+            <span style="color:var(--text3)">Hit <span style="color:${hitCol}">${hit}%</span></span>
+            <span style="color:var(--text3)">Edge <span style="color:${edgeCol}">${edge > 0 ? '+' : ''}${edge}</span></span>
+          </div>
+          <div style="display:flex;gap:2px;margin-top:6px;height:32px;align-items:flex-end">${bars}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div class="gm-over-badge">OVER ${line} ${arrow}</div>
+          <div style="font-size:10px;color:${hitCol};margin-top:4px;font-weight:700">${hit}% hit</div>
+        </div>
+      </div>`;
+  };
+
+  const teamSection = (abbr, playersList) => {
+    if (!playersList.length) return '';
+    const logo = teamLogoUrl(abbr);
+    return `
+      <div class="game-modal-section-title">
+        ${logo ? `<img src="${logo}" style="width:16px;height:16px;object-fit:contain">` : ''} ${abbr}
+      </div>
+      ${playersList.map(p => playerRow(p, abbr)).join('')}`;
+  };
+
+  body.innerHTML = `
+    ${teamSection(away.abbr, awayPlayers)}
+    ${teamSection(home.abbr, homePlayers)}
+    ${!awayPlayers.length && !homePlayers.length ? players.map(p => playerRow(p, '')).join('') : ''}
+    <div style="padding:12px 0;text-align:center;font-size:11px;color:var(--text3)">
+      Toque em um jogador para ver análise completa
+    </div>`;
+}
+
+function closeGameModal(e) {
+  if (e.target === document.getElementById('game-modal-overlay')) closeGameModalDirect();
+}
+function closeGameModalDirect() {
+  document.getElementById('game-modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeGameModalDirect(); });
+
 // Buscar pré-jogo dos jogadores de um jogo específico
 async function loadGamePregame(g) {
   const gameKey = g.gameId || (g.awayTeam.abbr + g.homeTeam.abbr);
-  if (todayPregameCache[gameKey]?.length) return; // já tem
+  window._todayPregameCache = window._todayPregameCache || {};
+  if (window._todayPregameCache[gameKey]?.length) return;
 
   const awayStarIds = STAR_PLAYERS[g.awayTeam.abbr] || [];
   const homeStarIds = STAR_PLAYERS[g.homeTeam.abbr] || [];
@@ -1105,9 +1371,10 @@ async function loadGamePregame(g) {
     .map(r => r.value)
     .sort((a,b) => (b.edge_points||0) - (a.edge_points||0));
 
-  todayPregameCache[gameKey] = valid;
+  window._todayPregameCache = window._todayPregameCache || {};
+  window._todayPregameCache[gameKey] = valid;
 
-  // Re-renderizar apenas a seção deste jogo
+  // Re-renderizar seção no card e modal se aberto
   const section = document.getElementById(`pregame-section-${gameKey}`);
   if (!section) return;
   const rows = valid.map(p => {
