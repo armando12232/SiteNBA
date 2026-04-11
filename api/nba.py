@@ -221,6 +221,55 @@ def get_pregame(player_id):
 
 
 # Cache longo para dados de defesa (mudam pouco)
+def get_today_schedule():
+    """Busca jogos do dia via nba_api live scoreboard + schedule CDN."""
+    cached = _cache_get("schedule_today")
+    if cached:
+        return cached
+
+    try:
+        from nba_api.live.nba.endpoints import scoreboard as sb_endpoint
+        board = sb_endpoint.ScoreBoard()
+        data  = board.get_dict()
+        games_raw = data.get("scoreboard", {}).get("games", [])
+
+        games = []
+        for g in games_raw:
+            ht = g.get("homeTeam", {})
+            at = g.get("awayTeam", {})
+            status = g.get("gameStatus", 1)  # 1=scheduled, 2=live, 3=final
+
+            # Horário em UTC
+            game_time_utc = g.get("gameTimeUTC", "")
+
+            games.append({
+                "gameId":     g.get("gameId"),
+                "status":     status,
+                "statusText": g.get("gameStatusText", ""),
+                "gameTimeUTC": game_time_utc,
+                "homeTeam": {
+                    "teamId":   ht.get("teamId"),
+                    "abbr":     ht.get("teamTricode", "HME"),
+                    "name":     ht.get("teamName", ""),
+                    "score":    ht.get("score", 0),
+                },
+                "awayTeam": {
+                    "teamId":   at.get("teamId"),
+                    "abbr":     at.get("teamTricode", "AWY"),
+                    "name":     at.get("teamName", ""),
+                    "score":    at.get("score", 0),
+                },
+            })
+
+        # Cache curto: 5 min durante jogos, 30 min sem jogos
+        ttl = 300 if any(g["status"] == 2 for g in games) else 1800
+        _cache_set("schedule_today", games)
+        return games
+
+    except Exception as e:
+        return {"error": str(e)}
+
+
 def get_defense_ranking(team_abbr, position):
     cache_key = f"defense_{team_abbr}_{position}"
     cached = _cache_get(cache_key)
@@ -311,6 +360,10 @@ class handler(BaseHTTPRequestHandler):
                 if not player_id:
                     self._send(400, {"error": "missing playerId"}); return
                 self._send(200, get_pregame(int(player_id)))
+
+            elif req_type == "schedule":
+                result = get_today_schedule()
+                self._send(200, {"games": result} if isinstance(result, list) else result)
 
             elif req_type == "defense":
                 team_abbr = params.get("teamAbbr", [""])[0]
