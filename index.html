@@ -619,6 +619,10 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
         <div id="modal-claude-analysis" style="background:var(--bg3);border:1px solid rgba(253,185,39,.2);border-radius:10px;padding:14px;min-height:40px"></div>
       </div>
       <div class="modal-section"><div class="modal-section-title">Stats ao vivo</div><div class="modal-stats-grid" id="modal-live-stats"></div></div>
+      <div class="modal-section" id="modal-defense-section">
+        <div class="modal-section-title">🛡️ Defesa do adversário</div>
+        <div id="modal-defense-box" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--text3)">Carregando...</div>
+      </div>
       <div class="modal-section"><div class="modal-section-title">Atual vs média vs linha</div><div id="modal-comparison"></div><div class="comp-legend"><div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--gold)"></div>Ritmo atual</div><div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--border2)"></div>Média temporada</div><div class="comp-legend-item"><div class="comp-legend-dot" style="background:var(--red);width:2px;height:8px;border-radius:1px"></div>Linha</div></div></div>
       <div class="modal-section"><div class="modal-section-title">Detalhes do jogo</div><div class="extra-stats-grid" id="modal-extra-stats"></div></div>
       <div class="modal-section"><div class="modal-section-title">Últimos 5 jogos (pontos)</div><div class="recent-list" id="modal-recent"></div></div>
@@ -1535,6 +1539,53 @@ function openModal(playerId) {
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow='hidden';
 
+  // 🛡️ Ranking defensivo do adversário
+  const defBox = document.getElementById('modal-defense-box');
+  if (defBox && a.type !== 'risk') {
+    // Extrair adversário do gameLabel "NYK 52 · MIA 49"
+    const glParts = (a.gameLabel || '').split('·').map(p => p.trim());
+    const awayTeam = glParts[0]?.split(' ')[0] || '';
+    const homeTeam = glParts[1]?.split(' ')[0] || '';
+    const oppTeam  = a.team === awayTeam ? homeTeam : awayTeam;
+    const pos      = a.position || 'G';
+
+    if (oppTeam) {
+      fetch(`/api/nba?type=defense&teamAbbr=${oppTeam}&position=${pos}`)
+        .then(r => r.json())
+        .then(def => {
+          if (def.error || !def.pts_allowed) {
+            defBox.innerHTML = `<span style="color:var(--text3)">Dados de defesa indisponíveis</span>`;
+            return;
+          }
+          const rank = def.rank, total = def.total, pts = def.pts_allowed;
+          const favorable = def.favorable;
+          const cor = favorable ? 'var(--green)' : rank > 20 ? 'var(--danger)' : 'var(--text2)';
+          const icon = favorable ? '🟢' : rank > 20 ? '🔴' : '🟡';
+          const label = favorable
+            ? `${icon} Defesa fraca — ${oppTeam} permite <strong style="color:${cor}">${pts} pts/jogo</strong> a ${def.category} (${rank}º pior)`
+            : `${icon} Boa defesa — ${oppTeam} permite <strong style="color:${cor}">${pts} pts/jogo</strong> a ${def.category} (${rank}º de ${total})`;
+
+          defBox.innerHTML = `
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="flex:1;line-height:1.5;color:var(--text2)">${label}</div>
+              <div style="text-align:center;min-width:48px">
+                <div style="font-family:var(--display);font-size:26px;font-weight:800;color:${cor};line-height:1">${rank}º</div>
+                <div style="font-size:9px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase">de ${total}</div>
+              </div>
+            </div>
+            <div style="margin-top:8px;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden">
+              <div style="height:100%;width:${Math.round((rank/total)*100)}%;background:${cor};border-radius:2px;opacity:.8"></div>
+            </div>`;
+
+          // Guardar no alerta para passar pro Claude
+          a._defenseRanking = def;
+        })
+        .catch(() => { defBox.innerHTML = `<span style="color:var(--text3)">Dados indisponíveis</span>`; });
+    } else {
+      defBox.innerHTML = `<span style="color:var(--text3)">Time adversário não identificado</span>`;
+    }
+  }
+
   // Análise do Claude AI — dados enriquecidos
   const analysisBox = document.getElementById('modal-claude-analysis');
   if (analysisBox && a.type !== 'risk') {
@@ -1568,6 +1619,8 @@ function openModal(playerId) {
       // Score da equação para a IA contextualizar
       propScore: Math.max(...(a.triggered||[]).map(t => t.score||0)),
       hitRate: pg.hitRate ?? null,
+      // Ranking defensivo do adversário
+      defenseRanking: a._defenseRanking || null,
     };
 
     fetch('/api/analyze', {
