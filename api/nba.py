@@ -220,6 +220,72 @@ def get_pregame(player_id):
     return result
 
 
+# Cache longo para dados de defesa (mudam pouco)
+def get_defense_ranking(team_abbr, position):
+    cache_key = f"defense_{team_abbr}_{position}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+
+    pos_map = {
+        "G": "Guards", "PG": "Guards", "SG": "Guards",
+        "F": "Forwards", "SF": "Forwards", "PF": "Forwards",
+        "C": "Centers", "FC": "Centers",
+    }
+    pos_upper = (position or "").upper().split("-")[0]
+    category = pos_map.get(pos_upper, "Guards")
+
+    try:
+        url = (
+            "https://stats.nba.com/stats/leaguedashptdefend"
+            "?College=&Conference=&Country=&DateFrom=&DateTo="
+            f"&DefenseCategory={category.replace(' ', '+')}"
+            "&Division=&DraftPick=&DraftYear=&GameSegment=&Height="
+            "&LastNGames=0&LeagueID=00&Location=&Month=0&OpponentTeamID=0"
+            "&Outcome=&PORound=0&PerMode=PerGame&Period=0"
+            "&PlayerExperience=&PlayerPosition=&Season=2024-25"
+            "&SeasonSegment=&SeasonType=Regular+Season"
+            "&StarterBench=&TeamID=0&VsConference=&VsDivision=&Weight="
+        )
+        data = _nba_fetch(url, timeout=9)
+        rs = data.get("resultSets", [{}])[0]
+        headers = rs.get("headers", [])
+        rows = rs.get("rowSet", [])
+
+        if not rows or not headers:
+            return None
+
+        abbr_idx = headers.index("TEAM_ABBREVIATION") if "TEAM_ABBREVIATION" in headers else None
+        pts_idx  = headers.index("PTS") if "PTS" in headers else None
+
+        if abbr_idx is None or pts_idx is None:
+            return None
+
+        team_data = [{"abbr": r[abbr_idx], "pts": float(r[pts_idx] or 0)} for r in rows]
+        sorted_teams = sorted(team_data, key=lambda x: x["pts"], reverse=True)
+        target = next((t for t in team_data if t["abbr"] == team_abbr.upper()), None)
+        if not target:
+            return None
+
+        rank = next((i+1 for i, t in enumerate(sorted_teams) if t["abbr"] == team_abbr.upper()), None)
+        total = len(sorted_teams)
+
+        result = {
+            "team": team_abbr.upper(),
+            "position": position,
+            "category": category,
+            "pts_allowed": round(target["pts"], 1),
+            "rank": rank,
+            "total": total,
+            "rating": "ruim" if rank <= 10 else "media" if rank <= 20 else "boa",
+            "favorable": rank <= 15,
+        }
+        _cache_set(cache_key, result)
+        return result
+
+    except Exception as e:
+        return {"error": str(e)}
+
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         params = parse_qs(urlparse(self.path).query)
@@ -245,6 +311,14 @@ class handler(BaseHTTPRequestHandler):
                 if not player_id:
                     self._send(400, {"error": "missing playerId"}); return
                 self._send(200, get_pregame(int(player_id)))
+
+            elif req_type == "defense":
+                team_abbr = params.get("teamAbbr", [""])[0]
+                position  = params.get("position", ["G"])[0]
+                if not team_abbr:
+                    self._send(400, {"error": "missing teamAbbr"}); return
+                result = get_defense_ranking(team_abbr, position)
+                self._send(200, result or {"error": "not found"})
 
             else:
                 self._send(400, {"error": f"type invalido: '{req_type}'"})
