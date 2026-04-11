@@ -1256,37 +1256,66 @@ function openModal(playerId) {
   document.getElementById('modal-overlay').classList.add('open');
   document.body.style.overflow='hidden';
 
-  // Análise do Claude AI
+  // Análise do Claude AI — dados enriquecidos
   const analysisBox = document.getElementById('modal-claude-analysis');
   if (analysisBox && a.type !== 'risk') {
-    analysisBox.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--text3);font-size:12px"><div style="width:14px;height:14px;border:2px solid var(--gold);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>Analisando...</div>`;
+    analysisBox.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--text3);font-size:12px"><div style="width:14px;height:14px;border:2px solid var(--gold);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>Analisando com IA...</div>`;
+
+    // Montar payload enriquecido com todos os dados disponíveis
+    const avgData = seasonAvgCache[a.playerId] || {};
+    const payload = {
+      name: a.name, team: a.team, period: a.period, clock: a.clock || '',
+      pts: a.pts, reb: a.reb, ast: a.ast,
+      mins: a.extraStats?.mins || 0,
+      gameLabel: a.gameLabel,
+      warnings: a.warnings || [],
+      triggered: a.triggered || [],
+      // L10 da temporada
+      l10: { pts: avgData.pts || null, reb: avgData.reb || null, ast: avgData.ast || null },
+      l5Pts: avgData.l5Pts || null,
+      hitRate: avgData.hitRate || null,
+      // H2H — não disponível ao vivo ainda, placeholder
+      h2h: a.h2h || [],
+      // Contexto
+      isB2B: a.isB2B || false,
+      minsL5: avgData.minsL5 || null,
+      paceFactor: a.paceFactor || 100,
+    };
+
     fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: a.name, team: a.team, period: a.period,
-        pts: a.pts, reb: a.reb, ast: a.ast,
-        mins: a.extraStats?.mins || 0,
-        gameLabel: a.gameLabel,
-        warnings: a.warnings || [],
-        triggered: a.triggered || []
-      })
+      body: JSON.stringify(payload)
     })
     .then(r => r.json())
     .then(d => {
       if (d.analysis) {
-        const parts = d.analysis.split('|||');
-        const veredicto = parts[0]?.trim() || d.analysis;
-        const motivo = parts[1]?.trim() || '';
-        const isOver = veredicto.toLowerCase().includes('over') || veredicto.toLowerCase().includes('sim') || veredicto.toLowerCase().includes('recomend');
-        const cor = isOver ? 'var(--green)' : 'var(--amber)';
+        const parts = d.analysis.split('|||').map(p => p.trim());
+        // Espera 4 partes: FORMA, CONTEXTO, RISCO, VEREDICTO
+        const forma    = parts[0] || '';
+        const contexto = parts[1] || '';
+        const risco    = parts[2] || '';
+        const veredicto= parts[3] || parts[0] || d.analysis;
+
+        const isOver = veredicto.toLowerCase().includes('over') || veredicto.toLowerCase().includes('alta') || veredicto.toLowerCase().includes('recomend');
+        const isWait = veredicto.toLowerCase().includes('aguardar') || veredicto.toLowerCase().includes('baixa');
+        const corVeredicto = isOver ? 'var(--green)' : isWait ? 'var(--amber)' : 'var(--text2)';
+
+        const topico = (label, texto, cor) => texto ? `
+          <div style="border-left:2px solid ${cor};padding-left:10px;margin-bottom:10px">
+            <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${cor};margin-bottom:3px">${label}</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.55">${texto}</div>
+          </div>` : '';
+
         analysisBox.innerHTML = `
-          <div style="display:flex;flex-direction:column;gap:10px">
-            <div style="display:flex;align-items:center;gap:10px">
-              <div style="width:32px;height:32px;background:rgba(253,185,39,.12);border:1px solid rgba(253,185,39,.3);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px">✦</div>
-              <div style="font-family:var(--display);font-size:16px;font-weight:800;color:${cor}">${veredicto}</div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            ${topico('Forma Recente', forma, 'var(--gold)')}
+            ${topico('Contexto do Jogo', contexto, 'var(--text3)')}
+            ${risco && risco !== 'nenhum' ? topico('Risco', risco, 'var(--amber)') : ''}
+            <div style="background:rgba(0,0,0,.3);border-radius:8px;padding:10px 12px;margin-top:4px;border:1px solid rgba(255,255,255,.06)">
+              <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:5px">Veredicto</div>
+              <div style="font-family:var(--display);font-size:15px;font-weight:800;color:${corVeredicto};line-height:1.3">${veredicto}</div>
             </div>
-            ${motivo ? `<div style="font-size:13px;color:var(--text2);line-height:1.6;padding-left:42px">${motivo}</div>` : ''}
           </div>`;
       }
     })
