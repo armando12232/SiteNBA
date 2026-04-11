@@ -196,6 +196,31 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .section-title { font-family: var(--display); font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text3); }
 .section-line { flex: 1; height: 1px; background: var(--border); }
 
+/* GAME GROUP */
+.game-group { margin-bottom: 28px; }
+.game-group-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 12px; padding: 10px 14px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; cursor: default;
+}
+.game-group-score {
+  font-family: var(--display); font-size: 15px; font-weight: 800;
+  color: var(--text); letter-spacing: 0.04em; flex: 1;
+}
+.game-group-score .sep { color: var(--text3); margin: 0 6px; font-weight: 400; }
+.game-group-badge {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; padding: 3px 8px; border-radius: 6px;
+}
+.game-group-badge.q1 { background: rgba(253,185,39,.1); color: var(--gold); border: 1px solid rgba(253,185,39,.25); }
+.game-group-badge.q2 { background: rgba(255,179,0,.1); color: var(--amber); border: 1px solid rgba(255,179,0,.25); }
+.game-group-badge.q3 { background: rgba(255,107,129,.1); color: #ff6b81; border: 1px solid rgba(255,107,129,.25); }
+.game-group-badge.q4 { background: rgba(255,23,68,.1); color: var(--danger); border: 1px solid rgba(255,23,68,.25); }
+.game-group-count { font-size: 11px; color: var(--text3); }
+.game-group-cards { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+@media (max-width: 600px) { .game-group-cards { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; } }
+
 /* ALERT CARDS */
 .alerts-list { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
 @media (max-width: 600px) { .alerts-list { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; } }
@@ -1218,14 +1243,46 @@ function renderCard(a) {
 }
 
 function renderAlerts() {
-  const list=document.getElementById('alerts-list');
-  const filtered=currentFilter==='todos'?allAlerts:allAlerts.filter(a=>a.type===currentFilter);
+  const list = document.getElementById('alerts-list');
+  const filtered = currentFilter === 'todos'
+    ? allAlerts
+    : allAlerts.filter(a => a.type === currentFilter);
+
   if (!filtered.length) {
-    list.innerHTML=`<div class="state-box"><div class="state-nba-logo">NBA</div><div class="state-title">Nenhum alerta no momento</div><div class="state-sub">Monitor ativo — verificando a cada 5 minutos<br><button class="state-btn" onclick="loadDemo()">Ver demo</button></div></div>`;
+    list.innerHTML = `<div class="state-box"><div class="state-nba-logo">NBA</div><div class="state-title">Nenhum alerta no momento</div><div class="state-sub">Monitor ativo — verificando a cada 5 minutos<br><button class="state-btn" onclick="loadDemo()">Ver demo</button></div></div>`;
     return;
   }
-  const order={fire:0,red:1,orange:2,yellow:3,risk:4};
-  list.innerHTML=[...filtered].sort((a,b)=>(order[a.type]??9)-(order[b.type]??9)).map(renderCard).join('');
+
+  // Agrupar alertas por jogo
+  const order = { fire:0, red:1, orange:2, yellow:3, risk:4 };
+  const groups = {};
+  for (const a of filtered) {
+    const key = a.gameLabel || 'Jogo';
+    if (!groups[key]) groups[key] = { label: key, period: a.period, clock: a.clock, alerts: [] };
+    groups[key].alerts.push(a);
+  }
+
+  // Ordenar alertas dentro de cada jogo e renderizar
+  list.innerHTML = Object.values(groups).map(g => {
+    const sorted = [...g.alerts].sort((a,b) => (order[a.type]??9) - (order[b.type]??9));
+    const period = g.period || 1;
+    const qCls = period <= 1 ? 'q1' : period === 2 ? 'q2' : period === 3 ? 'q3' : 'q4';
+    const qLabel = `Q${period}${g.clock ? ' ' + g.clock : ''}`;
+    const count = sorted.length;
+    const countLabel = count === 1 ? '1 alerta' : `${count} alertas`;
+
+    return `
+      <div class="game-group">
+        <div class="game-group-header">
+          <div class="game-group-score">${g.label.replace('·','<span class="sep">·</span>')}</div>
+          <span class="game-group-badge ${qCls}">${qLabel}</span>
+          <span class="game-group-count">${countLabel}</span>
+        </div>
+        <div class="game-group-cards">
+          ${sorted.map(renderCard).join('')}
+        </div>
+      </div>`;
+  }).join('');
 }
 
 function setFilter(type,btn) {
