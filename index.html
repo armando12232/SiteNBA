@@ -1126,57 +1126,37 @@ function renderTodayCard(g) {
     centerContent = `<div class="today-score-nums" style="font-size:22px;color:var(--text2)">${timeStr}</div><div class="today-status-pill scheduled">Horário de Brasília</div>`;
   }
 
-  // Fotos dos jogadores estrela (2 por time)
-  const homeStars = (STAR_PLAYERS[home.abbr] || []).slice(0,2);
-  const awayStars = (STAR_PLAYERS[away.abbr] || []).slice(0,2);
-  const allStars  = [...awayStars, ...homeStars].slice(0,4);
-  const playerSlots = allStars.map(pid => `
-    <div class="today-player-slot">
-      <img class="today-player-img" src="https://cdn.nba.com/headshots/nba/latest/1040x760/${pid}.png"
-           onerror="this.parentElement.style.background='var(--bg4)'">
-    </div>`).join('');
-
   const cardCls = status === 2 ? 'live' : status === 3 ? 'final' : '';
-
-  // Pré-jogo: jogadores deste jogo na lista PREGAME_PLAYERS
-  const gameTeams = [away.abbr, home.abbr];
-  // Usamos STAR_PLAYERS como proxy de quais jogadores mostrar
-  const pregamePlayers = PREGAME_PLAYERS.filter(p => {
-    // Verificar se algum star player deste jogo está na lista
-    const awayStarIds = STAR_PLAYERS[away.abbr] || [];
-    const homeStarIds = STAR_PLAYERS[home.abbr] || [];
-    return [...awayStarIds, ...homeStarIds].includes(p.id);
-  });
-
-  // Seção de pré-jogo
   const pregameSectionId = `pregame-section-${gameKey}`;
-  const pregameData = todayPregameCache[gameKey] || [];
+
+  // Pré-jogo inline — sem fotos, só dados
+  const pregameData = (window._todayPregameCache || {})[gameKey] || [];
 
   const pregameRows = pregameData.length
-    ? pregameData.map(p => {
-        const line = p.synthetic_lines?.pts ?? '—';
-        const l5   = p.last5_avg?.pts ?? '—';
-        const hit  = p.hit_rates?.pts_last10 ?? '—';
-        const edge = p.edge_points ?? 0;
+    ? pregameData.slice(0,4).map(p => {
+        const line   = p.synthetic_lines?.pts ?? '—';
+        const l5     = p.last5_avg?.pts ?? '—';
+        const hit    = p.hit_rates?.pts_last10 ?? '—';
+        const edge   = p.edge_points ?? 0;
         const edgeCol = edge > 0 ? 'var(--green)' : edge < 0 ? 'var(--danger)' : 'var(--text3)';
         const hitCol  = Number(hit) >= 70 ? 'var(--green)' : Number(hit) >= 50 ? 'var(--gold)' : 'var(--danger)';
         const arrow   = edge > 2 ? '↑' : edge < -2 ? '↓' : '→';
+        const overCol = edge > 2 ? 'var(--green)' : edge < -2 ? 'var(--danger)' : 'var(--text2)';
         return `
-          <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border)">
-            <img src="https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png"
-                 style="width:28px;height:28px;border-radius:6px;object-fit:cover;object-position:top;background:var(--bg3)"
-                 onerror="this.style.display='none'">
-            <div style="font-family:var(--display);font-size:12px;font-weight:800;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.player_name}</div>
-            <div style="display:flex;gap:10px;font-family:var(--display);font-size:12px;font-weight:700">
+          <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border)"
+               onclick="event.stopPropagation();openPregamePlayerModal(${p.player_id},'${gameKey}')"
+               style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s"
+               onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''">
+            <div style="font-family:var(--display);font-size:13px;font-weight:800;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.player_name}</div>
+            <div style="display:flex;gap:8px;font-family:var(--display);font-size:11px;font-weight:700;flex-shrink:0">
               <span style="color:var(--text3)">L5 <span style="color:var(--text)">${l5}</span></span>
               <span style="color:var(--text3)">Hit <span style="color:${hitCol}">${hit}%</span></span>
-              <span style="color:var(--text3)">Edge <span style="color:${edgeCol}">${edge > 0 ? '+' : ''}${edge}</span></span>
-              <span style="color:var(--green);font-size:13px">OVER ${line} ${arrow}</span>
+              <span style="color:${overCol}">OVER ${line} ${arrow}</span>
             </div>
           </div>`;
       }).join('')
-    : `<div style="padding:12px;text-align:center;font-size:11px;color:var(--text3)" id="${pregameSectionId}-loading">
-        Carregando dados de pré-jogo...
+    : `<div style="padding:10px 12px;font-size:11px;color:var(--text3);text-align:center">
+         Carregando dados...
        </div>`;
 
   return `
@@ -1186,12 +1166,10 @@ function renderTodayCard(g) {
         <div class="today-score-center">${centerContent}</div>
         <div class="today-team-side">${logoEl(homeLogo, home.abbr)}<span class="today-team-abbr">${home.abbr}</span></div>
       </div>
-      ${playerSlots ? `<div class="today-card-players">${playerSlots}</div>` : ''}
-      <div id="${pregameSectionId}">
-        <div style="padding:8px 12px 4px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);border-top:1px solid var(--border)">
-          📊 Pré-jogo
-        </div>
+      <div id="${pregameSectionId}" style="border-top:1px solid var(--border)">
+        <div style="padding:6px 12px 2px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)">📊 Pré-jogo</div>
         ${pregameRows}
+        <div style="padding:6px 12px 8px;text-align:right;font-size:10px;color:var(--text3)">Ver jogo completo →</div>
       </div>
     </div>`;
 }
@@ -1246,6 +1224,7 @@ function openGameModal(gameKey) {
 
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
+  window.currentGameModalKey = gameKey;
 
   // Buscar dados se não tiver
   if (!pregameData.length) {
@@ -1297,7 +1276,7 @@ function renderGameModalBody(gameKey, g, players) {
     }).join('');
 
     return `
-      <div class="gm-player-row" onclick="openModal(${p.player_id})" style="cursor:pointer">
+      <div class="gm-player-row" onclick="openPregamePlayerModal(${p.player_id}, currentGameModalKey)" style="cursor:pointer">
         <img class="gm-player-photo" src="https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png" onerror="this.style.background='var(--bg4)';this.style.display='block'">
         <div class="gm-player-info">
           <div class="gm-player-name">${p.player_name}</div>
@@ -1333,6 +1312,67 @@ function renderGameModalBody(gameKey, g, players) {
     <div style="padding:12px 0;text-align:center;font-size:11px;color:var(--text3)">
       Toque em um jogador para ver análise completa
     </div>`;
+}
+
+// Abre modal completo de um jogador a partir dos dados de pré-jogo
+function openPregamePlayerModal(playerId, gameKey) {
+  // Buscar dados do jogador no cache de pré-jogo
+  const cache = (window._todayPregameCache || {})[gameKey] || [];
+  const pg = cache.find(p => p.player_id === playerId);
+  if (!pg) {
+    // Não tem dados — tentar abrir no allAlerts se existir
+    const inAlerts = allAlerts.find(a => a.playerId === playerId || a.nbaId === playerId);
+    if (inAlerts) { closeGameModalDirect(); openModal(playerId); }
+    return;
+  }
+
+  // Fechar game modal e abrir player modal com dados sintéticos
+  closeGameModalDirect();
+
+  // Montar um alerta sintético a partir dos dados de pré-jogo
+  const synthAlert = {
+    playerId:  pg.player_id,
+    nbaId:     pg.player_id,
+    name:      pg.player_name,
+    team:      '',
+    position:  '—',
+    type:      'yellow',
+    pts:       pg.last5_avg?.pts ?? 0,
+    reb:       pg.season_avg?.reb ?? 0,
+    ast:       pg.season_avg?.ast ?? 0,
+    gameLabel: '',
+    period:    1,
+    clock:     '',
+    warnings:  [],
+    triggered: [{
+      stat: 'pts',
+      cur:  pg.last5_avg?.pts ?? 0,
+      proj: pg.last5_avg?.pts ?? 0,
+      avg:  pg.season_avg?.pts ?? 0,
+      pct:  100,
+      line: pg.synthetic_lines?.pts ?? null,
+    }],
+    extraStats: { mins: 0 },
+    pregame: {
+      l5Pts:      pg.last5_avg?.pts ?? null,
+      l10Pts:     pg.last10_avg?.pts ?? null,
+      hitRate:    pg.hit_rates?.pts_last10 ?? null,
+      line:       pg.synthetic_lines?.pts ?? null,
+      edge:       pg.edge_points ?? null,
+      last5Games: pg.last5_games || [],
+      seasonAvg:  pg.season_avg || {},
+    },
+  };
+
+  // Inserir temporariamente no allAlerts para openModal funcionar
+  const existing = allAlerts.findIndex(a => a.playerId === playerId);
+  if (existing >= 0) {
+    allAlerts[existing] = { ...allAlerts[existing], pregame: synthAlert.pregame };
+  } else {
+    allAlerts.push(synthAlert);
+  }
+
+  openModal(playerId);
 }
 
 function closeGameModal(e) {
