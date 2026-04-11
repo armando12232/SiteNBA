@@ -1134,24 +1134,26 @@ function renderTodayCard(g) {
 
   const pregameRows = pregameData.length
     ? pregameData.slice(0,4).map(p => {
-        const line   = p.synthetic_lines?.pts ?? '—';
-        const l5     = p.last5_avg?.pts ?? '—';
-        const hit    = p.hit_rates?.pts_last10 ?? '—';
-        const edge   = p.edge_points ?? 0;
-        const edgeCol = edge > 0 ? 'var(--green)' : edge < 0 ? 'var(--danger)' : 'var(--text3)';
+        const best   = getBestProp(p);
+        if (!best) return '';
+        const l5     = best.l5 ?? '—';
+        const hit    = best.hit_rate ?? '—';
+        const edge   = best.edge ?? 0;
         const hitCol  = Number(hit) >= 70 ? 'var(--green)' : Number(hit) >= 50 ? 'var(--gold)' : 'var(--danger)';
         const arrow   = edge > 2 ? '↑' : edge < -2 ? '↓' : '→';
         const overCol = edge > 2 ? 'var(--green)' : edge < -2 ? 'var(--danger)' : 'var(--text2)';
+        // Badge da categoria da prop
+        const statBadgeColor = {pts:'var(--gold)',reb:'var(--amber)',ast:'#4fc3f7',fg3m:'#ce93d8'}[best.stat]||'var(--text3)';
         return `
-          <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border)"
-               onclick="event.stopPropagation();openPregamePlayerModal(${p.player_id},'${gameKey}')"
+          <div onclick="event.stopPropagation();openPregamePlayerModal(${p.player_id},'${gameKey}')"
                style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s"
                onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''">
+            <span style="font-size:9px;font-weight:800;letter-spacing:.06em;color:${statBadgeColor};background:${statBadgeColor}22;border-radius:4px;padding:2px 5px;flex-shrink:0">${best.label}</span>
             <div style="font-family:var(--display);font-size:13px;font-weight:800;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.player_name}</div>
             <div style="display:flex;gap:8px;font-family:var(--display);font-size:11px;font-weight:700;flex-shrink:0">
               <span style="color:var(--text3)">L5 <span style="color:var(--text)">${l5}</span></span>
               <span style="color:var(--text3)">Hit <span style="color:${hitCol}">${hit}%</span></span>
-              <span style="color:${overCol}">OVER ${line} ${arrow}</span>
+              <span style="color:${overCol}">OVER ${best.line} ${arrow}</span>
             </div>
           </div>`;
       }).join('')
@@ -1172,6 +1174,43 @@ function renderTodayCard(g) {
         <div style="padding:6px 12px 8px;text-align:right;font-size:10px;color:var(--text3)">Ver jogo completo →</div>
       </div>
     </div>`;
+}
+
+// ─── HELPER: melhor prop do jogador ─────────────────────────────────────────
+function getBestProp(p) {
+  // Prioridade: maior edge entre as props disponíveis
+  const props = p.props || {};
+  const statLabels = { pts: 'PTS', reb: 'REB', ast: 'AST', fg3m: '3PM' };
+
+  let best = null, bestEdge = -99;
+  for (const [stat, data] of Object.entries(props)) {
+    if (!data || data.line == null) continue;
+    const edge = data.edge ?? 0;
+    if (edge > bestEdge) {
+      bestEdge = edge;
+      best = { stat, label: statLabels[stat] || stat.toUpperCase(), ...data };
+    }
+  }
+
+  // Fallback para dados legados (pts)
+  if (!best) {
+    const line    = p.synthetic_lines?.pts;
+    const l5      = p.last5_avg?.pts;
+    const hit     = p.hit_rates?.pts_last10;
+    const edge    = p.edge_points ?? 0;
+    if (line != null) best = { stat: 'pts', label: 'PTS', line, l5, l10: p.last10_avg?.pts, hit_rate: hit, edge };
+  }
+  return best;
+}
+
+function getPropsRow(p) {
+  // Retorna todas as props com dados válidos ordenadas por edge
+  const props = p.props || {};
+  const statLabels = { pts: 'PTS', reb: 'REB', ast: 'AST', fg3m: '3PM' };
+  return Object.entries(props)
+    .filter(([,d]) => d && d.line != null)
+    .sort(([,a],[,b]) => (b.edge||0) - (a.edge||0))
+    .map(([stat, data]) => ({ stat, label: statLabels[stat] || stat.toUpperCase(), ...data }));
 }
 
 // ─── GAME MODAL ─────────────────────────────────────────────────────────────
@@ -1252,45 +1291,49 @@ function renderGameModalBody(gameKey, g, players) {
   const homePlayers = players.filter(p => homeStarIds.has(p.player_id));
 
   const playerRow = (p, teamAbbr) => {
-    const line  = p.synthetic_lines?.pts ?? '—';
-    const l5    = p.last5_avg?.pts ?? '—';
-    const l10   = p.last10_avg?.pts ?? '—';
-    const hit   = p.hit_rates?.pts_last10 ?? '—';
-    const edge  = p.edge_points ?? 0;
-    const edgeCol = edge > 0 ? 'var(--green)' : edge < 0 ? 'var(--danger)' : 'var(--text3)';
-    const hitCol  = Number(hit) >= 70 ? 'var(--green)' : Number(hit) >= 50 ? 'var(--gold)' : 'var(--danger)';
-    const arrow   = edge > 2 ? '↑' : edge < -2 ? '↓' : '→';
+    const allProps = getPropsRow(p);
+    const best  = allProps[0] || null;
+    const statBadgeColors = {pts:'var(--gold)',reb:'var(--amber)',ast:'#4fc3f7',fg3m:'#ce93d8'};
 
-    // L5 mini barras
-    const last5 = p.last5_games || [];
-    const maxPts = Math.max(...last5.map(x => x.pts), Number(line) || 20, 1);
+    // Mini barras L5 baseadas na melhor prop
+    const last5  = p.last5_games || [];
+    const statKey = best?.stat || 'pts';
+    const maxVal  = Math.max(...last5.map(x => x[statKey] ?? x.pts ?? 0), Number(best?.line) || 15, 1);
     const bars = last5.map(x => {
-      const w = Math.round((x.pts / maxPts) * 100);
-      const col = x.hit ? 'var(--green)' : 'var(--danger)';
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">
-        <div style="font-size:8px;font-weight:700;color:${col}">${x.pts}</div>
-        <div style="width:100%;height:22px;background:var(--bg4);border-radius:2px;overflow:hidden;position:relative">
+      const val = x[statKey] ?? x.pts ?? 0;
+      const w   = Math.round((val / maxVal) * 100);
+      const hit = val >= (best?.line || 0);
+      const col = hit ? 'var(--green)' : 'var(--danger)';
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px">
+        <div style="font-size:8px;font-weight:700;color:${col}">${val}</div>
+        <div style="width:100%;height:20px;background:var(--bg4);border-radius:2px;overflow:hidden;position:relative">
           <div style="position:absolute;bottom:0;left:0;right:0;height:${w}%;background:${col};opacity:.85"></div>
         </div>
       </div>`;
     }).join('');
 
+    // Badges de todas as props disponíveis
+    const propBadges = allProps.map(prop => {
+      const arrow   = prop.edge > 2 ? '↑' : prop.edge < -2 ? '↓' : '→';
+      const hitCol  = prop.hit_rate >= 70 ? 'var(--green)' : prop.hit_rate >= 50 ? 'var(--gold)' : 'var(--danger)';
+      const col     = statBadgeColors[prop.stat] || 'var(--text3)';
+      return `<div style="display:flex;align-items:center;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 8px">
+        <span style="font-size:9px;font-weight:800;color:${col}">${prop.label}</span>
+        <span style="font-family:var(--display);font-size:13px;font-weight:800;color:var(--green)">O${prop.line}</span>
+        <span style="font-size:10px;color:${hitCol};font-weight:700">${prop.hit_rate}%</span>
+        <span style="font-size:12px;color:${prop.edge>0?'var(--green)':prop.edge<0?'var(--danger)':'var(--text3)'}">${arrow}</span>
+      </div>`;
+    }).join('');
+
     return `
-      <div class="gm-player-row" onclick="openPregamePlayerModal(${p.player_id}, currentGameModalKey)" style="cursor:pointer">
-        <img class="gm-player-photo" src="https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png" onerror="this.style.background='var(--bg4)';this.style.display='block'">
+      <div class="gm-player-row" onclick="openPregamePlayerModal(${p.player_id}, window.currentGameModalKey)">
+        <img class="gm-player-photo" src="https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png"
+             onerror="this.style.background='var(--bg3)'">
         <div class="gm-player-info">
           <div class="gm-player-name">${p.player_name}</div>
           <div class="gm-player-team">${teamAbbr}</div>
-          <div style="display:flex;gap:8px;margin-top:6px;font-family:var(--display);font-size:12px;font-weight:700">
-            <span style="color:var(--text3)">L5 <span style="color:var(--text)">${l5}</span></span>
-            <span style="color:var(--text3)">Hit <span style="color:${hitCol}">${hit}%</span></span>
-            <span style="color:var(--text3)">Edge <span style="color:${edgeCol}">${edge > 0 ? '+' : ''}${edge}</span></span>
-          </div>
-          <div style="display:flex;gap:2px;margin-top:6px;height:32px;align-items:flex-end">${bars}</div>
-        </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div class="gm-over-badge">OVER ${line} ${arrow}</div>
-          <div style="font-size:10px;color:${hitCol};margin-top:4px;font-weight:700">${hit}% hit</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">${propBadges || '<span style="font-size:11px;color:var(--text3)">Carregando...</span>'}</div>
+          ${last5.length ? `<div style="display:flex;gap:2px;margin-top:8px;height:28px;align-items:flex-end">${bars}</div>` : ''}
         </div>
       </div>`;
   };
