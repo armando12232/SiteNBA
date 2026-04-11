@@ -29,6 +29,8 @@ def build_prompt(d: dict) -> str:
     b2b       = d.get('isB2B', False)
     mins_l5   = d.get('minsL5', None)
     pace_factor = d.get('paceFactor', 100)
+    prop_score  = d.get('propScore', None)  # score da equação (ex: 1.65 = 165)
+    hit_rate_direct = d.get('hitRate', None)  # hit rate direto do payload
 
     triggered_lines = []
     for t in triggered:
@@ -52,7 +54,8 @@ def build_prompt(d: dict) -> str:
     if l10_reb  is not None: l10_parts.append(f"REB {l10_reb}")
     if l10_ast  is not None: l10_parts.append(f"AST {l10_ast}")
     l10_text  = ', '.join(l10_parts) if l10_parts else 'nao disponivel'
-    hit_text  = f"{hit_rate}% hit rate L10" if hit_rate is not None else 'nao disponivel'
+    effective_hit = hit_rate_direct if hit_rate_direct is not None else hit_rate
+    hit_text  = f"{effective_hit}% hit rate L10" if effective_hit is not None else 'nao disponivel'
     l5_text   = f"{l5_pts} pts" if l5_pts is not None else 'nao disponivel'
 
     if h2h:
@@ -90,6 +93,7 @@ CONTEXTO E CARGA
 Back-to-back: {b2b_text}
 Minutos medios: {mins_l5_txt}
 Pace do jogo: {pace_txt}
+PropScore da equacao: {f"{round(prop_score*100)}pts/100" if prop_score else "nao calculado"} (>=130=alerta, >=150=forte, >=180=excelente)
 Riscos: {warnings_text}
 
 Responda APENAS em portugues brasileiro. SEM markdown, SEM asteriscos, SEM emojis. Texto simples.
