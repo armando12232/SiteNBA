@@ -1037,6 +1037,12 @@ async function runMonitor() {
         };
 
         // ─── PropScore: equação unificada ───────────────────────────────
+        // Pré-jogo: buscar silenciosamente se não tiver no cache ainda
+        if (!pregameCache[player.playerId]) {
+          fetchNBA('pregame', null, player.playerId)
+            .then(data => { if (data && !data.error) pregameCache[player.playerId] = data; })
+            .catch(() => {});
+        }
         const pg = pregameCache[player.playerId] || {};
         const hitRate = pg.hit_rates?.pts_last10 ?? null;
         const blowoutRisk = diff >= BLOWOUT && !winning;
@@ -1099,14 +1105,6 @@ async function runMonitor() {
         if (player.pf >= 4 && period === 3) warnings.push(`${player.pf} faltas`);
         if (diff >= BLOWOUT && !winning) warnings.push('adversário em blowout');
         if (paceFactor > 1.08) warnings.push(`jogo acelerado (${Math.round(totalScorePace)} pts/jogo)`);
-
-        // Pré-jogo: buscar silenciosamente se não tiver no cache ainda
-        if (!pregameCache[player.playerId]) {
-          fetchNBA('pregame', null, player.playerId)
-            .then(data => { if (data && !data.error) pregameCache[player.playerId] = data; })
-            .catch(() => {});
-        }
-        const pg = pregameCache[player.playerId] || {};
 
         newAlerts.push({
           playerId: player.playerId, type,
