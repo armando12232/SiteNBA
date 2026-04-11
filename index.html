@@ -642,7 +642,6 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
       <div style="display:flex;gap:8px;margin-bottom:18px">
         <button id="view-today-btn" onclick="switchView('today')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">📅 Jogos do Dia</button>
         <button id="view-live-btn" onclick="switchView('live')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--body)">🔴 Ao vivo</button>
-        <button id="view-pregame-btn" onclick="switchView('pregame')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">📊 Pré-jogo</button>
       </div>
 
       <div id="today-view" style="display:none">
@@ -678,11 +677,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
       </div>
       </div><!-- end live-view -->
 
-      <div id="pregame-view" style="display:none">
-        <div class="section-header"><span class="section-title">Radar pré-jogo</span><div class="section-line"></div></div>
-        <div id="pregame-loading" style="text-align:center;padding:40px;color:var(--text3)">Carregando radar...</div>
-        <div id="pregame-grid" style="display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px"></div>
-      </div>
+
 
     </div>
   </div>
@@ -789,21 +784,18 @@ function teamLogoUrl(abbr) {
 
 function switchView(view) {
   currentView = view;
-  const btns = ['today','live','pregame'];
-  btns.forEach(v => {
+  ['today','live'].forEach(v => {
     const btn = document.getElementById(`view-${v}-btn`);
     if (btn) {
       const active = v === view;
-      btn.style.color     = active ? 'var(--text)' : 'var(--text3)';
+      btn.style.color       = active ? 'var(--text)'    : 'var(--text3)';
       btn.style.borderColor = active ? 'var(--border2)' : 'var(--border)';
-      btn.style.background  = active ? 'var(--bg3)' : 'var(--bg2)';
+      btn.style.background  = active ? 'var(--bg3)'     : 'var(--bg2)';
     }
   });
-  document.getElementById('today-view').style.display   = view === 'today'   ? 'block' : 'none';
-  document.getElementById('live-view').style.display    = view === 'live'    ? 'block' : 'none';
-  document.getElementById('pregame-view').style.display = view === 'pregame' ? 'block' : 'none';
-  if (view === 'pregame') loadPregame();
-  if (view === 'today')   loadTodayGames();
+  document.getElementById('today-view').style.display = view === 'today' ? 'block' : 'none';
+  document.getElementById('live-view').style.display  = view === 'live'  ? 'block' : 'none';
+  if (view === 'today') loadTodayGames();
 }
 
 function confidenceFromEdge(edge) {
@@ -924,6 +916,8 @@ async function loadTodayGames() {
 
     todayGamesCache = games;
     renderTodayGames(games);
+    // Buscar pré-jogo de todos os jogos em paralelo (silencioso)
+    games.forEach(g => loadGamePregame(g).catch(() => {}));
   } catch(e) {
     loading.textContent = 'Erro ao carregar jogos do dia.';
     console.error(e);
@@ -950,9 +944,13 @@ function renderTodayGames(games) {
   grid.innerHTML = games.map(renderTodayCard).join('');
 }
 
+// Cache de pré-jogo por jogo
+const todayPregameCache = {};
+
 function renderTodayCard(g) {
   const home = g.homeTeam, away = g.awayTeam;
-  const status = g.status; // 1=scheduled, 2=live, 3=final
+  const status = g.status;
+  const gameKey = g.gameId || (away.abbr + home.abbr);
 
   const homeLogo = teamLogoUrl(home.abbr);
   const awayLogo = teamLogoUrl(away.abbr);
@@ -964,70 +962,150 @@ function renderTodayCard(g) {
   // Placar ou horário
   let centerContent = '';
   let statusCls = 'scheduled';
-  let statusLabel = '';
-
   if (status === 2) {
-    // Ao vivo
+    const statusLabel = `<span class="today-live-dot"></span>${g.statusText || 'Ao vivo'}`;
+    centerContent = `<div class="today-score-nums">${away.score}<span class="today-score-sep">·</span>${home.score}</div><div class="today-status-pill live">${statusLabel}</div>`;
     statusCls = 'live';
-    statusLabel = `<span class="today-live-dot"></span>${g.statusText || 'Ao vivo'}`;
-    centerContent = `
-      <div class="today-score-nums">
-        ${away.score}<span class="today-score-sep">·</span>${home.score}
-      </div>
-      <div class="today-status-pill live">${statusLabel}</div>`;
   } else if (status === 3) {
-    // Final
+    centerContent = `<div class="today-score-nums">${away.score}<span class="today-score-sep">·</span>${home.score}</div><div class="today-status-pill final">Final</div>`;
     statusCls = 'final';
-    centerContent = `
-      <div class="today-score-nums">
-        ${away.score}<span class="today-score-sep">·</span>${home.score}
-      </div>
-      <div class="today-status-pill final">Final</div>`;
   } else {
-    // Agendado — mostrar horário
-    statusCls = 'scheduled';
     let timeStr = '—';
     if (g.gameTimeUTC) {
-      const d = new Date(g.gameTimeUTC);
-      timeStr = d.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Sao_Paulo' });
+      timeStr = new Date(g.gameTimeUTC).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Sao_Paulo' });
     }
-    centerContent = `
-      <div class="today-score-nums" style="font-size:22px;color:var(--text2)">${timeStr}</div>
-      <div class="today-status-pill scheduled">Horário de Brasília</div>`;
+    centerContent = `<div class="today-score-nums" style="font-size:22px;color:var(--text2)">${timeStr}</div><div class="today-status-pill scheduled">Horário de Brasília</div>`;
   }
 
   // Fotos dos jogadores estrela (2 por time)
   const homeStars = (STAR_PLAYERS[home.abbr] || []).slice(0,2);
   const awayStars = (STAR_PLAYERS[away.abbr] || []).slice(0,2);
   const allStars  = [...awayStars, ...homeStars].slice(0,4);
-
   const playerSlots = allStars.map(pid => `
     <div class="today-player-slot">
-      <img class="today-player-img"
-           src="https://cdn.nba.com/headshots/nba/latest/1040x760/${pid}.png"
+      <img class="today-player-img" src="https://cdn.nba.com/headshots/nba/latest/1040x760/${pid}.png"
            onerror="this.parentElement.style.background='var(--bg4)'">
     </div>`).join('');
 
-  // Badge do card
   const cardCls = status === 2 ? 'live' : status === 3 ? 'final' : '';
+
+  // Pré-jogo: jogadores deste jogo na lista PREGAME_PLAYERS
+  const gameTeams = [away.abbr, home.abbr];
+  // Usamos STAR_PLAYERS como proxy de quais jogadores mostrar
+  const pregamePlayers = PREGAME_PLAYERS.filter(p => {
+    // Verificar se algum star player deste jogo está na lista
+    const awayStarIds = STAR_PLAYERS[away.abbr] || [];
+    const homeStarIds = STAR_PLAYERS[home.abbr] || [];
+    return [...awayStarIds, ...homeStarIds].includes(p.id);
+  });
+
+  // Seção de pré-jogo
+  const pregameSectionId = `pregame-section-${gameKey}`;
+  const pregameData = todayPregameCache[gameKey] || [];
+
+  const pregameRows = pregameData.length
+    ? pregameData.map(p => {
+        const line = p.synthetic_lines?.pts ?? '—';
+        const l5   = p.last5_avg?.pts ?? '—';
+        const hit  = p.hit_rates?.pts_last10 ?? '—';
+        const edge = p.edge_points ?? 0;
+        const edgeCol = edge > 0 ? 'var(--green)' : edge < 0 ? 'var(--danger)' : 'var(--text3)';
+        const hitCol  = Number(hit) >= 70 ? 'var(--green)' : Number(hit) >= 50 ? 'var(--gold)' : 'var(--danger)';
+        const arrow   = edge > 2 ? '↑' : edge < -2 ? '↓' : '→';
+        return `
+          <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border)">
+            <img src="https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png"
+                 style="width:28px;height:28px;border-radius:6px;object-fit:cover;object-position:top;background:var(--bg3)"
+                 onerror="this.style.display='none'">
+            <div style="font-family:var(--display);font-size:12px;font-weight:800;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.player_name}</div>
+            <div style="display:flex;gap:10px;font-family:var(--display);font-size:12px;font-weight:700">
+              <span style="color:var(--text3)">L5 <span style="color:var(--text)">${l5}</span></span>
+              <span style="color:var(--text3)">Hit <span style="color:${hitCol}">${hit}%</span></span>
+              <span style="color:var(--text3)">Edge <span style="color:${edgeCol}">${edge > 0 ? '+' : ''}${edge}</span></span>
+              <span style="color:var(--green);font-size:13px">OVER ${line} ${arrow}</span>
+            </div>
+          </div>`;
+      }).join('')
+    : `<div style="padding:12px;text-align:center;font-size:11px;color:var(--text3)" id="${pregameSectionId}-loading">
+        Carregando dados de pré-jogo...
+       </div>`;
 
   return `
     <div class="today-game-card ${cardCls}">
       <div class="today-card-top">
-        <div class="today-team-side">
-          ${logoEl(awayLogo, away.abbr)}
-          <span class="today-team-abbr">${away.abbr}</span>
-        </div>
-        <div class="today-score-center">
-          ${centerContent}
-        </div>
-        <div class="today-team-side">
-          ${logoEl(homeLogo, home.abbr)}
-          <span class="today-team-abbr">${home.abbr}</span>
-        </div>
+        <div class="today-team-side">${logoEl(awayLogo, away.abbr)}<span class="today-team-abbr">${away.abbr}</span></div>
+        <div class="today-score-center">${centerContent}</div>
+        <div class="today-team-side">${logoEl(homeLogo, home.abbr)}<span class="today-team-abbr">${home.abbr}</span></div>
       </div>
       ${playerSlots ? `<div class="today-card-players">${playerSlots}</div>` : ''}
+      <div id="${pregameSectionId}">
+        <div style="padding:8px 12px 4px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);border-top:1px solid var(--border)">
+          📊 Pré-jogo
+        </div>
+        ${pregameRows}
+      </div>
     </div>`;
+}
+
+// Buscar pré-jogo dos jogadores de um jogo específico
+async function loadGamePregame(g) {
+  const gameKey = g.gameId || (g.awayTeam.abbr + g.homeTeam.abbr);
+  if (todayPregameCache[gameKey]?.length) return; // já tem
+
+  const awayStarIds = STAR_PLAYERS[g.awayTeam.abbr] || [];
+  const homeStarIds = STAR_PLAYERS[g.homeTeam.abbr] || [];
+  const starIds = [...awayStarIds, ...homeStarIds];
+
+  // Filtrar apenas jogadores na lista PREGAME_PLAYERS
+  const toFetch = PREGAME_PLAYERS.filter(p => starIds.includes(p.id));
+  if (!toFetch.length) return;
+
+  const results = await Promise.allSettled(
+    toFetch.map(p =>
+      fetchNBA('pregame', null, p.id)
+        .then(data => ({ ...data, player_name: p.name }))
+        .catch(() => null)
+    )
+  );
+
+  const valid = results
+    .filter(r => r.status === 'fulfilled' && r.value && !r.value.error)
+    .map(r => r.value)
+    .sort((a,b) => (b.edge_points||0) - (a.edge_points||0));
+
+  todayPregameCache[gameKey] = valid;
+
+  // Re-renderizar apenas a seção deste jogo
+  const section = document.getElementById(`pregame-section-${gameKey}`);
+  if (!section) return;
+  const rows = valid.map(p => {
+    const line = p.synthetic_lines?.pts ?? '—';
+    const l5   = p.last5_avg?.pts ?? '—';
+    const hit  = p.hit_rates?.pts_last10 ?? '—';
+    const edge = p.edge_points ?? 0;
+    const edgeCol = edge > 0 ? 'var(--green)' : edge < 0 ? 'var(--danger)' : 'var(--text3)';
+    const hitCol  = Number(hit) >= 70 ? 'var(--green)' : Number(hit) >= 50 ? 'var(--gold)' : 'var(--danger)';
+    const arrow   = edge > 2 ? '↑' : edge < -2 ? '↓' : '→';
+    return `
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border)">
+        <img src="https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png"
+             style="width:28px;height:28px;border-radius:6px;object-fit:cover;object-position:top;background:var(--bg3)"
+             onerror="this.style.display='none'">
+        <div style="font-family:var(--display);font-size:12px;font-weight:800;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.player_name}</div>
+        <div style="display:flex;gap:10px;font-family:var(--display);font-size:12px;font-weight:700">
+          <span style="color:var(--text3)">L5 <span style="color:var(--text)">${l5}</span></span>
+          <span style="color:var(--text3)">Hit <span style="color:${hitCol}">${hit}%</span></span>
+          <span style="color:var(--text3)">Edge <span style="color:${edgeCol}">${edge > 0 ? '+' : ''}${edge}</span></span>
+          <span style="color:var(--green);font-size:13px">OVER ${line} ${arrow}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  section.innerHTML = `
+    <div style="padding:8px 12px 4px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);border-top:1px solid var(--border)">
+      📊 Pré-jogo
+    </div>
+    ${rows || '<div style="padding:12px;text-align:center;font-size:11px;color:var(--text3)">Sem dados disponíveis</div>'}`;
 }
 
 async function loadPregame() {
