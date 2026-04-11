@@ -875,7 +875,44 @@ async function fetchNBA(type, gameId, playerId) {
 
 const seasonAvgCache = {};
 const BLOWOUT = 20;
-const PACE_MIN = 1.3; // 130% da média — mais sensível que 150%
+
+// ─── PropScore: equação unificada de confiança ───────────────────────────────
+// PropScore = ritmoIndividual × hitWeight × (1 - riskPenalty) × periodoBonus
+// Alerta dispara se PropScore ≥ SCORE_MIN
+const SCORE_MIN = 1.30;
+
+function calcPropScore({ ritmo, media, hitRate, pf, period, minsRemaining, blowoutRisk, paceFactor }) {
+  // 1. Ritmo individual vs média base
+  const ritmoRatio = media > 0 ? ritmo / media : 0;
+
+  // 2. Peso do hit rate histórico: sem dados = neutro (0.75), com dados = 0.5–1.0
+  const hitWeight = hitRate != null
+    ? 0.5 + (hitRate / 100) * 0.5
+    : 0.75;
+
+  // 3. Penalidades de risco
+  let riskPenalty = 0;
+  if (pf >= 5)        riskPenalty += 0.25;
+  else if (pf >= 4)   riskPenalty += 0.12;
+  else if (pf >= 3)   riskPenalty += 0.05;
+  if (blowoutRisk)    riskPenalty += 0.15;
+  if (period === 4 && minsRemaining <= 8) riskPenalty += 0.30; // bets fechadas
+  if (paceFactor < 0.92) riskPenalty += 0.08; // jogo lento prejudica projeção
+
+  // 4. Bônus por quarto (Q3 = mais confiável, Q4 = risco mas dados sólidos)
+  const periodoBonus = { 1: 0.95, 2: 1.00, 3: 1.08, 4: 1.05 }[period] || 1.0;
+
+  const score = ritmoRatio * hitWeight * (1 - riskPenalty) * periodoBonus;
+  return Math.round(score * 1000) / 1000;
+}
+
+// Tipo do alerta baseado no PropScore (não mais pelo período)
+function scoreToType(score) {
+  if (score >= 1.80) return 'fire';
+  if (score >= 1.50) return 'red';
+  if (score >= 1.35) return 'orange';
+  return 'yellow';
+}
 
 async function runMonitor() {
   try {
@@ -999,46 +1036,64 @@ async function runMonitor() {
           return { label: '🔴 Baixa', cls: 'low' };
         };
 
+        // ─── PropScore: equação unificada ───────────────────────────────
+        const pg = pregameCache[player.playerId] || {};
+        const hitRate = pg.hit_rates?.pts_last10 ?? null;
+        const blowoutRisk = diff >= BLOWOUT && !winning;
+        const scoreParams = { hitRate, pf: player.pf, period, minsRemaining, blowoutRisk, paceFactor };
+
         const triggered = [];
-        if (baseRef.pts > 0 && ptsPace / baseRef.pts >= PACE_MIN) {
-          const consistency = consistencyScore(baseRef.pts, stdDev.pts);
-          triggered.push({
-            stat: 'pts', cur: player.pts,
-            proj: Math.round(ptsPace),
-            projLow: Math.round(ptsPace - stdDev.pts * 0.8),
-            projHigh: Math.round(ptsPace + stdDev.pts * 0.8),
-            avg: baseRef.pts, avgSeason: avg.pts,
-            pct: Math.round((ptsPace / baseRef.pts) * 100),
-            consistency, line: null
-          });
+
+        if (baseRef.pts > 0) {
+          const score = calcPropScore({ ritmo: ptsPace, media: baseRef.pts, ...scoreParams });
+          if (score >= SCORE_MIN) {
+            const consistency = consistencyScore(baseRef.pts, stdDev.pts);
+            triggered.push({
+              stat: 'pts', cur: player.pts,
+              proj: Math.round(ptsPace),
+              projLow: Math.round(ptsPace - stdDev.pts * 0.8),
+              projHigh: Math.round(ptsPace + stdDev.pts * 0.8),
+              avg: baseRef.pts, avgSeason: avg.pts,
+              pct: Math.round((ptsPace / baseRef.pts) * 100),
+              score: score, consistency, line: pg.synthetic_lines?.pts ?? null
+            });
+          }
         }
-        if (baseRef.reb > 0 && rebPace / baseRef.reb >= PACE_MIN) {
-          const consistency = consistencyScore(baseRef.reb, stdDev.reb);
-          triggered.push({
-            stat: 'reb', cur: player.reb,
-            proj: Math.round(rebPace),
-            projLow: Math.round(rebPace - stdDev.reb * 0.8),
-            projHigh: Math.round(rebPace + stdDev.reb * 0.8),
-            avg: baseRef.reb, avgSeason: avg.reb,
-            pct: Math.round((rebPace / baseRef.reb) * 100),
-            consistency, line: null
-          });
+        if (baseRef.reb > 0) {
+          const score = calcPropScore({ ritmo: rebPace, media: baseRef.reb, hitRate: null, ...scoreParams });
+          if (score >= SCORE_MIN) {
+            const consistency = consistencyScore(baseRef.reb, stdDev.reb);
+            triggered.push({
+              stat: 'reb', cur: player.reb,
+              proj: Math.round(rebPace),
+              projLow: Math.round(rebPace - stdDev.reb * 0.8),
+              projHigh: Math.round(rebPace + stdDev.reb * 0.8),
+              avg: baseRef.reb, avgSeason: avg.reb,
+              pct: Math.round((rebPace / baseRef.reb) * 100),
+              score: score, consistency, line: null
+            });
+          }
         }
-        if (baseRef.ast > 0 && astPace / baseRef.ast >= PACE_MIN) {
-          const consistency = consistencyScore(baseRef.ast, stdDev.ast);
-          triggered.push({
-            stat: 'ast', cur: player.ast,
-            proj: Math.round(astPace),
-            projLow: Math.round(astPace - stdDev.ast * 0.8),
-            projHigh: Math.round(astPace + stdDev.ast * 0.8),
-            avg: baseRef.ast, avgSeason: avg.ast,
-            pct: Math.round((astPace / baseRef.ast) * 100),
-            consistency, line: null
-          });
+        if (baseRef.ast > 0) {
+          const score = calcPropScore({ ritmo: astPace, media: baseRef.ast, hitRate: null, ...scoreParams });
+          if (score >= SCORE_MIN) {
+            const consistency = consistencyScore(baseRef.ast, stdDev.ast);
+            triggered.push({
+              stat: 'ast', cur: player.ast,
+              proj: Math.round(astPace),
+              projLow: Math.round(astPace - stdDev.ast * 0.8),
+              projHigh: Math.round(astPace + stdDev.ast * 0.8),
+              avg: baseRef.ast, avgSeason: avg.ast,
+              pct: Math.round((astPace / baseRef.ast) * 100),
+              score: score, consistency, line: null
+            });
+          }
         }
         if (!triggered.length) continue;
 
-        const type = alertType(period, triggered.length);
+        // Tipo baseado no melhor score (não mais pelo período)
+        const bestScore = Math.max(...triggered.map(t => t.score));
+        const type = scoreToType(bestScore);
         const warnings = [];
         if (player.pf >= 3 && period <= 2) warnings.push(`${player.pf} faltas`);
         if (player.pf >= 4 && period === 3) warnings.push(`${player.pf} faltas`);
@@ -1133,6 +1188,8 @@ function renderCard(a) {
   const warnings = (a.warnings||[]).length ? `<div style="font-size:10px;color:var(--amber)">⚠ ${a.warnings.join(' · ')}</div>` : '';
   const paceInfo = a.paceFactor && a.paceFactor !== 100 ? `⚡${a.paceFactor}%` : '';
   const pctInfo = topTrigger ? `+${topTrigger.pct}%` : '';
+  const bestScore = Math.max(...(a.triggered||[]).map(t => t.score||0));
+  const scoreLabel = bestScore > 0 ? `Score ${Math.round(bestScore * 100)}` : '';
 
   return `<div class="alert-card ${a.type}" onclick="openModal(${a.playerId})" style="padding:0">
     <div style="height:4px;background:linear-gradient(90deg,${accent},${accent}66)"></div>
@@ -1155,7 +1212,7 @@ function renderCard(a) {
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between">
         <span class="badge ${a.type}" style="font-size:10px;padding:3px 8px">${momentLabel(a.type)}</span>
-        <span style="font-size:10px;color:${colVar};font-weight:700">${pctInfo}${paceInfo ? " · " + paceInfo : ""}</span>
+        <span style="font-size:10px;color:${colVar};font-weight:700">${scoreLabel}${pctInfo ? ' · ' + pctInfo : ''}${paceInfo ? ' · ' + paceInfo : ''}</span>
       </div>
       ${warnings}
     </div>
@@ -1303,6 +1360,9 @@ function openModal(playerId) {
       // Linha sintética
       line: pg.line ?? null,
       edge: pg.edge ?? null,
+      // Score da equação para a IA contextualizar
+      propScore: Math.max(...(a.triggered||[]).map(t => t.score||0)),
+      hitRate: pg.hitRate ?? null,
     };
 
     fetch('/api/analyze', {
