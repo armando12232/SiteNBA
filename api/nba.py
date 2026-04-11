@@ -1,5 +1,6 @@
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
+from urllib.request import Request, urlopen
 import json, time
 
 cache = {}
@@ -14,6 +15,21 @@ def _cache_get(key):
 
 def _cache_set(key, data):
     cache[key] = (data, time.time())
+
+NBA_HEADERS = {
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Origin': 'https://www.nba.com',
+    'Referer': 'https://www.nba.com/',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    'x-nba-stats-origin': 'stats',
+    'x-nba-stats-token': 'true',
+}
+
+def _nba_fetch(url, timeout=9):
+    req = Request(url, headers=NBA_HEADERS)
+    with urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read())
 
 def get_live_games():
     from nba_api.live.nba.endpoints import scoreboard
@@ -77,6 +93,7 @@ def get_boxscore(game_id):
                 "tpm": s.get("threePointersMade", 0),
                 "to": s.get("turnovers", 0),
                 "plusMinus": s.get("plusMinusPoints", 0),
+                "stl": s.get("steals", 0),
             })
     return players
 
@@ -85,20 +102,11 @@ def get_season_avg(player_id):
     if cached:
         return cached
     try:
-        import urllib.request
         url = "https://cdn.nba.com/static/json/staticData/playerIndex.json"
-        req = urllib.request.Request(url, headers={
-            'User-Agent': 'Mozilla/5.0',
-            'Origin': 'https://www.nba.com',
-            'Referer': 'https://www.nba.com/',
-        })
-        with urllib.request.urlopen(req, timeout=10) as r:
-            import json as _json
-            data = _json.loads(r.read())
+        data = _nba_fetch(url, timeout=8)
         rs = data.get("resultSets", [{}])[0]
         headers = rs.get("headers", [])
         rows = rs.get("rowSet", [])
-        # Achar o jogador pelo ID (primeira coluna = PERSON_ID)
         pid_idx = headers.index("PERSON_ID") if "PERSON_ID" in headers else 0
         pts_idx = headers.index("PTS") if "PTS" in headers else -1
         reb_idx = headers.index("REB") if "REB" in headers else -1
@@ -117,56 +125,96 @@ def get_season_avg(player_id):
         return None
 
 def get_pregame(player_id):
+    """Busca L5/L10/hitRate via urllib direto — sem nba_api (evita timeout)"""
     cached = _cache_get(f"pregame_{player_id}")
     if cached:
         return cached
-    from nba_api.stats.endpoints import playercareerstats, playergamelog
-    from nba_api.stats.static import players as nba_players
 
-    all_players = nba_players.get_players()
-    info = next((p for p in all_players if p["id"] == player_id), None)
-    player_name = info["full_name"] if info else f"Player {player_id}"
+    try:
+        # 1. Média da temporada via CDN (rápido, ~1s)
+        cdn_url = "https://cdn.nba.com/static/json/staticData/playerIndex.json"
+        cdn_data = _nba_fetch(cdn_url, timeout=8)
+        rs = cdn_data.get("resultSets", [{}])[0]
+        hdrs = rs.get("headers", [])
+        rows = rs.get("rowSet", [])
+        pid_idx = hdrs.index("PERSON_ID") if "PERSON_ID" in hdrs else 0
+        pts_idx = hdrs.index("PTS") if "PTS" in hdrs else -1
+        reb_idx = hdrs.index("REB") if "REB" in hdrs else -1
+        ast_idx = hdrs.index("AST") if "AST" in hdrs else -1
+        row = next((r for r in rows if r[pid_idx] == player_id), None)
+        season_pts = round(float(row[pts_idx] or 0), 1) if (row and pts_idx >= 0) else 0
+        season_reb = round(float(row[reb_idx] or 0), 1) if (row and reb_idx >= 0) else 0
+        season_ast = round(float(row[ast_idx] or 0), 1) if (row and ast_idx >= 0) else 0
+    except Exception:
+        season_pts, season_reb, season_ast = 0, 0, 0
 
-    career = playercareerstats.PlayerCareerStats(player_id=player_id, per_mode36="PerGame")
-    career_data = career.get_dict()
-    reg = next((s for s in career_data.get("resultSets", []) if s.get("name") == "SeasonTotalsRegularSeason"), None)
-    if not reg or not reg.get("rowSet"):
-        return {"error": "Sem dados de temporada"}
+    try:
+        # 2. Game log via stats.nba.com direto (urllib, headers corretos)
+        log_url = (
+            f"https://stats.nba.com/stats/playergamelog"
+            f"?PlayerID={player_id}&Season=2024-25"
+            f"&SeasonType=Regular+Season&LeagueID=00"
+        )
+        log_data = _nba_fetch(log_url, timeout=9)
+        rs2 = log_data.get("resultSets", [{}])[0]
+        game_rows = [
+            dict(zip(rs2["headers"], r))
+            for r in rs2.get("rowSet", [])
+        ]
+    except Exception:
+        game_rows = []
 
-    headers = reg["headers"]
-    last_row = dict(zip(headers, reg["rowSet"][-1]))
-    season_pts = round(float(last_row.get("PTS", 0) or 0), 1)
-    season_reb = round(float(last_row.get("REB", 0) or 0), 1)
-    season_ast = round(float(last_row.get("AST", 0) or 0), 1)
+    if len(game_rows) < 5:
+        # Fallback: retornar só médias da temporada sem L5/L10
+        line = round((season_pts - 1.5) * 2) / 2 if season_pts > 0 else None
+        result = {
+            "player_id": player_id,
+            "season_avg": {"pts": season_pts, "reb": season_reb, "ast": season_ast},
+            "last5_avg":  {"pts": None},
+            "last10_avg": {"pts": None},
+            "synthetic_lines": {"pts": line},
+            "hit_rates": {"pts_last10": None},
+            "edge_points": None,
+            "last5_games": [],
+            "summary": f"Temporada: {season_pts}pts"
+        }
+        _cache_set(f"pregame_{player_id}", result)
+        return result
 
-    log = playergamelog.PlayerGameLog(player_id=player_id)
-    log_data = log.get_dict()
-    rs = log_data.get("resultSets", [{}])[0]
-    rows = [dict(zip(rs["headers"], r)) for r in rs.get("rowSet", [])]
+    last5  = game_rows[:5]
+    last10 = game_rows[:10] if len(game_rows) >= 10 else game_rows
 
-    if len(rows) < 5:
-        return {"error": "Poucos jogos disponíveis"}
-
-    last5  = rows[:5]
-    last10 = rows[:10] if len(rows) >= 10 else rows
     last5_pts  = round(sum(float(r["PTS"]) for r in last5)  / len(last5),  1)
     last10_pts = round(sum(float(r["PTS"]) for r in last10) / len(last10), 1)
-    line = round((season_pts - 1.5) * 2) / 2
+    last5_reb  = round(sum(float(r.get("REB",0)) for r in last5) / len(last5), 1)
+    last5_ast  = round(sum(float(r.get("AST",0)) for r in last5) / len(last5), 1)
+    last5_mins = round(sum(float(r.get("MIN","0").split(":")[0]) for r in last5) / len(last5), 1)
+
+    line = round((season_pts - 1.5) * 2) / 2 if season_pts > 0 else round(last5_pts - 1.5)
     hits = sum(1 for r in last10 if float(r["PTS"]) >= line)
     hit_rate = round((hits / len(last10)) * 100)
     edge = round(last5_pts - line, 1)
 
     result = {
         "player_id": player_id,
-        "player_name": player_name,
         "season_avg": {"pts": season_pts, "reb": season_reb, "ast": season_ast},
-        "last5_avg":  {"pts": last5_pts},
+        "last5_avg":  {"pts": last5_pts, "reb": last5_reb, "ast": last5_ast},
         "last10_avg": {"pts": last10_pts},
         "synthetic_lines": {"pts": line},
         "hit_rates": {"pts_last10": hit_rate},
         "edge_points": edge,
-        "last5_games": [{"opp": r.get("MATCHUP",""), "pts": float(r["PTS"]), "hit": float(r["PTS"]) >= line} for r in last5],
-        "summary": f"L5 {last5_pts} pts · L10 hit {hit_rate}%"
+        "minsL5": last5_mins,
+        "last5_games": [
+            {
+                "opp": r.get("MATCHUP", ""),
+                "pts": float(r["PTS"]),
+                "reb": float(r.get("REB", 0)),
+                "ast": float(r.get("AST", 0)),
+                "hit": float(r["PTS"]) >= line
+            }
+            for r in last5
+        ],
+        "summary": f"L5 {last5_pts}pts · L10 hit {hit_rate}%"
     }
     _cache_set(f"pregame_{player_id}", result)
     return result
