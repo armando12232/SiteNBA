@@ -124,59 +124,77 @@ def get_season_avg(player_id):
     except Exception as e:
         return None
 
+def _calc_prop(game_rows, stat_key, season_avg, n5=5, n10=10):
+    """Calcula L5, L10, linha sintética, hit rate e edge para qualquer stat."""
+    last5  = game_rows[:n5]
+    last10 = game_rows[:n10] if len(game_rows) >= n10 else game_rows
+    if not last5:
+        return None
+
+    l5_val  = round(sum(float(r.get(stat_key, 0)) for r in last5)  / len(last5),  1)
+    l10_val = round(sum(float(r.get(stat_key, 0)) for r in last10) / len(last10), 1)
+
+    # Linha sintética baseada na média da temporada (arredondada para .5)
+    base = season_avg if season_avg > 0 else l5_val
+    line = round((base - 0.5) * 2) / 2  # arredonda para x.0 ou x.5
+
+    hits     = sum(1 for r in last10 if float(r.get(stat_key, 0)) >= line)
+    hit_rate = round((hits / len(last10)) * 100)
+    edge     = round(l5_val - line, 1)
+
+    return {
+        "l5": l5_val, "l10": l10_val,
+        "line": line, "hit_rate": hit_rate, "edge": edge
+    }
+
+
 def get_pregame(player_id):
-    """Busca L5/L10/hitRate via urllib direto — sem nba_api (evita timeout)"""
+    """Busca L5/L10/hitRate para PTS, REB, AST e 3PM via urllib direto."""
     cached = _cache_get(f"pregame_{player_id}")
     if cached:
         return cached
 
+    # 1. Médias da temporada via CDN (~1s, não bloqueado)
     try:
-        # 1. Média da temporada via CDN (rápido, ~1s)
-        cdn_url = "https://cdn.nba.com/static/json/staticData/playerIndex.json"
+        cdn_url  = "https://cdn.nba.com/static/json/staticData/playerIndex.json"
         cdn_data = _nba_fetch(cdn_url, timeout=8)
-        rs = cdn_data.get("resultSets", [{}])[0]
+        rs   = cdn_data.get("resultSets", [{}])[0]
         hdrs = rs.get("headers", [])
         rows = rs.get("rowSet", [])
         pid_idx = hdrs.index("PERSON_ID") if "PERSON_ID" in hdrs else 0
-        pts_idx = hdrs.index("PTS") if "PTS" in hdrs else -1
-        reb_idx = hdrs.index("REB") if "REB" in hdrs else -1
-        ast_idx = hdrs.index("AST") if "AST" in hdrs else -1
         row = next((r for r in rows if r[pid_idx] == player_id), None)
-        season_pts = round(float(row[pts_idx] or 0), 1) if (row and pts_idx >= 0) else 0
-        season_reb = round(float(row[reb_idx] or 0), 1) if (row and reb_idx >= 0) else 0
-        season_ast = round(float(row[ast_idx] or 0), 1) if (row and ast_idx >= 0) else 0
+        def _h(key):
+            idx = hdrs.index(key) if key in hdrs else -1
+            return round(float(row[idx] or 0), 1) if (row and idx >= 0) else 0
+        season_pts = _h("PTS"); season_reb = _h("REB")
+        season_ast = _h("AST"); season_3pm = _h("FG3M")
     except Exception:
-        season_pts, season_reb, season_ast = 0, 0, 0
+        season_pts = season_reb = season_ast = season_3pm = 0
 
+    # 2. Game log via stats.nba.com (~3-5s)
     try:
-        # 2. Game log via stats.nba.com direto (urllib, headers corretos)
-        log_url = (
+        log_url  = (
             f"https://stats.nba.com/stats/playergamelog"
             f"?PlayerID={player_id}&Season=2024-25"
             f"&SeasonType=Regular+Season&LeagueID=00"
         )
-        log_data = _nba_fetch(log_url, timeout=9)
-        rs2 = log_data.get("resultSets", [{}])[0]
-        game_rows = [
-            dict(zip(rs2["headers"], r))
-            for r in rs2.get("rowSet", [])
-        ]
+        log_data  = _nba_fetch(log_url, timeout=9)
+        rs2       = log_data.get("resultSets", [{}])[0]
+        game_rows = [dict(zip(rs2["headers"], r)) for r in rs2.get("rowSet", [])]
     except Exception:
         game_rows = []
 
     if len(game_rows) < 5:
-        # Fallback: retornar só médias da temporada sem L5/L10
-        line = round((season_pts - 1.5) * 2) / 2 if season_pts > 0 else None
         result = {
             "player_id": player_id,
-            "season_avg": {"pts": season_pts, "reb": season_reb, "ast": season_ast},
-            "last5_avg":  {"pts": None},
+            "season_avg": {"pts": season_pts, "reb": season_reb, "ast": season_ast, "fg3m": season_3pm},
+            "props": {},
+            "last5_avg":  {"pts": None, "reb": None, "ast": None, "fg3m": None},
             "last10_avg": {"pts": None},
-            "synthetic_lines": {"pts": line},
+            "synthetic_lines": {"pts": round((season_pts-0.5)*2)/2 if season_pts else None},
             "hit_rates": {"pts_last10": None},
-            "edge_points": None,
-            "last5_games": [],
-            "summary": f"Temporada: {season_pts}pts"
+            "edge_points": None, "last5_games": [],
+            "summary": f"Temporada: {season_pts}pts / {season_reb}reb / {season_ast}ast"
         }
         _cache_set(f"pregame_{player_id}", result)
         return result
@@ -184,37 +202,48 @@ def get_pregame(player_id):
     last5  = game_rows[:5]
     last10 = game_rows[:10] if len(game_rows) >= 10 else game_rows
 
-    last5_pts  = round(sum(float(r["PTS"]) for r in last5)  / len(last5),  1)
-    last10_pts = round(sum(float(r["PTS"]) for r in last10) / len(last10), 1)
-    last5_reb  = round(sum(float(r.get("REB",0)) for r in last5) / len(last5), 1)
-    last5_ast  = round(sum(float(r.get("AST",0)) for r in last5) / len(last5), 1)
-    last5_mins = round(sum(float(r.get("MIN","0").split(":")[0]) for r in last5) / len(last5), 1)
+    # Calcular props para cada categoria
+    props = {}
+    for stat_key, avg_val, label in [
+        ("PTS",  season_pts,  "pts"),
+        ("REB",  season_reb,  "reb"),
+        ("AST",  season_ast,  "ast"),
+        ("FG3M", season_3pm,  "fg3m"),
+    ]:
+        if avg_val >= 1.5:  # só calcular se jogador tem relevância nessa stat
+            p = _calc_prop(game_rows, stat_key, avg_val)
+            if p:
+                props[label] = p
 
-    line = round((season_pts - 1.5) * 2) / 2 if season_pts > 0 else round(last5_pts - 1.5)
-    hits = sum(1 for r in last10 if float(r["PTS"]) >= line)
-    hit_rate = round((hits / len(last10)) * 100)
-    edge = round(last5_pts - line, 1)
+    # Compat retroativa — manter campos antigos para não quebrar frontend
+    pts_prop = props.get("pts", {})
+    last5_mins = round(sum(
+        float(r.get("MIN", "0").split(":")[0]) for r in last5
+    ) / len(last5), 1)
 
     result = {
-        "player_id": player_id,
-        "season_avg": {"pts": season_pts, "reb": season_reb, "ast": season_ast},
-        "last5_avg":  {"pts": last5_pts, "reb": last5_reb, "ast": last5_ast},
-        "last10_avg": {"pts": last10_pts},
-        "synthetic_lines": {"pts": line},
-        "hit_rates": {"pts_last10": hit_rate},
-        "edge_points": edge,
+        "player_id":  player_id,
+        "season_avg": {"pts": season_pts, "reb": season_reb, "ast": season_ast, "fg3m": season_3pm},
+        "props":      props,  # novo: {pts:{l5,l10,line,hit_rate,edge}, reb:{...}, ast:{...}, fg3m:{...}}
+        # campos legados para não quebrar código existente
+        "last5_avg":  {"pts": pts_prop.get("l5"), "reb": props.get("reb",{}).get("l5"), "ast": props.get("ast",{}).get("l5"), "fg3m": props.get("fg3m",{}).get("l5")},
+        "last10_avg": {"pts": pts_prop.get("l10")},
+        "synthetic_lines": {"pts": pts_prop.get("line")},
+        "hit_rates":  {"pts_last10": pts_prop.get("hit_rate")},
+        "edge_points": pts_prop.get("edge"),
         "minsL5": last5_mins,
         "last5_games": [
             {
-                "opp": r.get("MATCHUP", ""),
-                "pts": float(r["PTS"]),
-                "reb": float(r.get("REB", 0)),
-                "ast": float(r.get("AST", 0)),
-                "hit": float(r["PTS"]) >= line
+                "opp": r.get("MATCHUP",""),
+                "pts": float(r.get("PTS",0)),
+                "reb": float(r.get("REB",0)),
+                "ast": float(r.get("AST",0)),
+                "fg3m": float(r.get("FG3M",0)),
+                "hit": float(r.get("PTS",0)) >= (pts_prop.get("line") or 0)
             }
             for r in last5
         ],
-        "summary": f"L5 {last5_pts}pts · L10 hit {hit_rate}%"
+        "summary": f"L5 {pts_prop.get('l5','—')}pts / {props.get('reb',{}).get('l5','—')}reb / {props.get('ast',{}).get('l5','—')}ast"
     }
     _cache_set(f"pregame_{player_id}", result)
     return result
