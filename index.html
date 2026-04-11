@@ -197,29 +197,84 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .section-line { flex: 1; height: 1px; background: var(--border); }
 
 /* GAME GROUP */
-.game-group { margin-bottom: 28px; }
-.game-group-header {
-  display: flex; align-items: center; gap: 10px;
-  margin-bottom: 12px; padding: 10px 14px;
+/* GAME CARDS GRID */
+.games-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; margin-bottom: 24px; }
+@media (max-width: 700px) { .games-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; } }
+@media (max-width: 420px) { .games-grid { grid-template-columns: 1fr; } }
+
+.game-card {
   background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 12px; cursor: default;
+  border-radius: 16px; overflow: hidden;
+  cursor: pointer; transition: border-color 0.2s, transform 0.15s;
+  position: relative;
 }
-.game-group-score {
-  font-family: var(--display); font-size: 15px; font-weight: 800;
-  color: var(--text); letter-spacing: 0.04em; flex: 1;
+.game-card:hover { transform: translateY(-2px); border-color: var(--border2); }
+.game-card.active { border-color: var(--gold); }
+.game-card.has-fire { border-color: rgba(255,109,0,0.4); }
+.game-card.has-red  { border-color: rgba(255,107,129,0.35); }
+.game-card-accent { height: 3px; }
+.game-card-accent.fire   { background: linear-gradient(90deg,var(--fire),var(--gold)); }
+.game-card-accent.red    { background: linear-gradient(90deg,var(--red),#ff6b81); }
+.game-card-accent.orange { background: linear-gradient(90deg,var(--amber),var(--gold)); }
+.game-card-accent.yellow { background: linear-gradient(90deg,var(--gold),#fff176); }
+.game-card-accent.risk   { background: linear-gradient(90deg,var(--danger),var(--red)); }
+
+.game-card-body { padding: 16px; }
+.game-card-teams {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
 }
-.game-group-score .sep { color: var(--text3); margin: 0 6px; font-weight: 400; }
-.game-group-badge {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; padding: 3px 8px; border-radius: 6px;
+.game-card-team { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.game-card-team img { width: 44px; height: 44px; object-fit: contain; }
+.game-card-team-abbr { font-family: var(--display); font-size: 14px; font-weight: 800; color: var(--text2); }
+.game-card-vs { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.game-card-score {
+  font-family: var(--display); font-size: 26px; font-weight: 800;
+  color: var(--text); letter-spacing: 0.04em; line-height: 1;
 }
-.game-group-badge.q1 { background: rgba(253,185,39,.1); color: var(--gold); border: 1px solid rgba(253,185,39,.25); }
-.game-group-badge.q2 { background: rgba(255,179,0,.1); color: var(--amber); border: 1px solid rgba(255,179,0,.25); }
-.game-group-badge.q3 { background: rgba(255,107,129,.1); color: #ff6b81; border: 1px solid rgba(255,107,129,.25); }
-.game-group-badge.q4 { background: rgba(255,23,68,.1); color: var(--danger); border: 1px solid rgba(255,23,68,.25); }
-.game-group-count { font-size: 11px; color: var(--text3); }
-.game-group-cards { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
-@media (max-width: 600px) { .game-group-cards { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; } }
+.game-card-sep { color: var(--text3); font-size: 14px; }
+.game-card-period {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 2px 8px; border-radius: 5px;
+  margin-top: 4px;
+}
+.game-card-period.q1 { background: rgba(253,185,39,.12); color: var(--gold); }
+.game-card-period.q2 { background: rgba(255,179,0,.12); color: var(--amber); }
+.game-card-period.q3 { background: rgba(255,107,129,.12); color: #ff6b81; }
+.game-card-period.q4 { background: rgba(255,23,68,.12); color: var(--danger); }
+
+.game-card-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 12px; border-top: 1px solid var(--border);
+}
+.game-card-alerts { display: flex; gap: 4px; flex-wrap: wrap; }
+.game-card-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+.game-card-dot.fire   { background: var(--fire); }
+.game-card-dot.red    { background: #ff6b81; }
+.game-card-dot.orange { background: var(--amber); }
+.game-card-dot.yellow { background: var(--gold); }
+.game-card-dot.risk   { background: var(--danger); }
+.game-card-count { font-size: 11px; color: var(--text3); font-weight: 600; }
+.game-card-arrow { font-size: 12px; color: var(--text3); transition: transform 0.2s; }
+.game-card.active .game-card-arrow { transform: rotate(180deg); color: var(--gold); }
+
+/* PLAYERS DRAWER — abre abaixo do card */
+.players-drawer {
+  grid-column: 1 / -1;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 14px; padding: 16px;
+  animation: drawerIn 0.2s ease;
+}
+@keyframes drawerIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+.players-drawer-header {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 14px; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3);
+}
+.players-drawer-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+@media (max-width: 600px) { .players-drawer-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; } }
 
 /* ALERT CARDS */
 .alerts-list { display: block; }
@@ -1260,6 +1315,8 @@ function renderCard(a) {
   </div>`;
 }
 
+let activeGameKey = null;
+
 function renderAlerts() {
   const list = document.getElementById('alerts-list');
   const filtered = currentFilter === 'todos'
@@ -1267,6 +1324,7 @@ function renderAlerts() {
     : allAlerts.filter(a => a.type === currentFilter);
 
   if (!filtered.length) {
+    activeGameKey = null;
     list.innerHTML = `<div class="state-box"><div class="state-nba-logo">NBA</div><div class="state-title">Nenhum alerta no momento</div><div class="state-sub">Monitor ativo — verificando a cada 5 minutos<br><button class="state-btn" onclick="loadDemo()">Ver demo</button></div></div>`;
     return;
   }
@@ -1276,54 +1334,105 @@ function renderAlerts() {
   const groups = {};
   for (const a of filtered) {
     const key = a.gameLabel || 'Jogo';
-    if (!groups[key]) groups[key] = { label: key, period: a.period, clock: a.clock, alerts: [] };
+    if (!groups[key]) groups[key] = { key, label: key, period: a.period, clock: a.clock, alerts: [] };
     groups[key].alerts.push(a);
   }
 
-  // Ordenar alertas dentro de cada jogo e renderizar
-  list.innerHTML = Object.values(groups).map(g => {
-    const sorted = [...g.alerts].sort((a,b) => (order[a.type]??9) - (order[b.type]??9));
-    const period = g.period || 1;
-    const qCls = period <= 1 ? 'q1' : period === 2 ? 'q2' : period === 3 ? 'q3' : 'q4';
-    const qLabel = `Q${period}${g.clock ? ' ' + g.clock : ''}`;
-    const count = sorted.length;
-    const countLabel = count === 1 ? '1 alerta' : `${count} alertas`;
+  // Se o jogo ativo sumiu, resetar
+  if (activeGameKey && !groups[activeGameKey]) activeGameKey = null;
+  // Auto-abrir o primeiro jogo se nenhum estiver ativo
+  if (!activeGameKey) activeGameKey = Object.keys(groups)[0];
 
-    // Extrair abbrs do gameLabel tipo "NYK 52 · MIA 49"
-    const parts = g.label.split('·').map(p => p.trim());
-    const awayAbbr = parts[0]?.split(' ')[0] || '';
-    const homeAbbr = parts[1]?.split(' ')[0] || '';
-    const awayScore = parts[0]?.split(' ')[1] || '';
-    const homeScore = parts[1]?.split(' ')[1] || '';
-    const awayLogo = teamLogoUrl(awayAbbr);
-    const homeLogo = teamLogoUrl(homeAbbr);
+  // Renderizar grid de game cards + drawer
+  const groupList = Object.values(groups);
+  list.innerHTML = `<div class="games-grid" id="games-grid">${
+    groupList.map(g => renderGameCard(g, order)).join('')
+  }</div>`;
 
-    const logoImg = (url, abbr) => url
-      ? `<img src="${url}" style="width:28px;height:28px;object-fit:contain;flex-shrink:0" onerror="this.style.display='none'">`
-      : `<span style="font-family:var(--display);font-size:11px;font-weight:800;color:var(--text3)">${abbr}</span>`;
+  // Inserir drawer após o card ativo
+  insertDrawer(groupList, order);
+}
 
-    return `
-      <div class="game-group">
-        <div class="game-group-header">
-          <div style="display:flex;align-items:center;gap:8px;flex:1">
-            ${logoImg(awayLogo, awayAbbr)}
-            <div class="game-group-score">
-              <span style="color:var(--text)">${awayAbbr}</span>
-              <span style="color:var(--gold);font-size:18px;margin:0 4px">${awayScore}</span>
-              <span class="sep">·</span>
-              <span style="color:var(--gold);font-size:18px;margin:0 4px">${homeScore}</span>
-              <span style="color:var(--text)">${homeAbbr}</span>
-            </div>
-            ${logoImg(homeLogo, homeAbbr)}
+function renderGameCard(g, order) {
+  const sorted = [...g.alerts].sort((a,b) => (order[a.type]??9) - (order[b.type]??9));
+  const bestType = sorted[0]?.type || 'yellow';
+  const period = g.period || 1;
+  const qCls = period <= 1 ? 'q1' : period === 2 ? 'q2' : period === 3 ? 'q3' : 'q4';
+  const qLabel = `Q${period}${g.clock ? ' ' + g.clock : ''}`;
+  const isActive = g.key === activeGameKey;
+
+  // Extrair times e placar do gameLabel "NYK 52 · MIA 49"
+  const parts = g.label.split('·').map(p => p.trim());
+  const awayAbbr = parts[0]?.split(' ')[0] || '';
+  const homeAbbr = parts[1]?.split(' ')[0] || '';
+  const awayScore = parts[0]?.split(' ')[1] || '0';
+  const homeScore = parts[1]?.split(' ')[1] || '0';
+  const awayLogo = teamLogoUrl(awayAbbr);
+  const homeLogo = teamLogoUrl(homeAbbr);
+
+  const teamBlock = (abbr, logo, score) => `
+    <div class="game-card-team">
+      ${logo
+        ? `<img src="${logo}" onerror="this.style.display='none'">`
+        : `<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:13px;font-weight:800;color:var(--text3)">${abbr}</div>`}
+      <span class="game-card-team-abbr">${abbr}</span>
+    </div>`;
+
+  // Dots de alertas (um por jogador)
+  const dots = sorted.map(a => `<div class="game-card-dot ${a.type}" title="${a.name}"></div>`).join('');
+  const countLabel = sorted.length === 1 ? '1 alerta' : `${sorted.length} alertas`;
+
+  return `
+    <div class="game-card ${isActive ? 'active' : ''} ${bestType === 'fire' ? 'has-fire' : bestType === 'red' ? 'has-red' : ''}"
+         data-gamekey="${g.key.replace(/"/g,'')}"
+         onclick="toggleGameDrawer('${g.key.replace(/'/g,"\'")}')">
+      <div class="game-card-accent ${bestType}"></div>
+      <div class="game-card-body">
+        <div class="game-card-teams">
+          ${teamBlock(awayAbbr, awayLogo, awayScore)}
+          <div class="game-card-vs">
+            <div class="game-card-score">${awayScore}<span class="game-card-sep" style="margin:0 6px">·</span>${homeScore}</div>
+            <div class="game-card-period ${qCls}">${qLabel}</div>
           </div>
-          <span class="game-group-badge ${qCls}">${qLabel}</span>
-          <span class="game-group-count">${countLabel}</span>
+          ${teamBlock(homeAbbr, homeLogo, homeScore)}
         </div>
-        <div class="game-group-cards">
-          ${sorted.map(renderCard).join('')}
+        <div class="game-card-footer">
+          <div class="game-card-alerts">${dots}</div>
+          <span class="game-card-count">${countLabel}</span>
+          <span class="game-card-arrow">${isActive ? '▲' : '▼'}</span>
         </div>
-      </div>`;
-  }).join('');
+      </div>
+    </div>`;
+}
+
+function insertDrawer(groupList, order) {
+  const grid = document.getElementById('games-grid');
+  if (!grid || !activeGameKey) return;
+  const g = groupList.find(x => x.key === activeGameKey);
+  if (!g) return;
+  const sorted = [...g.alerts].sort((a,b) => (order[a.type]??9) - (order[b.type]??9));
+  const drawer = document.createElement('div');
+  drawer.className = 'players-drawer';
+  drawer.id = 'players-drawer';
+  drawer.innerHTML = `
+    <div class="players-drawer-header">
+      <div style="flex:1">Jogadores com alerta — ${g.label}</div>
+    </div>
+    <div class="players-drawer-grid">
+      ${sorted.map(renderCard).join('')}
+    </div>`;
+  // Inserir como filho do grid (ocupa linha inteira via grid-column: 1/-1)
+  grid.appendChild(drawer);
+}
+
+function toggleGameDrawer(key) {
+  const order = { fire:0, red:1, orange:2, yellow:3, risk:4 };
+  if (activeGameKey === key) {
+    activeGameKey = null;
+  } else {
+    activeGameKey = key;
+  }
+  renderAlerts();
 }
 
 function setFilter(type,btn) {
