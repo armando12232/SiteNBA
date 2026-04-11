@@ -1045,15 +1045,32 @@ async function runMonitor() {
         if (diff >= BLOWOUT && !winning) warnings.push('adversário em blowout');
         if (paceFactor > 1.08) warnings.push(`jogo acelerado (${Math.round(totalScorePace)} pts/jogo)`);
 
+        // Pré-jogo: buscar silenciosamente se não tiver no cache ainda
+        if (!pregameCache[player.playerId]) {
+          fetchNBA('pregame', null, player.playerId)
+            .then(data => { if (data && !data.error) pregameCache[player.playerId] = data; })
+            .catch(() => {});
+        }
+        const pg = pregameCache[player.playerId] || {};
+
         newAlerts.push({
           playerId: player.playerId, type,
           name: player.name, team: player.teamAbbr,
-          position: player.position || '—', nbaId: player.playerId,
+          position: player.position || '\u2014', nbaId: player.playerId,
           triggered, pts: player.pts, reb: player.reb, ast: player.ast,
           gameLabel, period, clock: clockDisplay, warnings,
           paceFactor: Math.round(paceFactor * 100),
           minsLeft: Math.round(minsLeft),
-          extraStats: { mins: player.mins, fgm: player.fgm, fga: player.fga, tpm: player.tpm, pf: player.pf, to: player.to, plusMinus: player.plusMinus }
+          extraStats: { mins: player.mins, fgm: player.fgm, fga: player.fga, tpm: player.tpm, pf: player.pf, to: player.to, plusMinus: player.plusMinus },
+          pregame: {
+            l5Pts:      pg.last5_avg?.pts          ?? null,
+            l10Pts:     pg.last10_avg?.pts         ?? null,
+            hitRate:    pg.hit_rates?.pts_last10   ?? null,
+            line:       pg.synthetic_lines?.pts    ?? null,
+            edge:       pg.edge_points             ?? null,
+            last5Games: pg.last5_games             || [],
+            seasonAvg:  pg.season_avg              || {},
+          }
         });
       }
     }
@@ -1261,25 +1278,31 @@ function openModal(playerId) {
   if (analysisBox && a.type !== 'risk') {
     analysisBox.innerHTML = `<div style="display:flex;align-items:center;gap:8px;color:var(--text3);font-size:12px"><div style="width:14px;height:14px;border:2px solid var(--gold);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>Analisando com IA...</div>`;
 
-    // Montar payload enriquecido com todos os dados disponíveis
-    const avgData = seasonAvgCache[a.playerId] || {};
+    // Payload enriquecido: dados ao vivo + pré-jogo já carregado
+    const pg = a.pregame || {};
     const payload = {
+      // Identidade
       name: a.name, team: a.team, period: a.period, clock: a.clock || '',
       pts: a.pts, reb: a.reb, ast: a.ast,
       mins: a.extraStats?.mins || 0,
       gameLabel: a.gameLabel,
       warnings: a.warnings || [],
       triggered: a.triggered || [],
-      // L10 da temporada
-      l10: { pts: avgData.pts || null, reb: avgData.reb || null, ast: avgData.ast || null },
-      l5Pts: avgData.l5Pts || null,
-      hitRate: avgData.hitRate || null,
-      // H2H — não disponível ao vivo ainda, placeholder
-      h2h: a.h2h || [],
-      // Contexto
-      isB2B: a.isB2B || false,
-      minsL5: avgData.minsL5 || null,
       paceFactor: a.paceFactor || 100,
+      // Forma recente — do pré-jogo carregado
+      l5Pts:   pg.l5Pts   ?? null,
+      hitRate: pg.hitRate  ?? null,
+      l10: {
+        pts: pg.l10Pts ?? null,
+        reb: null, ast: null   // futuro
+      },
+      // H2H real — últimos 5 jogos vs adversário (do game log)
+      h2h: (pg.last5Games || []).slice(0,5).map(g => ({
+        opp: g.opp, pts: g.pts, reb: g.reb, ast: g.ast
+      })),
+      // Linha sintética
+      line: pg.line ?? null,
+      edge: pg.edge ?? null,
     };
 
     fetch('/api/analyze', {
