@@ -1109,8 +1109,20 @@ async function loadTodayGames() {
 
     todayGamesCache = games;
 
-    // Buscar pré-jogo de todos os jogos em paralelo (silencioso)
-    games.forEach(g => loadGamePregame(g).catch(() => {}));
+    // Buscar linhas reais do PrizePicks + pré-jogo em paralelo
+    Promise.all([
+      fetch('/api/lines').then(r => r.json()).then(d => {
+        if (d.lines) {
+          window._ppLines = {};
+          d.lines.forEach(l => {
+            const key = l.player_name + '_' + l.stat;
+            window._ppLines[key] = l;
+          });
+          console.log('PrizePicks:', d.count, 'props carregadas');
+        }
+      }).catch(() => {}),
+      ...games.map(g => loadGamePregame(g).catch(() => {}))
+    ]).then(() => renderPropsTable());
 
     renderPropsTable();
 
@@ -1136,7 +1148,18 @@ function renderPropsTable() {
     if (!players?.length) continue;
     for (const p of players) {
       const prop = (p.props || {})[currentPropFilter];
-      if (!prop || prop.line == null || prop.line <= 0) continue;
+      if (!prop) continue;
+
+      // Usar linha real do PrizePicks se disponível
+      const ppKey  = p.player_name + '_' + currentPropFilter;
+      const ppStat = { pts:'pts', reb:'reb', ast:'ast', fg3m:'fg3m',
+                       pts_map:{'pts':'Points','reb':'Rebounds','ast':'Assists','fg3m':'3-Pt Made'} };
+      const ppStatLabel = {pts:'Points',reb:'Rebounds',ast:'Assists',fg3m:'3-Pt Made'}[currentPropFilter];
+      const ppKeyFull   = p.player_name + '_' + (ppStatLabel || currentPropFilter);
+      const ppData      = (window._ppLines || {})[ppKeyFull] || (window._ppLines || {})[ppKey];
+      if (ppData) { prop.line = ppData.line; prop.source = 'PrizePicks'; }
+
+      if (prop.line == null || prop.line <= 0) continue;
       // Determinar time adversário
       let oppAbbr = '';
       if (g) {
@@ -1237,7 +1260,9 @@ function renderPropsTable() {
           <div style="font-family:var(--display);font-size:13px;font-weight:800;color:${edge==null?'var(--text3)':edge>0?'var(--green)':edge<0?'var(--danger)':'var(--text3)'};text-align:center">${edge==null?'—':edge>0?'+'+edge:edge}</div>
           <div style="text-align:right">
             <div style="font-family:var(--display);font-size:14px;font-weight:800;color:var(--gold)">O ${prop.line}</div>
-            <div style="font-size:9px;color:var(--text3)">L5: ${prop.l5 ?? '—'}</div>
+            <div style="font-size:9px;color:${prop.source === 'PrizePicks' ? 'var(--green)' : 'var(--text3)'}">
+              ${prop.source === 'PrizePicks' ? '🟢 PP' : 'L5: ' + (prop.l5 ?? '—')}
+            </div>
           </div>
         </div>`;
     }).join('');
