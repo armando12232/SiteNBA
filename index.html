@@ -1136,7 +1136,7 @@ function renderPropsTable() {
     if (!players?.length) continue;
     for (const p of players) {
       const prop = (p.props || {})[currentPropFilter];
-      if (!prop || prop.line == null) continue;
+      if (!prop || prop.line == null || prop.line <= 0) continue;
       // Determinar time adversário
       let oppAbbr = '';
       if (g) {
@@ -1191,8 +1191,9 @@ function renderPropsTable() {
   const todayStr    = new Date().toISOString().slice(0,10);
 
   const hrCell = (val) => {
-    if (val == null || val === '—') return `<div class="hit-rate-cell none">—</div>`;
+    if (val == null || val === '—' || val === '') return `<div class="hit-rate-cell none" style="color:var(--text3)">—</div>`;
     const n = Number(val);
+    if (isNaN(n)) return `<div class="hit-rate-cell none">—</div>`;
     const cls = n >= 70 ? 'high' : n >= 50 ? 'mid' : 'low';
     return `<div class="hit-rate-cell ${cls}">${n}%</div>`;
   };
@@ -1210,9 +1211,9 @@ function renderPropsTable() {
 
     const rows = players.map(p => {
       const prop  = p.currentProp;
-      const edge  = prop.edge ?? 0;
-      const arrow = edge > 2 ? '↑' : edge < -2 ? '↓' : '→';
-      const arrowCol = edge > 2 ? 'var(--green)' : edge < -2 ? 'var(--danger)' : 'var(--text3)';
+      const edge  = prop.edge ?? null;
+      const arrow = edge != null ? (edge > 2 ? '↑' : edge < -2 ? '↓' : '→') : '—';
+      const arrowCol = edge == null ? 'var(--text3)' : edge > 2 ? 'var(--green)' : edge < -2 ? 'var(--danger)' : 'var(--text3)';
       const l5hit  = prop.hit_rate;
       const l10hit = prop.hit_rate; // mesmo dado por enquanto
       const h2h    = p.h2hRate;
@@ -1233,7 +1234,7 @@ function renderPropsTable() {
           ${hrCell(l5hit)}
           ${hrCell(l10hit)}
           <div class="hide-mobile">${hrCell(seasonHit)}</div>
-          <div style="font-family:var(--display);font-size:13px;font-weight:800;color:${edge>0?'var(--green)':edge<0?'var(--danger)':'var(--text3)'};text-align:center">${edge>0?'+':''}${edge}</div>
+          <div style="font-family:var(--display);font-size:13px;font-weight:800;color:${edge==null?'var(--text3)':edge>0?'var(--green)':edge<0?'var(--danger)':'var(--text3)'};text-align:center">${edge==null?'—':edge>0?'+'+edge:edge}</div>
           <div style="text-align:right">
             <div style="font-family:var(--display);font-size:14px;font-weight:800;color:var(--gold)">O ${prop.line}</div>
             <div style="font-size:9px;color:var(--text3)">L5: ${prop.l5 ?? '—'}</div>
