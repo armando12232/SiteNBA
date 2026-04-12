@@ -38,6 +38,18 @@ MARKETS = {
     'blk':  136,   # Blocks
 }
 
+def hit_rate(period_data):
+    """Calcula hit rate Over de um período."""
+    if not period_data:
+        return None
+    o = period_data.get('over', 0)
+    u = period_data.get('under', 0)
+    total = o + u
+    if total == 0:
+        return None
+    return round((o / total) * 100)
+
+
 def fetch_bp(params: dict):
     qs = urlencode(params)
     url = f'https://api.bettingpros.com/v3/props?{qs}'
@@ -53,7 +65,7 @@ def get_props(date_str: str = None, stats: list = None):
     if not stats:
         stats = ['pts', 'reb', 'ast', 'fg3m']
 
-    cache_key = f'bp_{date_str}_{"_".join(stats)}'
+    cache_key = f'bp2_{date_str}_{"_".join(stats)}'  # v2: usa market_id correto
     cached = _cache_get(cache_key)
     if cached:
         return cached
@@ -68,7 +80,7 @@ def get_props(date_str: str = None, stats: list = None):
         try:
             data = fetch_bp({
                 'sport': 'NBA',
-                'market': market_id,
+                'market_id': market_id,  # precisa ser market_id (int), nao market (string)
                 'date': date_str,
                 'limit': 100,
                 'sort': 'diff',
@@ -85,16 +97,6 @@ def get_props(date_str: str = None, stats: list = None):
                 over  = prop.get('over', {})
                 perf  = prop.get('performance', {})
                 proj  = prop.get('projection', {})
-
-                def hit_rate(period_data):
-                    if not period_data:
-                        return None
-                    o = period_data.get('over', 0)
-                    u = period_data.get('under', 0)
-                    total = o + u
-                    if total == 0:
-                        return None
-                    return round((o / total) * 100)
 
                 prop_data = {
                     'line':       over.get('line'),
