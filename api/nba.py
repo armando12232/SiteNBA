@@ -172,26 +172,43 @@ def get_pregame(player_id):
         season_pts = season_reb = season_ast = season_3pm = 0
 
     # 2. Game log via stats.nba.com (~3-5s)
-    try:
-        log_url  = (
-            f"https://stats.nba.com/stats/playergamelog"
-            f"?PlayerID={player_id}&Season=2024-25"
-            f"&SeasonType=Regular+Season&LeagueID=00"
-        )
-        log_data  = _nba_fetch(log_url, timeout=9)
-        rs2       = log_data.get("resultSets", [{}])[0]
-        game_rows = [dict(zip(rs2["headers"], r)) for r in rs2.get("rowSet", [])]
-    except Exception:
-        game_rows = []
+    game_rows = []
+    for season_type in ["Regular+Season", "Playoffs"]:
+        try:
+            log_url = (
+                f"https://stats.nba.com/stats/playergamelog"
+                f"?PlayerID={player_id}&Season=2024-25"
+                f"&SeasonType={season_type}&LeagueID=00"
+            )
+            log_data  = _nba_fetch(log_url, timeout=9)
+            rs2       = log_data.get("resultSets", [{}])[0]
+            rows      = [dict(zip(rs2["headers"], r)) for r in rs2.get("rowSet", [])]
+            game_rows.extend(rows)
+        except Exception:
+            pass
+    # Ordenar do mais recente para o mais antigo
+    game_rows = sorted(game_rows, key=lambda r: r.get("GAME_DATE",""), reverse=True)
 
     if len(game_rows) < 5:
+        # Gerar props básicas com dados da temporada mesmo sem game log
+        props_fallback = {}
+        for stat_key, avg_val, label in [
+            ("PTS", season_pts, "pts"), ("REB", season_reb, "reb"),
+            ("AST", season_ast, "ast"), ("FG3M", season_3pm, "fg3m"),
+        ]:
+            if avg_val >= 1.5:
+                line = round((avg_val - 0.5) * 2) / 2
+                props_fallback[label] = {
+                    "l5": None, "l10": None,
+                    "line": line, "hit_rate": None, "edge": None
+                }
         result = {
             "player_id": player_id,
             "season_avg": {"pts": season_pts, "reb": season_reb, "ast": season_ast, "fg3m": season_3pm},
-            "props": {},
+            "props": props_fallback,
             "last5_avg":  {"pts": None, "reb": None, "ast": None, "fg3m": None},
             "last10_avg": {"pts": None},
-            "synthetic_lines": {"pts": round((season_pts-0.5)*2)/2 if season_pts else None},
+            "synthetic_lines": {"pts": props_fallback.get("pts", {}).get("line")},
             "hit_rates": {"pts_last10": None},
             "edge_points": None, "last5_games": [],
             "summary": f"Temporada: {season_pts}pts / {season_reb}reb / {season_ast}ast"
