@@ -1109,18 +1109,20 @@ async function loadTodayGames() {
 
     todayGamesCache = games;
 
-    // Buscar linhas reais do PrizePicks + pré-jogo em paralelo
+    // Buscar dados BettingPros (linhas reais + hit rates) + pré-jogo em paralelo
+    const dateStr = new Date().toISOString().slice(0,10);
     Promise.all([
-      fetch('/api/lines').then(r => r.json()).then(d => {
-        if (d.lines) {
-          window._ppLines = {};
-          d.lines.forEach(l => {
-            const key = l.player_name + '_' + l.stat;
-            window._ppLines[key] = l;
-          });
-          console.log('PrizePicks:', d.count, 'props carregadas');
-        }
-      }).catch(() => {}),
+      fetch(`/api/bettingpros?date=${dateStr}&stats=pts,reb,ast,fg3m`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.players) {
+            window._bpData = {};
+            d.players.forEach(p => {
+              window._bpData[p.player_name] = p;
+            });
+            console.log('BettingPros:', d.count, 'jogadores carregados');
+          }
+        }).catch(e => console.warn('BettingPros falhou:', e)),
       ...games.map(g => loadGamePregame(g).catch(() => {}))
     ]).then(() => renderPropsTable());
 
@@ -1139,47 +1141,60 @@ async function loadTodayGames() {
 function renderPropsTable() {
   const loading = document.getElementById('today-loading');
   const table   = document.getElementById('props-table');
-  const cache   = window._todayPregameCache || {};
+  const bpData  = window._bpData || {};
+  const games   = window._gameByKey || {};
 
-  // Coletar todos jogadores com dados
+  // Coletar jogadores do BettingPros
   let allPlayers = [];
-  for (const [gameKey, players] of Object.entries(cache)) {
-    const g = (window._gameByKey || {})[gameKey];
-    if (!players?.length) continue;
-    for (const p of players) {
-      const prop = (p.props || {})[currentPropFilter];
-      if (!prop) continue;
 
-      // Usar linha real do PrizePicks se disponível
-      const ppKey  = p.player_name + '_' + currentPropFilter;
-      const ppStat = { pts:'pts', reb:'reb', ast:'ast', fg3m:'fg3m',
-                       pts_map:{'pts':'Points','reb':'Rebounds','ast':'Assists','fg3m':'3-Pt Made'} };
-      const ppStatLabel = {pts:'Points',reb:'Rebounds',ast:'Assists',fg3m:'3-Pt Made'}[currentPropFilter];
-      const ppKeyFull   = p.player_name + '_' + (ppStatLabel || currentPropFilter);
-      const ppData      = (window._ppLines || {})[ppKeyFull] || (window._ppLines || {})[ppKey];
-      if (ppData) { prop.line = ppData.line; prop.source = 'PrizePicks'; }
+  for (const [name, bp] of Object.entries(bpData)) {
+    const prop = (bp.props || {})[currentPropFilter];
+    if (!prop || prop.line == null || prop.line <= 0) continue;
 
-      if (prop.line == null || prop.line <= 0) continue;
-      // Determinar time adversário
-      let oppAbbr = '';
-      if (g) {
-        const awayIds = STAR_PLAYERS[g.awayTeam.abbr] || [];
-        oppAbbr = awayIds.includes(p.player_id) ? g.homeTeam.abbr : g.awayTeam.abbr;
+    // Encontrar o jogo deste jogador pelos games agendados
+    let gameLabel = '', gameDateLabel = '', gameKey = '';
+    for (const [key, g] of Object.entries(games)) {
+      const isHome = g.homeTeam.abbr === bp.team;
+      const isAway = g.awayTeam.abbr === bp.team;
+      if (isHome || isAway) {
+        gameLabel     = `${g.awayTeam.abbr} × ${g.homeTeam.abbr}`;
+        gameDateLabel = g.gameDateLabel || '';
+        gameKey       = key;
+        break;
       }
-      allPlayers.push({
-        ...p, gameKey, oppAbbr,
-        gameDateLabel: g?.gameDateLabel || '',
-        gameLabel: g ? `${g.awayTeam.abbr} × ${g.homeTeam.abbr}` : '',
-        currentProp: prop,
-        // H2H: buscar do last5_games contra opp — por ora % dos L5 games
-        h2hRate: calcH2H(p, currentPropFilter, oppAbbr),
-      });
     }
+
+    if (!gameLabel) continue; // jogador sem jogo nas próximas 24h
+
+    // Buscar player_id do nosso cache de pré-jogo para o modal
+    let playerId = null;
+    const pgCache = window._todayPregameCache || {};
+    for (const players of Object.values(pgCache)) {
+      const found = players?.find(p => p.player_name === name);
+      if (found) { playerId = found.player_id; break; }
+    }
+    // Fallback: PREGAME_PLAYERS
+    if (!playerId) {
+      const pg = PREGAME_PLAYERS.find(p => p.name === name);
+      if (pg) playerId = pg.id;
+    }
+
+    allPlayers.push({
+      player_name: name,
+      team:        bp.team,
+      position:    bp.position,
+      image:       bp.image,
+      player_id:   playerId,
+      gameKey, gameLabel, gameDateLabel,
+      currentProp: prop,
+    });
   }
 
   if (!allPlayers.length) {
     loading.style.display = 'block';
-    loading.textContent   = todayGamesCache ? 'Carregando dados dos jogadores...' : 'Carregando...';
+    loading.innerHTML = todayGamesCache
+      ? '<div style="color:var(--text3);padding:20px 0">Buscando props de jogadores...<br><span style="font-size:11px;opacity:.6">Aguarde alguns segundos</span></div>'
+      : '<div style="color:var(--text3);padding:20px 0">Carregando jogos...</div>';
     table.style.display   = 'none';
     return;
   }
@@ -1187,15 +1202,16 @@ function renderPropsTable() {
   loading.style.display = 'none';
   table.style.display   = 'block';
 
-  // Ordenar
+  // Ordenar pelos dados reais do BettingPros
   allPlayers.sort((a, b) => {
+    const pa = a.currentProp, pb = b.currentProp;
     switch (currentPeriodFilter) {
-      case 'l5':     return (b.currentProp.hit_rate||0) - (a.currentProp.hit_rate||0);
-      case 'l10':    return (b.currentProp.hit_rate||0) - (a.currentProp.hit_rate||0); // mesmo por ora
-      case 'h2h':    return (b.h2hRate||0) - (a.h2hRate||0);
-      case 'season': return (b.currentProp.l10||0) - (a.currentProp.l10||0);
-      case 'edge':   return (b.currentProp.edge||0) - (a.currentProp.edge||0);
-      default:       return (b.currentProp.hit_rate||0) - (a.currentProp.hit_rate||0);
+      case 'l5':     return (pb.l5     ?? -1) - (pa.l5     ?? -1);
+      case 'l10':    return (pb.l10    ?? -1) - (pa.l10    ?? -1);
+      case 'h2h':    return (pb.h2h    ?? -1) - (pa.h2h    ?? -1);
+      case 'season': return (pb.season ?? -1) - (pa.season ?? -1);
+      case 'edge':   return Math.abs(pb.diff ?? 0) - Math.abs(pa.diff ?? 0);
+      default:       return (pb.l5     ?? -1) - (pa.l5     ?? -1);
     }
   });
 
@@ -1237,31 +1253,43 @@ function renderPropsTable() {
       const edge  = prop.edge ?? null;
       const arrow = edge != null ? (edge > 2 ? '↑' : edge < -2 ? '↓' : '→') : '—';
       const arrowCol = edge == null ? 'var(--text3)' : edge > 2 ? 'var(--green)' : edge < -2 ? 'var(--danger)' : 'var(--text3)';
-      const l5hit  = prop.hit_rate;
-      const l10hit = prop.hit_rate; // mesmo dado por enquanto
-      const h2h    = p.h2hRate;
-      const seasonHit = calcSeasonHitRate(p, currentPropFilter);
+      const l5hit     = prop.l5;
+      const l10hit    = prop.l10;
+      const h2h       = prop.h2h;
+      const seasonHit = prop.season;
+      const streak    = prop.streak && prop.streak_type
+        ? `${prop.streak} ${prop.streak_type === 'over' ? '↑' : '↓'}`
+        : null;
 
       return `
-        <div class="props-table-row" onclick="openPregamePlayerModal(${p.player_id},'${p.gameKey}')">
+        <div class="props-table-row" onclick="p.player_id ? openPregamePlayerModal(${p.player_id},'${p.gameKey}') : null" style="cursor:${p.player_id ? 'pointer' : 'default'}">
           <div style="display:flex;align-items:center;gap:10px;min-width:0">
-            <img src="https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png"
+            <img src="${p.player_id ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png` : (p.image || '')}"
                  style="width:36px;height:36px;border-radius:8px;object-fit:cover;object-position:top;flex-shrink:0;background:var(--bg3)"
                  onerror="this.style.background='var(--bg4)'">
             <div style="min-width:0">
               <div style="font-family:var(--display);font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.player_name}</div>
-              <div style="font-size:10px;color:var(--text3);margin-top:1px">${p.gameLabel} &middot; <span style="color:var(--gold);font-weight:700">O ${prop.line}</span> <span style="color:${arrowCol}">${arrow}</span></div>
+              <div style="font-size:10px;color:var(--text3);margin-top:1px">
+                ${p.gameLabel} &middot; <span style="color:var(--gold);font-weight:700">O ${prop.line}</span>
+                ${prop.rec_side === 'over' ? '<span style="color:var(--green)"> ↑</span>' : prop.rec_side === 'under' ? '<span style="color:var(--danger)"> ↓</span>' : ''}
+                ${streak ? `<span style="color:var(--text3);margin-left:4px">${streak} streak</span>` : ''}
+              </div>
             </div>
           </div>
           ${hrCell(h2h)}
           ${hrCell(l5hit)}
           ${hrCell(l10hit)}
           <div class="hide-mobile">${hrCell(seasonHit)}</div>
-          <div style="font-family:var(--display);font-size:13px;font-weight:800;color:${edge==null?'var(--text3)':edge>0?'var(--green)':edge<0?'var(--danger)':'var(--text3)'};text-align:center">${edge==null?'—':edge>0?'+'+edge:edge}</div>
+          <div style="text-align:center">
+            <div style="font-family:var(--display);font-size:12px;font-weight:800;color:${prop.projection == null ? 'var(--text3)' : 'var(--text2)'}">
+              ${prop.projection != null ? prop.projection.toFixed(1) : '—'}
+            </div>
+            ${prop.ev != null ? `<div style="font-size:9px;font-weight:700;color:${prop.ev > 0 ? 'var(--green)' : 'var(--danger)'}">EV ${prop.ev > 0 ? '+' : ''}${prop.ev}%</div>` : ''}
+          </div>
           <div style="text-align:right">
             <div style="font-family:var(--display);font-size:14px;font-weight:800;color:var(--gold)">O ${prop.line}</div>
-            <div style="font-size:9px;color:${prop.source === 'PrizePicks' ? 'var(--green)' : 'var(--text3)'}">
-              ${prop.source === 'PrizePicks' ? '🟢 PP' : 'L5: ' + (prop.l5 ?? '—')}
+            <div style="font-size:9px;color:${prop.odds ? 'var(--text2)' : 'var(--text3)'}">
+              ${prop.odds ? (prop.odds > 0 ? '+' : '') + prop.odds : (prop.projection ? '📊 ' + prop.projection : '—')}
             </div>
           </div>
         </div>`;
@@ -1281,8 +1309,8 @@ function renderPropsTable() {
             <div style="text-align:center">L5</div>
             <div style="text-align:center">L10</div>
             <div style="text-align:center" class="hide-mobile">Temp</div>
-            <div style="text-align:center">Edge</div>
-            <div style="text-align:right">Linha</div>
+            <div style="text-align:center">Proj/EV</div>
+            <div style="text-align:right">Linha/Odds</div>
           </div>
           ${rows}
         </div>
