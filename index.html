@@ -197,6 +197,59 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .section-line { flex: 1; height: 1px; background: var(--border); }
 
 /* GAME GROUP */
+/* PROPS TABLE VIEW */
+.prop-filter-btn, .period-filter-btn {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 14px; font-size: 12px;
+  font-weight: 600; color: var(--text3); cursor: pointer;
+  font-family: var(--body); transition: all 0.15s;
+}
+.prop-filter-btn:hover, .period-filter-btn:hover { border-color: var(--border2); color: var(--text2); }
+.prop-filter-btn.active { color: var(--gold); border-color: var(--gold); background: rgba(253,185,39,.08); }
+.period-filter-btn.active { color: var(--text); border-color: var(--border2); background: var(--bg3); }
+
+.props-table { width: 100%; border-collapse: collapse; }
+.props-table-header {
+  display: grid; grid-template-columns: 1fr 60px 70px 70px 70px 70px 80px;
+  gap: 0; padding: 6px 12px;
+  font-size: 10px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text3);
+  border-bottom: 1px solid var(--border);
+}
+@media (max-width: 600px) {
+  .props-table-header { grid-template-columns: 1fr 60px 60px 60px 70px; }
+  .hide-mobile { display: none !important; }
+}
+.props-table-row {
+  display: grid; grid-template-columns: 1fr 60px 70px 70px 70px 70px 80px;
+  gap: 0; padding: 10px 12px; align-items: center;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.12s;
+}
+.props-table-row:hover { background: var(--bg3); }
+@media (max-width: 600px) {
+  .props-table-row { grid-template-columns: 1fr 60px 60px 60px 70px; }
+}
+.props-table-wrap {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden; margin-bottom: 20px;
+}
+.props-table-game-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--display); font-size: 13px; font-weight: 800;
+  color: var(--text2);
+}
+.hit-rate-cell {
+  font-family: var(--display); font-size: 14px; font-weight: 800;
+  text-align: center;
+}
+.hit-rate-cell.high { color: var(--green); }
+.hit-rate-cell.mid  { color: var(--gold); }
+.hit-rate-cell.low  { color: var(--danger); }
+.hit-rate-cell.none { color: var(--text3); font-size: 12px; }
+
 /* GAME MODAL */
 .game-modal-overlay {
   position: fixed; inset: 0; z-index: 1001;
@@ -722,12 +775,24 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
       </div>
 
       <div id="today-view" style="display:none">
-        <div class="section-header">
-          <span class="section-title" id="today-section-title">Próximos jogos</span>
-          <div class="section-line"></div>
+        <!-- Filtros de prop -->
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+          <button class="prop-filter-btn active" data-prop="pts" onclick="setPropFilter('pts',this)">Pontos</button>
+          <button class="prop-filter-btn" data-prop="reb" onclick="setPropFilter('reb',this)">Rebotes</button>
+          <button class="prop-filter-btn" data-prop="ast" onclick="setPropFilter('ast',this)">Assistências</button>
+          <button class="prop-filter-btn" data-prop="fg3m" onclick="setPropFilter('fg3m',this)">Cestas de 3</button>
+        </div>
+        <!-- Filtros de período -->
+        <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--text3);font-weight:600;align-self:center;margin-right:4px">Ordenar por:</span>
+          <button class="period-filter-btn active" data-period="l5" onclick="setPeriodFilter('l5',this)">L5</button>
+          <button class="period-filter-btn" data-period="l10" onclick="setPeriodFilter('l10',this)">L10</button>
+          <button class="period-filter-btn" data-period="h2h" onclick="setPeriodFilter('h2h',this)">H2H</button>
+          <button class="period-filter-btn" data-period="season" onclick="setPeriodFilter('season',this)">Temporada</button>
+          <button class="period-filter-btn" data-period="edge" onclick="setPeriodFilter('edge',this)">Edge</button>
         </div>
         <div id="today-loading" style="text-align:center;padding:40px;color:var(--text3)">Carregando jogos...</div>
-        <div class="today-grid" id="today-grid" style="display:none"></div>
+        <div id="props-table" style="display:none"></div>
       </div>
 
       <div id="live-view">
@@ -999,435 +1064,222 @@ const STAR_PLAYERS = {
   WAS:[203552,  1629628],  // Kyle Kuzma, Jordan Poole
 };
 
+// ─── PRÓXIMOS JOGOS — Props Table ────────────────────────────────────────────
 let todayGamesCache = null;
+let currentPropFilter  = 'pts';
+let currentPeriodFilter = 'l5';
+
+// Mapa de adversário por jogo (para H2H)
+// gameKey → { away: 'MIN', home: 'DEN' }
+
+function setPropFilter(prop, btn) {
+  currentPropFilter = prop;
+  document.querySelectorAll('.prop-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderPropsTable();
+}
+
+function setPeriodFilter(period, btn) {
+  currentPeriodFilter = period;
+  document.querySelectorAll('.period-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderPropsTable();
+}
 
 async function loadTodayGames() {
   const loading = document.getElementById('today-loading');
-  const grid    = document.getElementById('today-grid');
-  const title   = document.getElementById('today-section-title');
+  const table   = document.getElementById('props-table');
 
-  // Se já carregou, só re-renderizar
-  if (todayGamesCache) {
-    renderTodayGames(todayGamesCache);
-    return;
-  }
+  if (todayGamesCache) { renderPropsTable(); return; }
 
   loading.style.display = 'block';
-  loading.textContent   = 'Carregando jogos...';
-  grid.style.display    = 'none';
+  loading.textContent   = 'Carregando jogos e dados...';
+  table.style.display   = 'none';
 
   try {
-    const data = await fetchNBA('schedule');
+    const data  = await fetchNBA('schedule');
     const games = data.games || [];
 
-    todayGamesCache = games;
-    // Indexar por gameKey para acesso rápido
+    // Indexar por gameKey
     window._gameByKey = {};
     games.forEach(g => {
       const key = g.gameId || (g.awayTeam.abbr + g.homeTeam.abbr);
       window._gameByKey[key] = g;
     });
-    renderTodayGames(games);
+
+    todayGamesCache = games;
+
     // Buscar pré-jogo de todos os jogos em paralelo (silencioso)
     games.forEach(g => loadGamePregame(g).catch(() => {}));
+
+    renderPropsTable();
+
+    // Re-renderizar quando dados chegarem
+    setTimeout(renderPropsTable, 5000);
+    setTimeout(renderPropsTable, 12000);
+
   } catch(e) {
-    loading.textContent = 'Erro ao carregar jogos do dia.';
+    loading.textContent = 'Erro ao carregar jogos.';
     console.error(e);
   }
 }
 
-function renderTodayGames(games) {
+function renderPropsTable() {
   const loading = document.getElementById('today-loading');
-  const grid    = document.getElementById('today-grid');
+  const table   = document.getElementById('props-table');
+  const cache   = window._todayPregameCache || {};
 
-  if (!games.length) {
+  // Coletar todos jogadores com dados
+  let allPlayers = [];
+  for (const [gameKey, players] of Object.entries(cache)) {
+    const g = (window._gameByKey || {})[gameKey];
+    if (!players?.length) continue;
+    for (const p of players) {
+      const prop = (p.props || {})[currentPropFilter];
+      if (!prop || prop.line == null) continue;
+      // Determinar time adversário
+      let oppAbbr = '';
+      if (g) {
+        const awayIds = STAR_PLAYERS[g.awayTeam.abbr] || [];
+        oppAbbr = awayIds.includes(p.player_id) ? g.homeTeam.abbr : g.awayTeam.abbr;
+      }
+      allPlayers.push({
+        ...p, gameKey, oppAbbr,
+        gameDateLabel: g?.gameDateLabel || '',
+        gameLabel: g ? `${g.awayTeam.abbr} × ${g.homeTeam.abbr}` : '',
+        currentProp: prop,
+        // H2H: buscar do last5_games contra opp — por ora % dos L5 games
+        h2hRate: calcH2H(p, currentPropFilter, oppAbbr),
+      });
+    }
+  }
+
+  if (!allPlayers.length) {
     loading.style.display = 'block';
-    loading.innerHTML = `<div class="state-box">
-      <div class="state-nba-logo">NBA</div>
-      <div class="state-title">Sem jogos nos próximos dias</div>
-      <div class="state-sub">Verifique novamente em breve.</div>
-    </div>`;
-    grid.style.display = 'none';
+    loading.textContent   = todayGamesCache ? 'Carregando dados dos jogadores...' : 'Carregando...';
+    table.style.display   = 'none';
     return;
   }
 
+  loading.style.display = 'none';
+  table.style.display   = 'block';
+
+  // Ordenar
+  allPlayers.sort((a, b) => {
+    switch (currentPeriodFilter) {
+      case 'l5':     return (b.currentProp.hit_rate||0) - (a.currentProp.hit_rate||0);
+      case 'l10':    return (b.currentProp.hit_rate||0) - (a.currentProp.hit_rate||0); // mesmo por ora
+      case 'h2h':    return (b.h2hRate||0) - (a.h2hRate||0);
+      case 'season': return (b.currentProp.l10||0) - (a.currentProp.l10||0);
+      case 'edge':   return (b.currentProp.edge||0) - (a.currentProp.edge||0);
+      default:       return (b.currentProp.hit_rate||0) - (a.currentProp.hit_rate||0);
+    }
+  });
+
   // Agrupar por data
   const byDate = {};
-  for (const g of games) {
-    const dateKey = g.gameDateLabel || 'hoje';
-    if (!byDate[dateKey]) byDate[dateKey] = [];
-    byDate[dateKey].push(g);
+  for (const p of allPlayers) {
+    const d = p.gameDateLabel || 'hoje';
+    if (!byDate[d]) byDate[d] = [];
+    byDate[d].push(p);
   }
 
-  loading.style.display = 'none';
-  grid.style.display    = 'block'; // block pra suportar section headers entre grids
+  const propLabels  = { pts:'Pontos', reb:'Rebotes', ast:'Assistências', fg3m:'3 Pontos' };
+  const propLabel   = propLabels[currentPropFilter] || currentPropFilter.toUpperCase();
+  const weekDays    = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const months      = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const todayStr    = new Date().toISOString().slice(0,10);
 
-  const dateLabels = {
-    [new Date().toISOString().slice(0,10)]: 'Hoje',
-    [new Date(Date.now()+86400000).toISOString().slice(0,10)]: 'Amanhã',
+  const hrCell = (val) => {
+    if (val == null || val === '—') return `<div class="hit-rate-cell none">—</div>`;
+    const n = Number(val);
+    const cls = n >= 70 ? 'high' : n >= 50 ? 'mid' : 'low';
+    return `<div class="hit-rate-cell ${cls}">${n}%</div>`;
   };
 
-  const weekDays = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-  const months   = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-
-  grid.innerHTML = Object.entries(byDate).map(([date, dayGames]) => {
-    // Label da data
-    let label = dateLabels[date];
-    if (!label) {
-      const d = new Date(date + 'T12:00:00');
-      label = `${weekDays[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
+  table.innerHTML = Object.entries(byDate).map(([date, players]) => {
+    let dateLabel = date === todayStr ? 'Hoje' :
+      date === new Date(Date.now()+86400000).toISOString().slice(0,10) ? 'Amanhã' : '';
+    if (!dateLabel && date.length === 10) {
+      try {
+        const d = new Date(date + 'T12:00:00');
+        dateLabel = `${weekDays[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
+      } catch(e) { dateLabel = date; }
     }
-    const isToday = date === new Date().toISOString().slice(0,10);
+    const isToday = date === todayStr;
+
+    const rows = players.map(p => {
+      const prop  = p.currentProp;
+      const edge  = prop.edge ?? 0;
+      const arrow = edge > 2 ? '↑' : edge < -2 ? '↓' : '→';
+      const arrowCol = edge > 2 ? 'var(--green)' : edge < -2 ? 'var(--danger)' : 'var(--text3)';
+      const l5hit  = prop.hit_rate;
+      const l10hit = prop.hit_rate; // mesmo dado por enquanto
+      const h2h    = p.h2hRate;
+      const seasonHit = calcSeasonHitRate(p, currentPropFilter);
+
+      return `
+        <div class="props-table-row" onclick="openPregamePlayerModal(${p.player_id},'${p.gameKey}')">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0">
+            <img src="https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png"
+                 style="width:36px;height:36px;border-radius:8px;object-fit:cover;object-position:top;flex-shrink:0;background:var(--bg3)"
+                 onerror="this.style.background='var(--bg4)'">
+            <div style="min-width:0">
+              <div style="font-family:var(--display);font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.player_name}</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:1px">${p.gameLabel} &middot; <span style="color:var(--gold);font-weight:700">O ${prop.line}</span> <span style="color:${arrowCol}">${arrow}</span></div>
+            </div>
+          </div>
+          ${hrCell(h2h)}
+          ${hrCell(l5hit)}
+          ${hrCell(l10hit)}
+          <div class="hide-mobile">${hrCell(seasonHit)}</div>
+          <div style="font-family:var(--display);font-size:13px;font-weight:800;color:${edge>0?'var(--green)':edge<0?'var(--danger)':'var(--text3)'};text-align:center">${edge>0?'+':''}${edge}</div>
+          <div style="text-align:right">
+            <div style="font-family:var(--display);font-size:14px;font-weight:800;color:var(--gold)">O ${prop.line}</div>
+            <div style="font-size:9px;color:var(--text3)">L5: ${prop.l5 ?? '—'}</div>
+          </div>
+        </div>`;
+    }).join('');
 
     return `
-      <div style="margin-bottom:28px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-          <span style="font-family:var(--display);font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:${isToday ? 'var(--gold)' : 'var(--text3)'}">${label}</span>
+      <div style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${isToday?'var(--gold)':'var(--text3)'}">${dateLabel}</span>
           <div style="flex:1;height:1px;background:var(--border)"></div>
-          <span style="font-size:11px;color:var(--text3)">${dayGames.length} ${dayGames.length===1?'jogo':'jogos'}</span>
+          <span style="font-size:11px;color:var(--text3)">${players.length} jogadores</span>
         </div>
-        <div class="today-grid" style="margin-bottom:0">
-          ${dayGames.map(renderTodayCard).join('')}
+        <div class="props-table-wrap">
+          <div class="props-table-header">
+            <div>Jogador</div>
+            <div style="text-align:center">H2H</div>
+            <div style="text-align:center">L5</div>
+            <div style="text-align:center">L10</div>
+            <div style="text-align:center" class="hide-mobile">Temp</div>
+            <div style="text-align:center">Edge</div>
+            <div style="text-align:right">Linha</div>
+          </div>
+          ${rows}
         </div>
       </div>`;
   }).join('');
 }
 
-// Cache de pré-jogo por jogo
-const todayPregameCache = {};
-
-function renderTodayCard(g) {
-  const home = g.homeTeam, away = g.awayTeam;
-  const status = g.status;
-  const gameKey = g.gameId || (away.abbr + home.abbr);
-
-  const homeLogo = teamLogoUrl(home.abbr);
-  const awayLogo = teamLogoUrl(away.abbr);
-
-  const logoEl = (logo, abbr) => logo
-    ? `<img class="today-team-logo" src="${logo}" onerror="this.style.display='none'" alt="${abbr}">`
-    : `<div class="today-team-logo" style="display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:16px;font-weight:800;color:var(--text3)">${abbr}</div>`;
-
-  // Placar ou horário
-  let centerContent = '';
-  let statusCls = 'scheduled';
-  if (status === 2) {
-    const statusLabel = `<span class="today-live-dot"></span>${g.statusText || 'Ao vivo'}`;
-    centerContent = `<div class="today-score-nums">${away.score}<span class="today-score-sep">·</span>${home.score}</div><div class="today-status-pill live">${statusLabel}</div>`;
-    statusCls = 'live';
-  } else if (status === 3) {
-    centerContent = `<div class="today-score-nums">${away.score}<span class="today-score-sep">·</span>${home.score}</div><div class="today-status-pill final">Final</div>`;
-    statusCls = 'final';
-  } else {
-    let timeStr = '—';
-    if (g.gameTimeUTC) {
-      timeStr = new Date(g.gameTimeUTC).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Sao_Paulo' });
-    }
-    centerContent = `<div class="today-score-nums" style="font-size:22px;color:var(--text2)">${timeStr}</div><div class="today-status-pill scheduled">Horário de Brasília</div>`;
-  }
-
-  const cardCls = status === 2 ? 'live' : status === 3 ? 'final' : '';
-  const pregameSectionId = `pregame-section-${gameKey}`;
-
-  // Pré-jogo inline — sem fotos, só dados
-  const pregameData = (window._todayPregameCache || {})[gameKey] || [];
-
-  const pregameRows = pregameData.length
-    ? pregameData.slice(0,4).map(p => {
-        const best   = getBestProp(p);
-        if (!best) return '';
-        const l5     = best.l5 ?? '—';
-        const hit    = best.hit_rate ?? '—';
-        const edge   = best.edge ?? 0;
-        const hitCol  = Number(hit) >= 70 ? 'var(--green)' : Number(hit) >= 50 ? 'var(--gold)' : 'var(--danger)';
-        const arrow   = edge > 2 ? '↑' : edge < -2 ? '↓' : '→';
-        const overCol = edge > 2 ? 'var(--green)' : edge < -2 ? 'var(--danger)' : 'var(--text2)';
-        // Badge da categoria da prop
-        const statBadgeColor = {pts:'var(--gold)',reb:'var(--amber)',ast:'#4fc3f7',fg3m:'#ce93d8'}[best.stat]||'var(--text3)';
-        return `
-          <div onclick="event.stopPropagation();openPregamePlayerModal(${p.player_id},'${gameKey}')"
-               style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s"
-               onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''">
-            <span style="font-size:9px;font-weight:800;letter-spacing:.06em;color:${statBadgeColor};background:${statBadgeColor}22;border-radius:4px;padding:2px 5px;flex-shrink:0">${best.label}</span>
-            <div style="font-family:var(--display);font-size:13px;font-weight:800;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.player_name}</div>
-            <div style="display:flex;gap:8px;font-family:var(--display);font-size:11px;font-weight:700;flex-shrink:0">
-              <span style="color:var(--text3)">L5 <span style="color:var(--text)">${l5}</span></span>
-              <span style="color:var(--text3)">Hit <span style="color:${hitCol}">${hit}%</span></span>
-              <span style="color:${overCol}">OVER ${best.line} ${arrow}</span>
-            </div>
-          </div>`;
-      }).join('')
-    : `<div style="padding:10px 12px;font-size:11px;color:var(--text3);text-align:center">
-         Carregando dados...
-       </div>`;
-
-  return `
-    <div class="today-game-card ${cardCls}" onclick="openGameModal('${gameKey}')" style="cursor:pointer">
-      <div class="today-card-top">
-        <div class="today-team-side">${logoEl(awayLogo, away.abbr)}<span class="today-team-abbr">${away.abbr}</span></div>
-        <div class="today-score-center">${centerContent}</div>
-        <div class="today-team-side">${logoEl(homeLogo, home.abbr)}<span class="today-team-abbr">${home.abbr}</span></div>
-      </div>
-      <div id="${pregameSectionId}" style="border-top:1px solid var(--border)">
-        <div style="padding:6px 12px 2px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)">📊 Pré-jogo</div>
-        ${pregameRows}
-        <div style="padding:6px 12px 8px;text-align:right;font-size:10px;color:var(--text3)">Ver jogo completo →</div>
-      </div>
-    </div>`;
+function calcH2H(p, stat, oppAbbr) {
+  // Calcular hit rate nos últimos jogos vs esse adversário específico
+  if (!oppAbbr || !p.last5_games?.length) return null;
+  const vsOpp = p.last5_games.filter(g => g.opp?.includes(oppAbbr));
+  if (!vsOpp.length) return null;
+  const prop = (p.props || {})[stat];
+  const line = prop?.line ?? p.synthetic_lines?.pts ?? 0;
+  const hits = vsOpp.filter(g => (g[stat] ?? g.pts ?? 0) >= line).length;
+  return Math.round((hits / vsOpp.length) * 100);
 }
 
-// ─── HELPER: melhor prop do jogador ─────────────────────────────────────────
-function getBestProp(p) {
-  // Prioridade: maior edge entre as props disponíveis
-  const props = p.props || {};
-  const statLabels = { pts: 'PTS', reb: 'REB', ast: 'AST', fg3m: '3PM' };
-
-  let best = null, bestEdge = -99;
-  for (const [stat, data] of Object.entries(props)) {
-    if (!data || data.line == null) continue;
-    const edge = data.edge ?? 0;
-    if (edge > bestEdge) {
-      bestEdge = edge;
-      best = { stat, label: statLabels[stat] || stat.toUpperCase(), ...data };
-    }
-  }
-
-  // Fallback para dados legados (pts)
-  if (!best) {
-    const line    = p.synthetic_lines?.pts;
-    const l5      = p.last5_avg?.pts;
-    const hit     = p.hit_rates?.pts_last10;
-    const edge    = p.edge_points ?? 0;
-    if (line != null) best = { stat: 'pts', label: 'PTS', line, l5, l10: p.last10_avg?.pts, hit_rate: hit, edge };
-  }
-  return best;
+function calcSeasonHitRate(p, stat) {
+  const prop = (p.props || {})[stat];
+  return prop?.hit_rate ?? null;
 }
 
-function getPropsRow(p) {
-  // Retorna todas as props com dados válidos ordenadas por edge
-  const props = p.props || {};
-  const statLabels = { pts: 'PTS', reb: 'REB', ast: 'AST', fg3m: '3PM' };
-  return Object.entries(props)
-    .filter(([,d]) => d && d.line != null)
-    .sort(([,a],[,b]) => (b.edge||0) - (a.edge||0))
-    .map(([stat, data]) => ({ stat, label: statLabels[stat] || stat.toUpperCase(), ...data }));
-}
-
-// ─── GAME MODAL ─────────────────────────────────────────────────────────────
-function openGameModal(gameKey) {
-  const g = (window._gameByKey || {})[gameKey];
-  if (!g) return;
-
-  const overlay = document.getElementById('game-modal-overlay');
-  const home = g.homeTeam, away = g.awayTeam;
-  const status = g.status;
-
-  // Header com times e placar/horário
-  const homeLogo = teamLogoUrl(home.abbr);
-  const awayLogo = teamLogoUrl(away.abbr);
-
-  const logoEl = (logo, abbr) => logo
-    ? `<img src="${logo}" style="width:64px;height:64px;object-fit:contain" onerror="this.style.display='none'">`
-    : `<div style="width:64px;height:64px;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:20px;font-weight:800;color:var(--text3)">${abbr}</div>`;
-
-  let scoreHtml = '';
-  if (status === 2) {
-    scoreHtml = `<div class="game-modal-score">${away.score}<span class="sep">·</span>${home.score}</div>`;
-    document.getElementById('gm-status').innerHTML = `<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px"><div style="width:8px;height:8px;border-radius:50%;background:var(--red2);animation:blink 1.2s infinite"></div><span style="font-size:12px;color:var(--red2);font-weight:700">${g.statusText || 'Ao vivo'}</span></div>`;
-  } else if (status === 3) {
-    scoreHtml = `<div class="game-modal-score">${away.score}<span class="sep">·</span>${home.score}</div>`;
-    document.getElementById('gm-status').innerHTML = `<div style="text-align:center;margin-top:8px;font-size:12px;color:var(--text3);font-weight:600">Final</div>`;
-  } else {
-    let timeStr = '—';
-    if (g.gameTimeUTC) timeStr = new Date(g.gameTimeUTC).toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Sao_Paulo' });
-    scoreHtml = `<div class="game-modal-score" style="font-size:32px;color:var(--text2)">${timeStr}</div>`;
-    document.getElementById('gm-status').innerHTML = `<div style="text-align:center;margin-top:6px;font-size:11px;color:var(--text3)">Horário de Brasília</div>`;
-  }
-
-  document.getElementById('gm-teams').innerHTML = `
-    <div class="game-modal-team">
-      ${logoEl(awayLogo, away.abbr)}
-      <div class="game-modal-team-name">${away.abbr}</div>
-      <div class="game-modal-team-city">${away.name || ''}</div>
-    </div>
-    <div class="game-modal-center">${scoreHtml}</div>
-    <div class="game-modal-team">
-      ${logoEl(homeLogo, home.abbr)}
-      <div class="game-modal-team-name">${home.abbr}</div>
-      <div class="game-modal-team-city">${home.name || ''}</div>
-    </div>`;
-
-  // Body — pré-jogo dos jogadores
-  const pregameData = (window._todayPregameCache || {})[gameKey] || [];
-  renderGameModalBody(gameKey, g, pregameData);
-
-  overlay.classList.add('open');
-  document.body.style.overflow = 'hidden';
-  window.currentGameModalKey = gameKey;
-
-  // Buscar dados se não tiver
-  if (!pregameData.length) {
-    loadGamePregame(g).then(() => {
-      const fresh = (window._todayPregameCache || {})[gameKey] || [];
-      renderGameModalBody(gameKey, g, fresh);
-    });
-  }
-}
-
-function renderGameModalBody(gameKey, g, players) {
-  const body = document.getElementById('gm-body');
-  const away = g.awayTeam, home = g.homeTeam;
-
-  if (!players.length) {
-    body.innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3)">Carregando dados...</div>`;
-    return;
-  }
-
-  // Separar por time
-  const awayStarIds = new Set(STAR_PLAYERS[away.abbr] || []);
-  const homeStarIds = new Set(STAR_PLAYERS[home.abbr] || []);
-
-  const awayPlayers = players.filter(p => awayStarIds.has(p.player_id));
-  const homePlayers = players.filter(p => homeStarIds.has(p.player_id));
-
-  const playerRow = (p, teamAbbr) => {
-    const allProps = getPropsRow(p);
-    const best  = allProps[0] || null;
-    const statBadgeColors = {pts:'var(--gold)',reb:'var(--amber)',ast:'#4fc3f7',fg3m:'#ce93d8'};
-
-    // Mini barras L5 baseadas na melhor prop
-    const last5  = p.last5_games || [];
-    const statKey = best?.stat || 'pts';
-    const maxVal  = Math.max(...last5.map(x => x[statKey] ?? x.pts ?? 0), Number(best?.line) || 15, 1);
-    const bars = last5.map(x => {
-      const val = x[statKey] ?? x.pts ?? 0;
-      const w   = Math.round((val / maxVal) * 100);
-      const hit = val >= (best?.line || 0);
-      const col = hit ? 'var(--green)' : 'var(--danger)';
-      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px">
-        <div style="font-size:8px;font-weight:700;color:${col}">${val}</div>
-        <div style="width:100%;height:20px;background:var(--bg4);border-radius:2px;overflow:hidden;position:relative">
-          <div style="position:absolute;bottom:0;left:0;right:0;height:${w}%;background:${col};opacity:.85"></div>
-        </div>
-      </div>`;
-    }).join('');
-
-    // Badges de todas as props disponíveis
-    const propBadges = allProps.map(prop => {
-      const arrow   = prop.edge > 2 ? '↑' : prop.edge < -2 ? '↓' : '→';
-      const hitCol  = prop.hit_rate >= 70 ? 'var(--green)' : prop.hit_rate >= 50 ? 'var(--gold)' : 'var(--danger)';
-      const col     = statBadgeColors[prop.stat] || 'var(--text3)';
-      return `<div style="display:flex;align-items:center;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:5px 8px">
-        <span style="font-size:9px;font-weight:800;color:${col}">${prop.label}</span>
-        <span style="font-family:var(--display);font-size:13px;font-weight:800;color:var(--green)">O${prop.line}</span>
-        <span style="font-size:10px;color:${hitCol};font-weight:700">${prop.hit_rate}%</span>
-        <span style="font-size:12px;color:${prop.edge>0?'var(--green)':prop.edge<0?'var(--danger)':'var(--text3)'}">${arrow}</span>
-      </div>`;
-    }).join('');
-
-    return `
-      <div class="gm-player-row" onclick="openPregamePlayerModal(${p.player_id}, window.currentGameModalKey)">
-        <img class="gm-player-photo" src="https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png"
-             onerror="this.style.background='var(--bg3)'">
-        <div class="gm-player-info">
-          <div class="gm-player-name">${p.player_name}</div>
-          <div class="gm-player-team">${teamAbbr}</div>
-          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">${propBadges || '<span style="font-size:11px;color:var(--text3)">Carregando...</span>'}</div>
-          ${last5.length ? `<div style="display:flex;gap:2px;margin-top:8px;height:28px;align-items:flex-end">${bars}</div>` : ''}
-        </div>
-      </div>`;
-  };
-
-  const teamSection = (abbr, playersList) => {
-    if (!playersList.length) return '';
-    const logo = teamLogoUrl(abbr);
-    return `
-      <div class="game-modal-section-title">
-        ${logo ? `<img src="${logo}" style="width:16px;height:16px;object-fit:contain">` : ''} ${abbr}
-      </div>
-      ${playersList.map(p => playerRow(p, abbr)).join('')}`;
-  };
-
-  body.innerHTML = `
-    ${teamSection(away.abbr, awayPlayers)}
-    ${teamSection(home.abbr, homePlayers)}
-    ${!awayPlayers.length && !homePlayers.length ? players.map(p => playerRow(p, '')).join('') : ''}
-    <div style="padding:12px 0;text-align:center;font-size:11px;color:var(--text3)">
-      Toque em um jogador para ver análise completa
-    </div>`;
-}
-
-// Abre modal completo de um jogador a partir dos dados de pré-jogo
-function openPregamePlayerModal(playerId, gameKey) {
-  // Buscar dados do jogador no cache de pré-jogo
-  const cache = (window._todayPregameCache || {})[gameKey] || [];
-  const pg = cache.find(p => p.player_id === playerId);
-  if (!pg) {
-    // Não tem dados — tentar abrir no allAlerts se existir
-    const inAlerts = allAlerts.find(a => a.playerId === playerId || a.nbaId === playerId);
-    if (inAlerts) { closeGameModalDirect(); openModal(playerId); }
-    return;
-  }
-
-  // Fechar game modal e abrir player modal com dados sintéticos
-  closeGameModalDirect();
-
-  // Montar um alerta sintético a partir dos dados de pré-jogo
-  const synthAlert = {
-    playerId:  pg.player_id,
-    nbaId:     pg.player_id,
-    name:      pg.player_name,
-    team:      '',
-    position:  '—',
-    type:      'yellow',
-    pts:       pg.last5_avg?.pts ?? 0,
-    reb:       pg.season_avg?.reb ?? 0,
-    ast:       pg.season_avg?.ast ?? 0,
-    gameLabel: '',
-    period:    1,
-    clock:     '',
-    warnings:  [],
-    triggered: [{
-      stat: 'pts',
-      cur:  pg.last5_avg?.pts ?? 0,
-      proj: pg.last5_avg?.pts ?? 0,
-      avg:  pg.season_avg?.pts ?? 0,
-      pct:  100,
-      line: pg.synthetic_lines?.pts ?? null,
-    }],
-    extraStats: { mins: 0 },
-    pregame: {
-      l5Pts:      pg.last5_avg?.pts ?? null,
-      l10Pts:     pg.last10_avg?.pts ?? null,
-      hitRate:    pg.hit_rates?.pts_last10 ?? null,
-      line:       pg.synthetic_lines?.pts ?? null,
-      edge:       pg.edge_points ?? null,
-      last5Games: pg.last5_games || [],
-      seasonAvg:  pg.season_avg || {},
-    },
-  };
-
-  // Inserir temporariamente no allAlerts para openModal funcionar
-  const existing = allAlerts.findIndex(a => a.playerId === playerId);
-  if (existing >= 0) {
-    allAlerts[existing] = { ...allAlerts[existing], pregame: synthAlert.pregame };
-  } else {
-    allAlerts.push(synthAlert);
-  }
-
-  openModal(playerId);
-}
-
-function closeGameModal(e) {
-  if (e.target === document.getElementById('game-modal-overlay')) closeGameModalDirect();
-}
-function closeGameModalDirect() {
-  document.getElementById('game-modal-overlay').classList.remove('open');
-  document.body.style.overflow = '';
-}
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeGameModalDirect(); });
-
-// Buscar pré-jogo dos jogadores de um jogo específico
 async function loadGamePregame(g) {
   const gameKey = g.gameId || (g.awayTeam.abbr + g.homeTeam.abbr);
   window._todayPregameCache = window._todayPregameCache || {};
@@ -1437,7 +1289,6 @@ async function loadGamePregame(g) {
   const homeStarIds = STAR_PLAYERS[g.homeTeam.abbr] || [];
   const starIds = [...awayStarIds, ...homeStarIds];
 
-  // Filtrar apenas jogadores na lista PREGAME_PLAYERS
   const toFetch = PREGAME_PLAYERS.filter(p => starIds.includes(p.id));
   if (!toFetch.length) return;
 
@@ -1457,37 +1308,40 @@ async function loadGamePregame(g) {
   window._todayPregameCache = window._todayPregameCache || {};
   window._todayPregameCache[gameKey] = valid;
 
-  // Re-renderizar seção no card e modal se aberto
+  // Atualizar tabela se estiver visível
+  if (document.getElementById('today-view')?.style.display !== 'none') {
+    renderPropsTable();
+  }
+
+  // Atualizar card do jogo se estiver visível
   const section = document.getElementById(`pregame-section-${gameKey}`);
   if (!section) return;
-  const rows = valid.map(p => {
-    const line = p.synthetic_lines?.pts ?? '—';
-    const l5   = p.last5_avg?.pts ?? '—';
-    const hit  = p.hit_rates?.pts_last10 ?? '—';
-    const edge = p.edge_points ?? 0;
-    const edgeCol = edge > 0 ? 'var(--green)' : edge < 0 ? 'var(--danger)' : 'var(--text3)';
+  const rows = valid.slice(0,4).map(p => {
+    const best    = getBestProp(p);
+    if (!best) return '';
+    const hit     = best.hit_rate ?? '—';
+    const edge    = best.edge ?? 0;
     const hitCol  = Number(hit) >= 70 ? 'var(--green)' : Number(hit) >= 50 ? 'var(--gold)' : 'var(--danger)';
     const arrow   = edge > 2 ? '↑' : edge < -2 ? '↓' : '→';
+    const overCol = edge > 2 ? 'var(--green)' : edge < -2 ? 'var(--danger)' : 'var(--text2)';
+    const statBadgeColor = {pts:'var(--gold)',reb:'var(--amber)',ast:'#4fc3f7',fg3m:'#ce93d8'}[best.stat]||'var(--text3)';
     return `
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border)">
-        <img src="https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png"
-             style="width:28px;height:28px;border-radius:6px;object-fit:cover;object-position:top;background:var(--bg3)"
-             onerror="this.style.display='none'">
-        <div style="font-family:var(--display);font-size:12px;font-weight:800;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.player_name}</div>
-        <div style="display:flex;gap:10px;font-family:var(--display);font-size:12px;font-weight:700">
-          <span style="color:var(--text3)">L5 <span style="color:var(--text)">${l5}</span></span>
+      <div onclick="event.stopPropagation();openPregamePlayerModal(${p.player_id},'${gameKey}')"
+           style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s"
+           onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''">
+        <span style="font-size:9px;font-weight:800;letter-spacing:.06em;color:${statBadgeColor};background:${statBadgeColor}22;border-radius:4px;padding:2px 5px;flex-shrink:0">${best.label}</span>
+        <div style="font-family:var(--display);font-size:13px;font-weight:800;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.player_name}</div>
+        <div style="display:flex;gap:8px;font-family:var(--display);font-size:11px;font-weight:700;flex-shrink:0">
+          <span style="color:var(--text3)">L5 <span style="color:var(--text)">${best.l5 ?? '—'}</span></span>
           <span style="color:var(--text3)">Hit <span style="color:${hitCol}">${hit}%</span></span>
-          <span style="color:var(--text3)">Edge <span style="color:${edgeCol}">${edge > 0 ? '+' : ''}${edge}</span></span>
-          <span style="color:var(--green);font-size:13px">OVER ${line} ${arrow}</span>
+          <span style="color:${overCol}">OVER ${best.line} ${arrow}</span>
         </div>
       </div>`;
   }).join('');
-
   section.innerHTML = `
-    <div style="padding:8px 12px 4px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);border-top:1px solid var(--border)">
-      📊 Pré-jogo
-    </div>
-    ${rows || '<div style="padding:12px;text-align:center;font-size:11px;color:var(--text3)">Sem dados disponíveis</div>'}`;
+    <div style="padding:6px 12px 2px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)">📊 Pré-jogo</div>
+    ${rows || '<div style="padding:10px 12px;font-size:11px;color:var(--text3);text-align:center">Sem dados</div>'}
+    <div style="padding:6px 12px 8px;text-align:right;font-size:10px;color:var(--text3)">Ver jogo completo →</div>`;
 }
 
 async function loadPregame() {
