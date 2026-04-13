@@ -1109,22 +1109,21 @@ async function loadTodayGames() {
 
     todayGamesCache = games;
 
-    // Buscar dados BettingPros (linhas reais + hit rates) + pré-jogo em paralelo
+    // Buscar BP imediatamente (independente do schedule)
     const dateStr = new Date().toISOString().slice(0,10);
-    Promise.all([
-      fetch(`/api/bettingpros?date=${dateStr}&stats=pts,reb,ast,fg3m`)
-        .then(r => r.json())
-        .then(d => {
-          if (d.players) {
-            window._bpData = {};
-            d.players.forEach(p => {
-              window._bpData[p.player_name] = p;
-            });
-            console.log('BettingPros:', d.count, 'jogadores carregados');
-          }
-        }).catch(e => console.warn('BettingPros falhou:', e)),
-      ...games.map(g => loadGamePregame(g).catch(() => {}))
-    ]).then(() => renderPropsTable());
+    fetch(`/api/bettingpros?date=${dateStr}&stats=pts,reb,ast,fg3m`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.players?.length) {
+          window._bpData = {};
+          d.players.forEach(p => { window._bpData[p.player_name] = p; });
+          console.log('BettingPros:', d.count, 'jogadores');
+          renderPropsTable();
+        }
+      }).catch(e => console.warn('BettingPros falhou:', e));
+
+    // Pré-jogo dos jogos em paralelo
+    games.forEach(g => loadGamePregame(g).catch(() => {}));
 
     renderPropsTable();
 
@@ -1164,7 +1163,8 @@ function renderPropsTable() {
       }
     }
 
-    if (!gameLabel) continue; // jogador sem jogo nas próximas 24h
+    // Não filtrar — mostrar mesmo sem jogo mapeado
+    // (pode acontecer se schedule ainda carregando ou jogo fora de 24h)
 
     // Buscar player_id do nosso cache de pré-jogo para o modal
     let playerId = null;
@@ -1185,17 +1185,25 @@ function renderPropsTable() {
       position:    bp.position,
       image:       bp.image,
       player_id:   playerId,
-      gameKey, gameLabel, gameDateLabel,
+      gameKey,
+      gameLabel:     gameLabel || bp.team || '',
+      gameDateLabel: gameDateLabel || new Date().toISOString().slice(0,10),
       currentProp: prop,
     });
   }
 
   if (!allPlayers.length) {
     loading.style.display = 'block';
-    loading.innerHTML = todayGamesCache
-      ? '<div style="color:var(--text3);padding:20px 0">Buscando props de jogadores...<br><span style="font-size:11px;opacity:.6">Aguarde alguns segundos</span></div>'
-      : '<div style="color:var(--text3);padding:20px 0">Carregando jogos...</div>';
-    table.style.display   = 'none';
+    const hasBP    = Object.keys(bpData).length > 0;
+    const hasGames = Object.keys(games).length > 0;
+    if (!hasBP) {
+      loading.innerHTML = '<div style="color:var(--text3);padding:20px 0">Buscando props do BettingPros...<br><span style="font-size:11px;opacity:.6">Aguarde alguns segundos</span></div>';
+    } else if (!hasGames) {
+      loading.innerHTML = '<div style="color:var(--text3);padding:20px 0">Sem jogos nas próximas 24h<br><span style="font-size:11px;opacity:.6">Tente novamente mais tarde</span></div>';
+    } else {
+      loading.innerHTML = '<div style="color:var(--text3);padding:20px 0">Sem props disponíveis para ' + (currentPropFilter === 'pts' ? 'Pontos' : currentPropFilter === 'reb' ? 'Rebotes' : currentPropFilter === 'ast' ? 'Assistências' : '3 Pontos') + '</div>';
+    }
+    table.style.display = 'none';
     return;
   }
 
