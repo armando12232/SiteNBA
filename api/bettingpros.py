@@ -146,7 +146,15 @@ class handler(BaseHTTPRequestHandler):
 
         try:
             data = get_props(date_str, stats)
-            self._send(200, {'players': data, 'count': len(data), 'date': date_str})
+            # Se vazio, tenta dia anterior (UTC pode estar adiantado)
+            if not data and date_str:
+                from datetime import datetime, timedelta
+                prev = (datetime.strptime(date_str, '%Y-%m-%d') - timedelta(days=1)).strftime('%Y-%m-%d')
+                data_prev = get_props(prev, stats)
+                if data_prev:
+                    data = data_prev
+                    date_str = prev
+            self._send(200, {'players': data or [], 'count': len(data or []), 'date': date_str})
         except Exception as e:
             self._send(500, {'error': str(e)})
 
