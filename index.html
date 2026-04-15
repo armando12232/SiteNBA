@@ -190,6 +190,43 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .section-line { flex: 1; height: 1px; background: var(--border); }
 
 /* GAME GROUP */
+/* BUSCA + CONFIANÇA */
+.search-bar-wrap {
+  position: relative; margin-bottom: 12px;
+}
+.search-bar {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 9px 14px 9px 36px;
+  font-size: 13px; color: var(--text); font-family: var(--body);
+  outline: none; transition: border-color .15s; box-sizing: border-box;
+}
+.search-bar:focus { border-color: var(--border2); }
+.search-bar::placeholder { color: var(--text3); }
+.search-icon {
+  position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+  font-size: 14px; color: var(--text3); pointer-events: none;
+}
+.search-clear {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  font-size: 12px; color: var(--text3); cursor: pointer; padding: 4px;
+  display: none;
+}
+.search-clear.visible { display: block; }
+
+/* Score de confiança */
+.conf-score {
+  display: flex; align-items: center; gap: 3px;
+}
+.conf-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--border);
+}
+.conf-dot.filled.c5 { background: #00e676; }
+.conf-dot.filled.c4 { background: #69f0ae; }
+.conf-dot.filled.c3 { background: #fdb927; }
+.conf-dot.filled.c2 { background: #ff9800; }
+.conf-dot.filled.c1 { background: #c8102e; }
+
 /* PROPS TABLE VIEW */
 .prop-filter-btn, .period-filter-btn {
   background: var(--bg2); border: 1px solid var(--border);
@@ -868,6 +905,13 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
       </div>
 
       <div id="today-view" style="display:none">
+        <!-- Busca de jogador -->
+        <div class="search-bar-wrap">
+          <span class="search-icon">⌕</span>
+          <input class="search-bar" id="player-search" type="text"
+                 placeholder="Buscar jogador..." oninput="filterPlayerSearch(this.value)" autocomplete="off">
+          <span class="search-clear" id="search-clear" onclick="clearSearch()">✕</span>
+        </div>
         <!-- Filtros de prop -->
         <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
           <button class="prop-filter-btn active" data-prop="pts" onclick="setPropFilter('pts',this)">Pontos</button>
@@ -1181,11 +1225,73 @@ const STAR_PLAYERS = {
 
 // ─── PRÓXIMOS JOGOS — Props Table ────────────────────────────────────────────
 let todayGamesCache = null;
-let currentPropFilter  = 'pts';
+let currentPropFilter   = 'pts';
 let currentPeriodFilter = 'l5';
+let currentSearchQuery  = '';
 
 // Mapa de adversário por jogo (para H2H)
 // gameKey → { away: 'MIN', home: 'DEN' }
+
+// ─── BUSCA DE JOGADOR ────────────────────────────────────────────────────────
+function filterPlayerSearch(val) {
+  currentSearchQuery = val.trim().toLowerCase();
+  const clearBtn = document.getElementById('search-clear');
+  if (clearBtn) clearBtn.classList.toggle('visible', currentSearchQuery.length > 0);
+  renderPropsTable();
+}
+
+function clearSearch() {
+  currentSearchQuery = '';
+  const input = document.getElementById('player-search');
+  if (input) input.value = '';
+  const clearBtn = document.getElementById('search-clear');
+  if (clearBtn) clearBtn.classList.remove('visible');
+  renderPropsTable();
+}
+
+// ─── SCORE DE CONFIANÇA ───────────────────────────────────────────────────────
+function calcConfScore(prop) {
+  // Score 1-5 baseado em: bet_rating, EV, hit rate L5, streak
+  if (!prop) return 0;
+  let score = 0;
+
+  // bet_rating (0-5 → peso 40%)
+  if (prop.bet_rating) score += prop.bet_rating * 0.4;
+
+  // EV positivo (peso 25%)
+  if (prop.ev != null) {
+    if (prop.ev >= 10) score += 1.25;
+    else if (prop.ev >= 5) score += 0.75;
+    else if (prop.ev > 0) score += 0.35;
+  }
+
+  // L5 hit rate (peso 20%)
+  if (prop.l5 != null) {
+    if (prop.l5 >= 80) score += 1.0;
+    else if (prop.l5 >= 60) score += 0.6;
+    else if (prop.l5 >= 40) score += 0.3;
+  }
+
+  // Streak (peso 15%)
+  if (prop.streak >= 4 && prop.streak_type === prop.rec_side) score += 0.75;
+  else if (prop.streak >= 2 && prop.streak_type === prop.rec_side) score += 0.35;
+
+  return Math.min(5, Math.max(1, Math.round(score)));
+}
+
+function confScoreHtml(score) {
+  if (!score) return '';
+  const colors = { 5: 'c5', 4: 'c4', 3: 'c3', 2: 'c2', 1: 'c1' };
+  const cls = colors[score] || 'c3';
+  const dots = Array.from({length: 5}, (_, i) =>
+    `<div class="conf-dot ${i < score ? 'filled ' + cls : ''}"></div>`
+  ).join('');
+  const labels = { 5: 'Altíssima', 4: 'Alta', 3: 'Média', 2: 'Baixa', 1: 'Muito baixa' };
+  return `<div title="Confiança: ${labels[score]}" style="display:flex;flex-direction:column;align-items:center;gap:3px">
+    <div class="conf-score">${dots}</div>
+    <div style="font-size:9px;color:var(--text3);font-weight:600">${labels[score]}</div>
+  </div>`;
+}
 
 function setPropFilter(prop, btn) {
   currentPropFilter = prop;
@@ -1292,6 +1398,9 @@ function renderPropsTable() {
     const prop = (bp.props || {})[currentPropFilter];
     if (!prop || prop.line == null || prop.line <= 0) continue;
 
+    // Filtro de busca
+    if (currentSearchQuery && !name.toLowerCase().includes(currentSearchQuery)) continue;
+
     // Encontrar o jogo deste jogador pelos games agendados
     let gameLabel = '', gameDateLabel = '', gameKey = '';
     for (const [key, g] of Object.entries(games)) {
@@ -1331,6 +1440,7 @@ function renderPropsTable() {
       gameLabel:     gameLabel || bp.team || '',
       gameDateLabel: gameDateLabel || new Date().toISOString().slice(0,10),
       currentProp: prop,
+      confScore:   calcConfScore(prop),
     });
   }
 
@@ -1459,7 +1569,7 @@ function renderPropsTable() {
             <div style="text-align:center">L5</div>
             <div style="text-align:center">L10</div>
             <div style="text-align:center" class="hide-mobile">Temp</div>
-            <div style="text-align:center">Proj/EV</div>
+            <div style="text-align:center">Conf.</div>
             <div style="text-align:right">Linha/Odds</div>
           </div>
           ${rows}
