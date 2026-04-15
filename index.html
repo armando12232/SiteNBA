@@ -1508,7 +1508,6 @@ function _renderPPModalBody(bp) {
 
   // Header: linha, odds, badge rec, estrelas
   if (prop) {
-    document.getElementById('pp-line').textContent  = prop.line != null ? `O ${prop.line}` : '—';
     document.getElementById('pp-odds').textContent  = prop.odds ? `${prop.odds > 0 ? '+' : ''}${prop.odds}` : '—';
     const stars = prop.bet_rating ? '★'.repeat(prop.bet_rating) + '☆'.repeat(5 - prop.bet_rating) : '';
     document.getElementById('pp-stars').textContent = stars;
