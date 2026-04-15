@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NBA Props Monitor</title>
+<title>CRAVADA — Props Monitor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -59,14 +59,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
   text-align: center;
   position: relative;
 }
-.auth-logo-icon {
-  width: 52px; height: 52px;
-  background: var(--red);
-  border-radius: 14px;
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--display); font-size: 26px; font-weight: 800;
-  color: white; margin: 0 auto 14px;
-}
+.auth-logo-icon { display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
 .auth-title { font-family: var(--display); font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: 0.02em; margin-bottom: 4px; }
 .auth-title span { color: var(--gold); }
 .auth-sub { font-size: 13px; color: var(--text3); }
@@ -121,7 +114,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
   height: 60px; position: sticky; top: 0; z-index: 100;
 }
 .header-left { display: flex; align-items: center; gap: 12px; }
-.logo-icon { width: 36px; height: 36px; background: var(--red); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: var(--display); font-size: 18px; font-weight: 800; color: white; }
+.logo-icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
 .logo-text { font-family: var(--display); font-size: 20px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
 .logo-text span { color: var(--gold); }
 .live-pill { display: flex; align-items: center; gap: 5px; background: rgba(200,16,46,0.15); border: 1px solid rgba(200,16,46,0.4); border-radius: 20px; padding: 3px 10px; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--red2); text-transform: uppercase; }
@@ -787,7 +780,65 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
   <div class="auth-screen" id="auth-screen" style="display:none">
     <div class="auth-card">
       <div class="auth-hero">
-        <div class="auth-logo-icon">N</div>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="60" height="60">
+  <!-- Fundo escuro -->
+  <circle cx="50" cy="50" r="48" fill="#111008"/>
+  <!-- Bola de basquete (linhas clássicas) douradas -->
+  <circle cx="50" cy="50" r="46" fill="none" stroke="#c8a84b" stroke-width="2.2"/>
+  <path d="M50 4 Q70 27 70 50 Q70 73 50 96" fill="none" stroke="#c8a84b" stroke-width="1.4" opacity="0.55"/>
+  <path d="M50 4 Q30 27 30 50 Q30 73 50 96" fill="none" stroke="#c8a84b" stroke-width="1.4" opacity="0.55"/>
+  <line x1="4" y1="50" x2="96" y2="50" stroke="#c8a84b" stroke-width="1.4" opacity="0.55"/>
+
+  <!-- Seta de gráfico Over (branca/prata, atrás do jogador) -->
+  <polyline points="12,72 24,56 35,63 58,28" fill="none" stroke="#d0d0d0" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <polygon points="58,28 49,32 54,40" fill="#d0d0d0" opacity="0.9"/>
+
+  <!-- Rosa dos ventos (canto dir baixo, prata) -->
+  <g transform="translate(72,70) scale(0.5)">
+    <circle cx="0" cy="0" r="14" fill="#111008" stroke="#888" stroke-width="1.2"/>
+    <!-- N -->
+    <polygon points="0,-13 3.5,-5 0,-8 -3.5,-5" fill="#ccc"/>
+    <!-- S -->
+    <polygon points="0,13 3.5,5 0,8 -3.5,5" fill="#777"/>
+    <!-- W -->
+    <polygon points="-13,0 -5,-3.5 -8,0 -5,3.5" fill="#777"/>
+    <!-- E -->
+    <polygon points="13,0 5,-3.5 8,0 5,3.5" fill="#777"/>
+    <!-- diagonais -->
+    <polygon points="-9,-9 -3,-4 -5,-5 -4,-3" fill="#999"/>
+    <polygon points="9,-9 3,-4 5,-5 4,-3" fill="#999"/>
+    <polygon points="9,9 3,4 5,5 4,3" fill="#999"/>
+    <polygon points="-9,9 -3,4 -5,5 -4,3" fill="#999"/>
+    <circle cx="0" cy="0" r="3" fill="#ccc"/>
+  </g>
+
+  <!-- Jogador (dourado, postura de dribble baixo) -->
+  <!-- Cabeça -->
+  <circle cx="50" cy="21" r="6.5" fill="#c8a84b"/>
+  <!-- Pescoço -->
+  <rect x="48" y="27" width="4" height="3" fill="#c8a84b"/>
+  <!-- Torso / colete -->
+  <path d="M41,30 L43,29 L50,31 L57,29 L59,30 L60,46 L50,43 L40,46 Z" fill="#c8a84b"/>
+  <!-- Shorts -->
+  <path d="M40,46 Q50,50 60,46 L58,60 L53,58 L50,60 L47,58 L42,60 Z" fill="#a88030"/>
+  <!-- Braço esq — dobrado para frente com bola -->
+  <path d="M42,32 Q34,37 30,44 Q29,46 30,48" fill="none" stroke="#c8a84b" stroke-width="4" stroke-linecap="round"/>
+  <!-- Bola de basquete na mão esq -->
+  <circle cx="29" cy="50" r="6" fill="#c8102e" stroke="#c8a84b" stroke-width="1.2"/>
+  <path d="M29,44 Q33,47 33,50 Q33,53 29,56" fill="none" stroke="#7a0000" stroke-width="1"/>
+  <path d="M29,44 Q25,47 25,50 Q25,53 29,56" fill="none" stroke="#7a0000" stroke-width="1"/>
+  <line x1="23" y1="50" x2="35" y2="50" stroke="#7a0000" stroke-width="1"/>
+  <!-- Braço dir — levantado/aberto -->
+  <path d="M58,32 Q65,27 68,22" fill="none" stroke="#c8a84b" stroke-width="4" stroke-linecap="round"/>
+  <!-- Perna esq — joelho dobrado (postura atlética) -->
+  <path d="M44,60 L40,70 L35,78" fill="none" stroke="#c8a84b" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Perna dir -->
+  <path d="M56,60 L60,70 L65,78" fill="none" stroke="#c8a84b" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Tênis esq -->
+  <ellipse cx="33" cy="79" rx="5" ry="2.5" fill="#c8a84b"/>
+  <!-- Tênis dir -->
+  <ellipse cx="67" cy="79" rx="5" ry="2.5" fill="#c8a84b"/>
+</svg>
         <div class="auth-title">Props<span>Monitor</span></div>
         <div class="auth-sub">Alertas ao vivo da NBA em tempo real</div>
       </div>
@@ -838,8 +889,66 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
   <div id="dashboard" style="display:none">
     <div class="header">
       <div class="header-left">
-        <div class="logo-icon">N</div>
-        <span class="logo-text">Props<span>Monitor</span></span>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="36" height="36">
+  <!-- Fundo escuro -->
+  <circle cx="50" cy="50" r="48" fill="#111008"/>
+  <!-- Bola de basquete (linhas clássicas) douradas -->
+  <circle cx="50" cy="50" r="46" fill="none" stroke="#c8a84b" stroke-width="2.2"/>
+  <path d="M50 4 Q70 27 70 50 Q70 73 50 96" fill="none" stroke="#c8a84b" stroke-width="1.4" opacity="0.55"/>
+  <path d="M50 4 Q30 27 30 50 Q30 73 50 96" fill="none" stroke="#c8a84b" stroke-width="1.4" opacity="0.55"/>
+  <line x1="4" y1="50" x2="96" y2="50" stroke="#c8a84b" stroke-width="1.4" opacity="0.55"/>
+
+  <!-- Seta de gráfico Over (branca/prata, atrás do jogador) -->
+  <polyline points="12,72 24,56 35,63 58,28" fill="none" stroke="#d0d0d0" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <polygon points="58,28 49,32 54,40" fill="#d0d0d0" opacity="0.9"/>
+
+  <!-- Rosa dos ventos (canto dir baixo, prata) -->
+  <g transform="translate(72,70) scale(0.5)">
+    <circle cx="0" cy="0" r="14" fill="#111008" stroke="#888" stroke-width="1.2"/>
+    <!-- N -->
+    <polygon points="0,-13 3.5,-5 0,-8 -3.5,-5" fill="#ccc"/>
+    <!-- S -->
+    <polygon points="0,13 3.5,5 0,8 -3.5,5" fill="#777"/>
+    <!-- W -->
+    <polygon points="-13,0 -5,-3.5 -8,0 -5,3.5" fill="#777"/>
+    <!-- E -->
+    <polygon points="13,0 5,-3.5 8,0 5,3.5" fill="#777"/>
+    <!-- diagonais -->
+    <polygon points="-9,-9 -3,-4 -5,-5 -4,-3" fill="#999"/>
+    <polygon points="9,-9 3,-4 5,-5 4,-3" fill="#999"/>
+    <polygon points="9,9 3,4 5,5 4,3" fill="#999"/>
+    <polygon points="-9,9 -3,4 -5,5 -4,3" fill="#999"/>
+    <circle cx="0" cy="0" r="3" fill="#ccc"/>
+  </g>
+
+  <!-- Jogador (dourado, postura de dribble baixo) -->
+  <!-- Cabeça -->
+  <circle cx="50" cy="21" r="6.5" fill="#c8a84b"/>
+  <!-- Pescoço -->
+  <rect x="48" y="27" width="4" height="3" fill="#c8a84b"/>
+  <!-- Torso / colete -->
+  <path d="M41,30 L43,29 L50,31 L57,29 L59,30 L60,46 L50,43 L40,46 Z" fill="#c8a84b"/>
+  <!-- Shorts -->
+  <path d="M40,46 Q50,50 60,46 L58,60 L53,58 L50,60 L47,58 L42,60 Z" fill="#a88030"/>
+  <!-- Braço esq — dobrado para frente com bola -->
+  <path d="M42,32 Q34,37 30,44 Q29,46 30,48" fill="none" stroke="#c8a84b" stroke-width="4" stroke-linecap="round"/>
+  <!-- Bola de basquete na mão esq -->
+  <circle cx="29" cy="50" r="6" fill="#c8102e" stroke="#c8a84b" stroke-width="1.2"/>
+  <path d="M29,44 Q33,47 33,50 Q33,53 29,56" fill="none" stroke="#7a0000" stroke-width="1"/>
+  <path d="M29,44 Q25,47 25,50 Q25,53 29,56" fill="none" stroke="#7a0000" stroke-width="1"/>
+  <line x1="23" y1="50" x2="35" y2="50" stroke="#7a0000" stroke-width="1"/>
+  <!-- Braço dir — levantado/aberto -->
+  <path d="M58,32 Q65,27 68,22" fill="none" stroke="#c8a84b" stroke-width="4" stroke-linecap="round"/>
+  <!-- Perna esq — joelho dobrado (postura atlética) -->
+  <path d="M44,60 L40,70 L35,78" fill="none" stroke="#c8a84b" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Perna dir -->
+  <path d="M56,60 L60,70 L65,78" fill="none" stroke="#c8a84b" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Tênis esq -->
+  <ellipse cx="33" cy="79" rx="5" ry="2.5" fill="#c8a84b"/>
+  <!-- Tênis dir -->
+  <ellipse cx="67" cy="79" rx="5" ry="2.5" fill="#c8a84b"/>
+</svg>
+        <span class="logo-text">CRAV<span>ADA</span></span>
         <div class="live-pill"><div class="live-dot"></div>ao vivo</div>
       </div>
       <div class="header-right">
@@ -912,7 +1021,65 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 
       <div class="alerts-list" id="alerts-list">
         <div class="state-box">
-          <div class="state-nba-logo">NBA</div>
+          <div style="margin-bottom:16px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
+  <!-- Fundo escuro -->
+  <circle cx="50" cy="50" r="48" fill="#111008"/>
+  <!-- Bola de basquete (linhas clássicas) douradas -->
+  <circle cx="50" cy="50" r="46" fill="none" stroke="#c8a84b" stroke-width="2.2"/>
+  <path d="M50 4 Q70 27 70 50 Q70 73 50 96" fill="none" stroke="#c8a84b" stroke-width="1.4" opacity="0.55"/>
+  <path d="M50 4 Q30 27 30 50 Q30 73 50 96" fill="none" stroke="#c8a84b" stroke-width="1.4" opacity="0.55"/>
+  <line x1="4" y1="50" x2="96" y2="50" stroke="#c8a84b" stroke-width="1.4" opacity="0.55"/>
+
+  <!-- Seta de gráfico Over (branca/prata, atrás do jogador) -->
+  <polyline points="12,72 24,56 35,63 58,28" fill="none" stroke="#d0d0d0" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <polygon points="58,28 49,32 54,40" fill="#d0d0d0" opacity="0.9"/>
+
+  <!-- Rosa dos ventos (canto dir baixo, prata) -->
+  <g transform="translate(72,70) scale(0.5)">
+    <circle cx="0" cy="0" r="14" fill="#111008" stroke="#888" stroke-width="1.2"/>
+    <!-- N -->
+    <polygon points="0,-13 3.5,-5 0,-8 -3.5,-5" fill="#ccc"/>
+    <!-- S -->
+    <polygon points="0,13 3.5,5 0,8 -3.5,5" fill="#777"/>
+    <!-- W -->
+    <polygon points="-13,0 -5,-3.5 -8,0 -5,3.5" fill="#777"/>
+    <!-- E -->
+    <polygon points="13,0 5,-3.5 8,0 5,3.5" fill="#777"/>
+    <!-- diagonais -->
+    <polygon points="-9,-9 -3,-4 -5,-5 -4,-3" fill="#999"/>
+    <polygon points="9,-9 3,-4 5,-5 4,-3" fill="#999"/>
+    <polygon points="9,9 3,4 5,5 4,3" fill="#999"/>
+    <polygon points="-9,9 -3,4 -5,5 -4,3" fill="#999"/>
+    <circle cx="0" cy="0" r="3" fill="#ccc"/>
+  </g>
+
+  <!-- Jogador (dourado, postura de dribble baixo) -->
+  <!-- Cabeça -->
+  <circle cx="50" cy="21" r="6.5" fill="#c8a84b"/>
+  <!-- Pescoço -->
+  <rect x="48" y="27" width="4" height="3" fill="#c8a84b"/>
+  <!-- Torso / colete -->
+  <path d="M41,30 L43,29 L50,31 L57,29 L59,30 L60,46 L50,43 L40,46 Z" fill="#c8a84b"/>
+  <!-- Shorts -->
+  <path d="M40,46 Q50,50 60,46 L58,60 L53,58 L50,60 L47,58 L42,60 Z" fill="#a88030"/>
+  <!-- Braço esq — dobrado para frente com bola -->
+  <path d="M42,32 Q34,37 30,44 Q29,46 30,48" fill="none" stroke="#c8a84b" stroke-width="4" stroke-linecap="round"/>
+  <!-- Bola de basquete na mão esq -->
+  <circle cx="29" cy="50" r="6" fill="#c8102e" stroke="#c8a84b" stroke-width="1.2"/>
+  <path d="M29,44 Q33,47 33,50 Q33,53 29,56" fill="none" stroke="#7a0000" stroke-width="1"/>
+  <path d="M29,44 Q25,47 25,50 Q25,53 29,56" fill="none" stroke="#7a0000" stroke-width="1"/>
+  <line x1="23" y1="50" x2="35" y2="50" stroke="#7a0000" stroke-width="1"/>
+  <!-- Braço dir — levantado/aberto -->
+  <path d="M58,32 Q65,27 68,22" fill="none" stroke="#c8a84b" stroke-width="4" stroke-linecap="round"/>
+  <!-- Perna esq — joelho dobrado (postura atlética) -->
+  <path d="M44,60 L40,70 L35,78" fill="none" stroke="#c8a84b" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Perna dir -->
+  <path d="M56,60 L60,70 L65,78" fill="none" stroke="#c8a84b" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Tênis esq -->
+  <ellipse cx="33" cy="79" rx="5" ry="2.5" fill="#c8a84b"/>
+  <!-- Tênis dir -->
+  <ellipse cx="67" cy="79" rx="5" ry="2.5" fill="#c8a84b"/>
+</svg></div>
           <div class="state-title">Iniciando monitor</div>
           <div class="state-sub">Buscando jogos ao vivo...</div>
         </div>
@@ -939,9 +1106,8 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
           <div id="pp-rec-badge" class="pp-rec-badge" style="display:none"></div>
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <div style="font-family:var(--display);font-size:28px;font-weight:800;color:var(--gold)" id="pp-line">—</div>
-          <div style="font-size:11px;color:var(--text3)" id="pp-odds">—</div>
           <div class="pp-stars" id="pp-stars"></div>
+          <div style="font-size:10px;color:var(--text3);margin-top:4px" id="pp-odds"></div>
         </div>
       </div>
     </div>
@@ -1530,8 +1696,7 @@ function _renderPPModalBody(bp) {
       badge.style.display = 'none';
     }
   } else {
-    document.getElementById('pp-line').textContent = '—';
-    document.getElementById('pp-odds').textContent = '—';
+    document.getElementById('pp-odds').textContent = '';
     document.getElementById('pp-stars').textContent = '';
     document.getElementById('pp-rec-badge').style.display = 'none';
   }
@@ -1549,27 +1714,43 @@ function _renderPPModalBody(bp) {
 
   window._ppModalBP = bp;
 
-  // Stats grid
+  // Stats grid — Linha em destaque, projeção e EV secundários
   const statGrid = prop ? `
-    <div class="pp-stats-grid">
-      <div class="pp-stat-card">
-        <div class="pp-stat-label">Projeção</div>
-        <div class="pp-stat-val" style="color:${statColors[stat]||'var(--text)'}">${prop.projection != null ? prop.projection.toFixed(1) : '—'}</div>
-        <div class="pp-stat-sub">vs linha ${prop.line || '—'}</div>
-      </div>
-      <div class="pp-stat-card">
-        <div class="pp-stat-label">Diff</div>
-        <div class="pp-stat-val" style="color:${prop.diff != null ? (prop.diff < 0 ? 'var(--green)' : 'var(--danger)') : 'var(--text3)'}">
-          ${prop.diff != null ? (prop.diff > 0 ? '+' : '') + prop.diff.toFixed(1) : '—'}
+    <div style="margin-bottom:16px">
+      <!-- Linha real — destaque principal -->
+      <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Linha</div>
+          <div style="font-family:var(--display);font-size:42px;font-weight:900;color:var(--gold);line-height:1">O ${prop.line || '—'}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">${prop.odds ? `Odds: ${prop.odds > 0 ? '+' : ''}${prop.odds}` : ''}</div>
         </div>
-        <div class="pp-stat-sub">proj − linha</div>
-      </div>
-      <div class="pp-stat-card">
-        <div class="pp-stat-label">EV</div>
-        <div class="pp-stat-val" style="color:${prop.ev != null ? (prop.ev > 0 ? 'var(--green)' : 'var(--danger)') : 'var(--text3)'}">
-          ${prop.ev != null ? (prop.ev > 0 ? '+' : '') + prop.ev + '%' : '—'}
+        <div style="text-align:right">
+          ${prop.rec_side ? `<div style="font-size:28px;margin-bottom:4px">${prop.rec_side === 'over' ? '↑' : '↓'}</div>` : ''}
+          <div style="font-size:10px;color:var(--text3)">Recomendação</div>
+          <div style="font-weight:800;font-size:13px;color:${prop.rec_side === 'over' ? 'var(--green)' : prop.rec_side === 'under' ? 'var(--danger)' : 'var(--text3)'}">${prop.rec_side ? prop.rec_side.toUpperCase() : '—'}</div>
         </div>
-        <div class="pp-stat-sub">expected value</div>
+      </div>
+      <!-- Projeção, Diff, EV — secundários -->
+      <div class="pp-stats-grid">
+        <div class="pp-stat-card">
+          <div class="pp-stat-label">Projeção</div>
+          <div class="pp-stat-val" style="color:${statColors[stat]||'var(--text)'}">${prop.projection != null ? prop.projection.toFixed(1) : '—'}</div>
+          <div class="pp-stat-sub">esperado</div>
+        </div>
+        <div class="pp-stat-card">
+          <div class="pp-stat-label">Diff</div>
+          <div class="pp-stat-val" style="color:${prop.diff != null ? (prop.diff < 0 ? 'var(--green)' : 'var(--danger)') : 'var(--text3)'}">
+            ${prop.diff != null ? (prop.diff > 0 ? '+' : '') + prop.diff.toFixed(1) : '—'}
+          </div>
+          <div class="pp-stat-sub">proj − linha</div>
+        </div>
+        <div class="pp-stat-card">
+          <div class="pp-stat-label">EV</div>
+          <div class="pp-stat-val" style="color:${prop.ev != null ? (prop.ev > 0 ? 'var(--green)' : 'var(--danger)') : 'var(--text3)'}">
+            ${prop.ev != null ? (prop.ev > 0 ? '+' : '') + prop.ev + '%' : '—'}
+          </div>
+          <div class="pp-stat-sub">expected value</div>
+        </div>
       </div>
     </div>` : '';
 
@@ -2299,7 +2480,65 @@ function renderAlerts() {
 
   if (!filtered.length) {
     activeGameKey = null;
-    list.innerHTML = `<div class="state-box"><div class="state-nba-logo">NBA</div><div class="state-title">Nenhum alerta no momento</div><div class="state-sub">Monitor ativo — verificando a cada 5 minutos<br><button class="state-btn" onclick="loadDemo()">Ver demo</button></div></div>`;
+    list.innerHTML = `<div class="state-box"><div style="margin-bottom:16px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
+  <!-- Fundo escuro -->
+  <circle cx="50" cy="50" r="48" fill="#111008"/>
+  <!-- Bola de basquete (linhas clássicas) douradas -->
+  <circle cx="50" cy="50" r="46" fill="none" stroke="#c8a84b" stroke-width="2.2"/>
+  <path d="M50 4 Q70 27 70 50 Q70 73 50 96" fill="none" stroke="#c8a84b" stroke-width="1.4" opacity="0.55"/>
+  <path d="M50 4 Q30 27 30 50 Q30 73 50 96" fill="none" stroke="#c8a84b" stroke-width="1.4" opacity="0.55"/>
+  <line x1="4" y1="50" x2="96" y2="50" stroke="#c8a84b" stroke-width="1.4" opacity="0.55"/>
+
+  <!-- Seta de gráfico Over (branca/prata, atrás do jogador) -->
+  <polyline points="12,72 24,56 35,63 58,28" fill="none" stroke="#d0d0d0" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <polygon points="58,28 49,32 54,40" fill="#d0d0d0" opacity="0.9"/>
+
+  <!-- Rosa dos ventos (canto dir baixo, prata) -->
+  <g transform="translate(72,70) scale(0.5)">
+    <circle cx="0" cy="0" r="14" fill="#111008" stroke="#888" stroke-width="1.2"/>
+    <!-- N -->
+    <polygon points="0,-13 3.5,-5 0,-8 -3.5,-5" fill="#ccc"/>
+    <!-- S -->
+    <polygon points="0,13 3.5,5 0,8 -3.5,5" fill="#777"/>
+    <!-- W -->
+    <polygon points="-13,0 -5,-3.5 -8,0 -5,3.5" fill="#777"/>
+    <!-- E -->
+    <polygon points="13,0 5,-3.5 8,0 5,3.5" fill="#777"/>
+    <!-- diagonais -->
+    <polygon points="-9,-9 -3,-4 -5,-5 -4,-3" fill="#999"/>
+    <polygon points="9,-9 3,-4 5,-5 4,-3" fill="#999"/>
+    <polygon points="9,9 3,4 5,5 4,3" fill="#999"/>
+    <polygon points="-9,9 -3,4 -5,5 -4,3" fill="#999"/>
+    <circle cx="0" cy="0" r="3" fill="#ccc"/>
+  </g>
+
+  <!-- Jogador (dourado, postura de dribble baixo) -->
+  <!-- Cabeça -->
+  <circle cx="50" cy="21" r="6.5" fill="#c8a84b"/>
+  <!-- Pescoço -->
+  <rect x="48" y="27" width="4" height="3" fill="#c8a84b"/>
+  <!-- Torso / colete -->
+  <path d="M41,30 L43,29 L50,31 L57,29 L59,30 L60,46 L50,43 L40,46 Z" fill="#c8a84b"/>
+  <!-- Shorts -->
+  <path d="M40,46 Q50,50 60,46 L58,60 L53,58 L50,60 L47,58 L42,60 Z" fill="#a88030"/>
+  <!-- Braço esq — dobrado para frente com bola -->
+  <path d="M42,32 Q34,37 30,44 Q29,46 30,48" fill="none" stroke="#c8a84b" stroke-width="4" stroke-linecap="round"/>
+  <!-- Bola de basquete na mão esq -->
+  <circle cx="29" cy="50" r="6" fill="#c8102e" stroke="#c8a84b" stroke-width="1.2"/>
+  <path d="M29,44 Q33,47 33,50 Q33,53 29,56" fill="none" stroke="#7a0000" stroke-width="1"/>
+  <path d="M29,44 Q25,47 25,50 Q25,53 29,56" fill="none" stroke="#7a0000" stroke-width="1"/>
+  <line x1="23" y1="50" x2="35" y2="50" stroke="#7a0000" stroke-width="1"/>
+  <!-- Braço dir — levantado/aberto -->
+  <path d="M58,32 Q65,27 68,22" fill="none" stroke="#c8a84b" stroke-width="4" stroke-linecap="round"/>
+  <!-- Perna esq — joelho dobrado (postura atlética) -->
+  <path d="M44,60 L40,70 L35,78" fill="none" stroke="#c8a84b" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Perna dir -->
+  <path d="M56,60 L60,70 L65,78" fill="none" stroke="#c8a84b" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Tênis esq -->
+  <ellipse cx="33" cy="79" rx="5" ry="2.5" fill="#c8a84b"/>
+  <!-- Tênis dir -->
+  <ellipse cx="67" cy="79" rx="5" ry="2.5" fill="#c8a84b"/>
+</svg></div><div class="state-title">Nenhum alerta no momento</div><div class="state-sub">Monitor ativo — verificando a cada 5 minutos<br><button class="state-btn" onclick="loadDemo()">Ver demo</button></div></div>`;
     return;
   }
 
