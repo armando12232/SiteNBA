@@ -1109,18 +1109,45 @@ async function loadTodayGames() {
 
     todayGamesCache = games;
 
-    // Buscar BP imediatamente (independente do schedule)
-    const dateStr = new Date().toISOString().slice(0,10);
-    fetch(`/api/bettingpros?date=${dateStr}&stats=pts,reb,ast,fg3m`)
-      .then(r => r.json())
-      .then(d => {
-        if (d.players?.length) {
-          window._bpData = {};
-          d.players.forEach(p => { window._bpData[p.player_name] = p; });
-          console.log('BettingPros:', d.count, 'jogadores');
-          renderPropsTable();
-        }
-      }).catch(e => console.warn('BettingPros falhou:', e));
+    // Buscar BP — tenta data de hoje (local), e ontem como fallback
+    const _localDate = () => {
+      const d = new Date();
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); // ajusta para local
+      return d.toISOString().slice(0,10);
+    };
+    const _prevDate = (ds) => {
+      const d = new Date(ds + 'T12:00:00');
+      d.setDate(d.getDate() - 1);
+      return d.toISOString().slice(0,10);
+    };
+    const _loadBP = (dateStr) =>
+      fetch(`/api/bettingpros?date=${dateStr}&stats=pts,reb,ast,fg3m`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.players?.length) {
+            window._bpData = {};
+            window._bpDate = dateStr;
+            d.players.forEach(p => { window._bpData[p.player_name] = p; });
+            console.log('BettingPros:', d.count, 'jogadores para', dateStr);
+            renderPropsTable();
+            return true;
+          }
+          return false;
+        });
+
+    const dateStr = _localDate();
+    _loadBP(dateStr).then(ok => {
+      if (!ok) {
+        // Fallback: dia anterior (UTC pode estar adiantado)
+        const prevDate = _prevDate(dateStr);
+        console.log('BP vazio para', dateStr, '— tentando', prevDate);
+        _loadBP(prevDate).catch(() => {});
+      }
+    }).catch(e => {
+      console.warn('BettingPros falhou:', e);
+      // Tentar dia anterior direto
+      _loadBP(_prevDate(dateStr)).catch(() => {});
+    });
 
     // Pré-jogo dos jogos em paralelo
     games.forEach(g => loadGamePregame(g).catch(() => {}));
