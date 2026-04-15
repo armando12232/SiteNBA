@@ -218,7 +218,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
   display: flex; align-items: center; gap: 3px;
 }
 .conf-dot {
-  width: 7px; height: 7px; border-radius: 50%;
+  width: 9px; height: 9px; border-radius: 50%;
   background: var(--border);
 }
 .conf-dot.filled.c5 { background: #00e676; }
@@ -240,29 +240,29 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 
 .props-table { width: 100%; border-collapse: collapse; }
 .props-table-header {
-  display: grid; grid-template-columns: 1fr 60px 70px 70px 70px 70px 80px;
-  gap: 0; padding: 6px 12px;
-  font-size: 10px; font-weight: 700; letter-spacing: .1em;
+  display: grid; grid-template-columns: 1fr 64px 76px 76px 76px 90px 96px;
+  gap: 0; padding: 10px 16px;
+  font-size: 11px; font-weight: 700; letter-spacing: .1em;
   text-transform: uppercase; color: var(--text3);
   border-bottom: 1px solid var(--border);
 }
 @media (max-width: 600px) {
-  .props-table-header { grid-template-columns: 1fr 60px 60px 60px 70px; }
+  .props-table-header { grid-template-columns: 1fr 64px 70px 70px 80px; }
   .hide-mobile { display: none !important; }
 }
 .props-table-row {
-  display: grid; grid-template-columns: 1fr 60px 70px 70px 70px 70px 80px;
-  gap: 0; padding: 10px 12px; align-items: center;
+  display: grid; grid-template-columns: 1fr 64px 76px 76px 76px 90px 96px;
+  gap: 0; padding: 14px 16px; align-items: center;
   border-bottom: 1px solid var(--border);
   cursor: pointer; transition: background 0.12s;
 }
 .props-table-row:hover { background: var(--bg3); }
 @media (max-width: 600px) {
-  .props-table-row { grid-template-columns: 1fr 60px 60px 60px 70px; }
+  .props-table-row { grid-template-columns: 1fr 64px 70px 70px 80px; }
 }
 .props-table-wrap {
   background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 14px; overflow: hidden; margin-bottom: 20px;
+  border-radius: 16px; overflow: hidden; margin-bottom: 20px;
 }
 .props-table-game-header {
   display: flex; align-items: center; gap: 10px;
@@ -272,7 +272,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
   color: var(--text2);
 }
 .hit-rate-cell {
-  font-family: var(--display); font-size: 14px; font-weight: 800;
+  font-family: var(--display); font-size: 16px; font-weight: 800;
   text-align: center;
 }
 .hit-rate-cell.high { color: var(--green); }
@@ -1289,7 +1289,7 @@ function confScoreHtml(score) {
   const labels = { 5: 'Altíssima', 4: 'Alta', 3: 'Média', 2: 'Baixa', 1: 'Muito baixa' };
   return `<div title="Confiança: ${labels[score]}" style="display:flex;flex-direction:column;align-items:center;gap:3px">
     <div class="conf-score">${dots}</div>
-    <div style="font-size:9px;color:var(--text3);font-weight:600">${labels[score]}</div>
+    <div style="font-size:10px;color:var(--text3);font-weight:600">${labels[score]}</div>
   </div>`;
 }
 
@@ -1525,11 +1525,11 @@ function renderPropsTable() {
         <div class="props-table-row" onclick="openPlayerPropsModal('${p.player_name}','${p.gameLabel}')" style="cursor:pointer">
           <div style="display:flex;align-items:center;gap:10px;min-width:0">
             <img src="${p.player_id ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png` : (p.image || '')}"
-                 style="width:36px;height:36px;border-radius:8px;object-fit:cover;object-position:top;flex-shrink:0;background:var(--bg3)"
+                 style="width:48px;height:48px;border-radius:10px;object-fit:cover;object-position:top;flex-shrink:0;background:var(--bg3)"
                  onerror="this.style.background='var(--bg4)'">
             <div style="min-width:0">
-              <div style="font-family:var(--display);font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.player_name}</div>
-              <div style="font-size:10px;color:var(--text3);margin-top:1px">
+              <div style="font-family:var(--display);font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.player_name}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px">
                 ${p.gameLabel} &middot; <span style="color:var(--gold);font-weight:700">O ${prop.line}</span>
                 ${prop.rec_side === 'over' ? '<span style="color:var(--green)"> ↑</span>' : prop.rec_side === 'under' ? '<span style="color:var(--danger)"> ↓</span>' : ''}
                 ${streak ? `<span style="color:var(--text3);margin-left:4px">${streak} streak</span>` : ''}
@@ -1547,8 +1547,8 @@ function renderPropsTable() {
             ${prop.ev != null ? `<div style="font-size:9px;font-weight:700;color:${prop.ev > 0 ? 'var(--green)' : 'var(--danger)'}">EV ${prop.ev > 0 ? '+' : ''}${prop.ev}%</div>` : ''}
           </div>
           <div style="text-align:right">
-            <div style="font-family:var(--display);font-size:14px;font-weight:800;color:var(--gold)">O ${prop.line}</div>
-            <div style="font-size:9px;color:${prop.odds ? 'var(--text2)' : 'var(--text3)'}">
+            <div style="font-family:var(--display);font-size:17px;font-weight:800;color:var(--gold)">O ${prop.line}</div>
+            <div style="font-size:11px;font-weight:600;color:${prop.odds ? 'var(--text2)' : 'var(--text3)'}">
               ${prop.odds ? (prop.odds > 0 ? '+' : '') + prop.odds : (prop.projection ? '📊 ' + prop.projection : '—')}
             </div>
           </div>
