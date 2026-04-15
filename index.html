@@ -250,6 +250,106 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .hit-rate-cell.low  { color: var(--danger); }
 .hit-rate-cell.none { color: var(--text3); font-size: 12px; }
 
+/* PLAYER PROPS MODAL */
+.pp-modal-overlay {
+  position: fixed; inset: 0; z-index: 1002;
+  background: rgba(0,0,0,0.92); backdrop-filter: blur(10px);
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.22s;
+}
+.pp-modal-overlay.open { opacity: 1; pointer-events: all; }
+.pp-modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 24px 24px 0 0; width: 100%; max-width: 600px;
+  max-height: 90vh; overflow-y: auto; scrollbar-width: none;
+  transform: translateY(50px); transition: transform 0.26s cubic-bezier(.22,.68,0,1.2);
+  padding-bottom: 32px;
+}
+.pp-modal::-webkit-scrollbar { display: none; }
+.pp-modal-overlay.open .pp-modal { transform: translateY(0); }
+
+.pp-modal-hero {
+  position: relative;
+  background: linear-gradient(160deg, #0d0d0d 0%, var(--bg2) 100%);
+  border-bottom: 1px solid var(--border); padding: 24px 20px 20px;
+}
+.pp-modal-close {
+  position: absolute; top: 14px; right: 14px;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--bg3); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 14px; color: var(--text2);
+  transition: all 0.15s;
+}
+.pp-modal-close:hover { background: var(--bg4); color: var(--text); }
+
+.pp-hero-inner {
+  display: flex; align-items: center; gap: 16px;
+}
+.pp-player-photo {
+  width: 72px; height: 72px; border-radius: 14px;
+  object-fit: cover; object-position: top;
+  background: var(--bg3); flex-shrink: 0;
+  border: 2px solid var(--border2);
+}
+.pp-player-meta { flex: 1; min-width: 0; }
+.pp-player-name {
+  font-family: var(--display); font-size: 22px; font-weight: 800;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pp-player-team { font-size: 12px; color: var(--text3); margin-top: 3px; }
+.pp-rec-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 6px; font-size: 11px;
+  font-weight: 800; letter-spacing: .05em; margin-top: 6px;
+}
+.pp-rec-badge.over  { background: rgba(0,230,118,.12); color: var(--green); border: 1px solid rgba(0,230,118,.25); }
+.pp-rec-badge.under { background: rgba(200,16,46,.12);  color: var(--danger); border: 1px solid rgba(200,16,46,.25); }
+
+.pp-modal-body { padding: 20px; }
+.pp-section-title {
+  font-size: 10px; font-weight: 700; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--text3);
+  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+}
+.pp-section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* Grid de stats */
+.pp-stats-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 8px; margin-bottom: 20px;
+}
+.pp-stat-card {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px; text-align: center;
+}
+.pp-stat-label { font-size: 9px; color: var(--text3); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.pp-stat-val   { font-family: var(--display); font-size: 22px; font-weight: 800; line-height: 1.1; margin-top: 2px; }
+.pp-stat-sub   { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+/* Hit rate bars */
+.pp-hitrate-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.pp-hitrate-label { font-size: 11px; font-weight: 700; color: var(--text3); width: 32px; flex-shrink: 0; }
+.pp-hitrate-bar   { flex: 1; height: 6px; background: var(--bg4); border-radius: 3px; overflow: hidden; }
+.pp-hitrate-fill  { height: 100%; border-radius: 3px; transition: width .4s; }
+.pp-hitrate-pct   { font-family: var(--display); font-size: 12px; font-weight: 800; width: 36px; text-align: right; }
+
+/* Props tabs */
+.pp-prop-tabs {
+  display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap;
+}
+.pp-prop-tab {
+  padding: 5px 12px; border-radius: 7px; font-size: 11px; font-weight: 700;
+  border: 1px solid var(--border); background: var(--bg3);
+  cursor: pointer; transition: all .15s; color: var(--text3);
+}
+.pp-prop-tab.active { color: var(--gold); border-color: var(--gold); background: rgba(253,185,39,.08); }
+
+/* Estrelas bet_rating */
+.pp-stars { color: var(--gold); font-size: 14px; letter-spacing: 1px; }
+
 /* GAME MODAL */
 .game-modal-overlay {
   position: fixed; inset: 0; z-index: 1001;
@@ -770,7 +870,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
       </div>
 
       <div style="display:flex;gap:8px;margin-bottom:18px">
-        <button id="view-today-btn" onclick="switchView('today')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">📅 Próximos Jogos</button>
+        <button id="view-today-btn" onclick="switchView('today')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">🏀 Player Props</button>
         <button id="view-live-btn" onclick="switchView('live')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--body)">🔴 Ao vivo</button>
       </div>
 
@@ -824,6 +924,29 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
     </div>
   </div>
 
+</div>
+
+<!-- PLAYER PROPS MODAL -->
+<div class="pp-modal-overlay" id="pp-modal-overlay" onclick="closePPModal(event)">
+  <div class="pp-modal" id="pp-modal">
+    <div class="pp-modal-hero">
+      <div class="pp-modal-close" onclick="closePPModalDirect()">✕</div>
+      <div class="pp-hero-inner">
+        <img id="pp-photo" class="pp-player-photo" src="" onerror="this.style.background='var(--bg4)'">
+        <div class="pp-player-meta">
+          <div class="pp-player-name" id="pp-name"></div>
+          <div class="pp-player-team" id="pp-team"></div>
+          <div id="pp-rec-badge" class="pp-rec-badge" style="display:none"></div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-family:var(--display);font-size:28px;font-weight:800;color:var(--gold)" id="pp-line">—</div>
+          <div style="font-size:11px;color:var(--text3)" id="pp-odds">—</div>
+          <div class="pp-stars" id="pp-stars"></div>
+        </div>
+      </div>
+    </div>
+    <div class="pp-modal-body" id="pp-modal-body"></div>
+  </div>
 </div>
 
 <!-- GAME MODAL -->
@@ -1297,7 +1420,7 @@ function renderPropsTable() {
         : null;
 
       return `
-        <div class="props-table-row" onclick="p.player_id ? openPregamePlayerModal(${p.player_id},'${p.gameKey}') : null" style="cursor:${p.player_id ? 'pointer' : 'default'}">
+        <div class="props-table-row" onclick="openPlayerPropsModal('${p.player_name}','${p.gameLabel}')" style="cursor:pointer">
           <div style="display:flex;align-items:center;gap:10px;min-width:0">
             <img src="${p.player_id ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png` : (p.image || '')}"
                  style="width:36px;height:36px;border-radius:8px;object-fit:cover;object-position:top;flex-shrink:0;background:var(--bg3)"
@@ -1352,6 +1475,182 @@ function renderPropsTable() {
       </div>`;
   }).join('');
 }
+
+// ─── PLAYER PROPS MODAL ──────────────────────────────────────────────────────
+let _ppModalCurrentStat = 'pts';
+
+function openPlayerPropsModal(playerName, gameLabel) {
+  const bp = (window._bpData || {})[playerName];
+  if (!bp) return;
+
+  _ppModalCurrentStat = currentPropFilter;
+
+  const overlay = document.getElementById('pp-modal-overlay');
+
+  // Foto: tentar NBA CDN via player_id do cache de pré-jogo
+  let photoUrl = bp.image || '';
+  const pgCache = window._todayPregameCache || {};
+  for (const players of Object.values(pgCache)) {
+    const found = players?.find(p => p.player_name === playerName);
+    if (found?.player_id) {
+      photoUrl = `https://cdn.nba.com/headshots/nba/latest/1040x760/${found.player_id}.png`;
+      break;
+    }
+  }
+
+  document.getElementById('pp-photo').src  = photoUrl;
+  document.getElementById('pp-name').textContent  = playerName;
+  document.getElementById('pp-team').textContent  = `${bp.team} · ${bp.position || '—'} · ${gameLabel}`;
+
+  _renderPPModalBody(bp);
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function _renderPPModalBody(bp) {
+  const stat  = _ppModalCurrentStat;
+  const prop  = (bp.props || {})[stat];
+  const statLabels = { pts: 'Pontos', reb: 'Rebotes', ast: 'Assistências', fg3m: 'Cestas de 3' };
+  const statColors = { pts: 'var(--gold)', reb: 'var(--amber)', ast: '#4fc3f7', fg3m: '#ce93d8' };
+
+  // Header: linha, odds, badge rec, estrelas
+  if (prop) {
+    document.getElementById('pp-line').textContent  = prop.line != null ? `O ${prop.line}` : '—';
+    document.getElementById('pp-odds').textContent  = prop.odds ? `${prop.odds > 0 ? '+' : ''}${prop.odds}` : '—';
+    const stars = prop.bet_rating ? '★'.repeat(prop.bet_rating) + '☆'.repeat(5 - prop.bet_rating) : '';
+    document.getElementById('pp-stars').textContent = stars;
+
+    const badge = document.getElementById('pp-rec-badge');
+    if (prop.rec_side) {
+      badge.style.display = 'inline-flex';
+      badge.className = `pp-rec-badge ${prop.rec_side}`;
+      badge.textContent = prop.rec_side === 'over' ? '↑ OVER recomendado' : '↓ UNDER recomendado';
+    } else {
+      badge.style.display = 'none';
+    }
+  } else {
+    document.getElementById('pp-line').textContent = '—';
+    document.getElementById('pp-odds').textContent = '—';
+    document.getElementById('pp-stars').textContent = '';
+    document.getElementById('pp-rec-badge').style.display = 'none';
+  }
+
+  // Body
+  const body = document.getElementById('pp-modal-body');
+
+  // Tabs de props disponíveis
+  const availableProps = Object.keys(bp.props || {}).filter(s => bp.props[s]?.line);
+  const tabsHtml = availableProps.map(s => `
+    <div class="pp-prop-tab ${s === stat ? 'active' : ''}"
+         onclick="_ppModalCurrentStat='${s}';_renderPPModalBody(window._ppModalBP)">
+      ${statLabels[s] || s.toUpperCase()}
+    </div>`).join('');
+
+  window._ppModalBP = bp;
+
+  // Stats grid
+  const statGrid = prop ? `
+    <div class="pp-stats-grid">
+      <div class="pp-stat-card">
+        <div class="pp-stat-label">Projeção</div>
+        <div class="pp-stat-val" style="color:${statColors[stat]||'var(--text)'}">${prop.projection != null ? prop.projection.toFixed(1) : '—'}</div>
+        <div class="pp-stat-sub">vs linha ${prop.line || '—'}</div>
+      </div>
+      <div class="pp-stat-card">
+        <div class="pp-stat-label">Diff</div>
+        <div class="pp-stat-val" style="color:${prop.diff != null ? (prop.diff < 0 ? 'var(--green)' : 'var(--danger)') : 'var(--text3)'}">
+          ${prop.diff != null ? (prop.diff > 0 ? '+' : '') + prop.diff.toFixed(1) : '—'}
+        </div>
+        <div class="pp-stat-sub">proj − linha</div>
+      </div>
+      <div class="pp-stat-card">
+        <div class="pp-stat-label">EV</div>
+        <div class="pp-stat-val" style="color:${prop.ev != null ? (prop.ev > 0 ? 'var(--green)' : 'var(--danger)') : 'var(--text3)'}">
+          ${prop.ev != null ? (prop.ev > 0 ? '+' : '') + prop.ev + '%' : '—'}
+        </div>
+        <div class="pp-stat-sub">expected value</div>
+      </div>
+    </div>` : '';
+
+  // Hit rates com barras
+  const hrColor = (v) => v >= 70 ? 'var(--green)' : v >= 50 ? 'var(--gold)' : 'var(--danger)';
+  const hrBar = (label, val) => {
+    if (val == null) return `
+      <div class="pp-hitrate-row">
+        <div class="pp-hitrate-label">${label}</div>
+        <div class="pp-hitrate-bar"><div class="pp-hitrate-fill" style="width:0%;background:var(--border)"></div></div>
+        <div class="pp-hitrate-pct" style="color:var(--text3)">—</div>
+      </div>`;
+    return `
+      <div class="pp-hitrate-row">
+        <div class="pp-hitrate-label">${label}</div>
+        <div class="pp-hitrate-bar"><div class="pp-hitrate-fill" style="width:${val}%;background:${hrColor(val)}"></div></div>
+        <div class="pp-hitrate-pct" style="color:${hrColor(val)}">${val}%</div>
+      </div>`;
+  };
+
+  const hitRatesHtml = prop ? `
+    <div class="pp-section-title">Hit Rates (Over)</div>
+    ${hrBar('H2H', prop.h2h)}
+    ${hrBar('L5',  prop.l5)}
+    ${hrBar('L10', prop.l10)}
+    ${hrBar('L15', prop.l15)}
+    ${hrBar('L20', prop.l20)}
+    ${hrBar('Temp', prop.season)}` : '';
+
+  // Streak
+  const streakHtml = prop?.streak ? `
+    <div style="margin-top:16px;padding:12px;background:var(--bg3);border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;gap:10px">
+      <div style="font-size:20px">${prop.streak_type === 'over' ? '🔥' : '❄️'}</div>
+      <div>
+        <div style="font-family:var(--display);font-size:15px;font-weight:800">
+          ${prop.streak} jogos seguidos ${prop.streak_type === 'over' ? 'OVER' : 'UNDER'}
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">Streak atual</div>
+      </div>
+    </div>` : '';
+
+  // Todas as props resumidas
+  const allPropsHtml = availableProps.length > 1 ? `
+    <div class="pp-section-title" style="margin-top:20px">Todas as props</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${availableProps.map(s => {
+        const p = bp.props[s];
+        if (!p) return '';
+        const col = statColors[s] || 'var(--text)';
+        const hitCol = hrColor(p.l5 || 0);
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg3);border-radius:8px;border:1px solid ${s===stat?'var(--border2)':'var(--border)'}">
+          <span style="font-size:10px;font-weight:800;color:${col};background:${col}22;border-radius:4px;padding:2px 6px;min-width:32px;text-align:center">${statLabels[s]||s}</span>
+          <span style="font-family:var(--display);font-size:15px;font-weight:800;color:var(--gold)">O ${p.line}</span>
+          <span style="font-size:11px;color:var(--text3)">${p.odds > 0 ? '+' : ''}${p.odds || '—'}</span>
+          <div style="flex:1"></div>
+          <span style="font-size:11px;font-weight:700;color:${hrColor(p.l5)}">L5 ${p.l5 != null ? p.l5+'%' : '—'}</span>
+          <span style="font-size:11px;font-weight:700;color:${hrColor(p.l10)}">L10 ${p.l10 != null ? p.l10+'%' : '—'}</span>
+          ${p.rec_side ? `<span style="font-size:11px;font-weight:800;color:${p.rec_side==='over'?'var(--green)':'var(--danger)'}">${p.rec_side==='over'?'↑':'↓'}</span>` : ''}
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  body.innerHTML = `
+    ${availableProps.length > 1 ? `<div class="pp-section-title">Prop</div><div class="pp-prop-tabs">${tabsHtml}</div>` : ''}
+    ${statGrid}
+    ${hitRatesHtml}
+    ${streakHtml}
+    ${allPropsHtml}
+    <div style="margin-top:20px;text-align:center;font-size:11px;color:var(--text3)">
+      Dados: BettingPros · Atualizado hoje
+    </div>`;
+}
+
+function closePPModal(e) {
+  if (e.target === document.getElementById('pp-modal-overlay')) closePPModalDirect();
+}
+function closePPModalDirect() {
+  document.getElementById('pp-modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePPModalDirect(); closeGameModalDirect(); } });
 
 function calcH2H(p, stat, oppAbbr) {
   // Calcular hit rate nos últimos jogos vs esse adversário específico
