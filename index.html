@@ -1232,6 +1232,15 @@ let currentSearchQuery  = '';
 // Mapa de adversário por jogo (para H2H)
 // gameKey → { away: 'MIN', home: 'DEN' }
 
+// ─── HELPER: garante que linha sempre termina em .5 ─────────────────────────
+function ensureHalfLine(line) {
+  if (line == null) return null;
+  const n = parseFloat(line);
+  if (isNaN(n)) return line;
+  // Se já termina em .5, mantém. Senão, floor + 0.5
+  return (n % 1 === 0.5) ? n : Math.floor(n) + 0.5;
+}
+
 // ─── BUSCA DE JOGADOR ────────────────────────────────────────────────────────
 function filterPlayerSearch(val) {
   currentSearchQuery = val.trim().toLowerCase();
@@ -1530,7 +1539,7 @@ function renderPropsTable() {
             <div style="min-width:0">
               <div style="font-family:var(--display);font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.player_name}</div>
               <div style="font-size:11px;color:var(--text3);margin-top:2px">
-                ${p.gameLabel} &middot; <span style="color:var(--gold);font-weight:700">O ${prop.line}</span>
+                ${p.gameLabel} &middot; <span style="color:var(--gold);font-weight:700">O ${ensureHalfLine(prop.line)}</span>
                 ${prop.rec_side === 'over' ? '<span style="color:var(--green)"> ↑</span>' : prop.rec_side === 'under' ? '<span style="color:var(--danger)"> ↓</span>' : ''}
                 ${streak ? `<span style="color:var(--text3);margin-left:4px">${streak} streak</span>` : ''}
               </div>
@@ -1547,7 +1556,7 @@ function renderPropsTable() {
             ${prop.ev != null ? `<div style="font-size:9px;font-weight:700;color:${prop.ev > 0 ? 'var(--green)' : 'var(--danger)'}">EV ${prop.ev > 0 ? '+' : ''}${prop.ev}%</div>` : ''}
           </div>
           <div style="text-align:right">
-            <div style="font-family:var(--display);font-size:17px;font-weight:800;color:var(--gold)">O ${prop.line}</div>
+            <div style="font-family:var(--display);font-size:17px;font-weight:800;color:var(--gold)">O ${ensureHalfLine(prop.line)}</div>
             <div style="font-size:11px;font-weight:600;color:${prop.odds ? 'var(--text2)' : 'var(--text3)'}">
               ${prop.odds ? (prop.odds > 0 ? '+' : '') + prop.odds : (prop.projection ? '📊 ' + prop.projection : '—')}
             </div>
@@ -1656,7 +1665,7 @@ function _renderPPModalBody(bp) {
       <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:14px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div>
           <div style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Linha</div>
-          <div style="font-family:var(--display);font-size:42px;font-weight:900;color:var(--gold);line-height:1">O ${prop.line || '—'}</div>
+          <div style="font-family:var(--display);font-size:42px;font-weight:900;color:var(--gold);line-height:1">O ${ensureHalfLine(prop.line) ?? '—'}</div>
           <div style="font-size:11px;color:var(--text3);margin-top:4px">${prop.odds ? `Odds: ${prop.odds > 0 ? '+' : ''}${prop.odds}` : ''}</div>
         </div>
         <div style="text-align:right">
@@ -1738,7 +1747,7 @@ function _renderPPModalBody(bp) {
         const hitCol = hrColor(p.l5 || 0);
         return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg3);border-radius:8px;border:1px solid ${s===stat?'var(--border2)':'var(--border)'}">
           <span style="font-size:10px;font-weight:800;color:${col};background:${col}22;border-radius:4px;padding:2px 6px;min-width:32px;text-align:center">${statLabels[s]||s}</span>
-          <span style="font-family:var(--display);font-size:15px;font-weight:800;color:var(--gold)">O ${p.line}</span>
+          <span style="font-family:var(--display);font-size:15px;font-weight:800;color:var(--gold)">O ${ensureHalfLine(p.line)}</span>
           <span style="font-size:11px;color:var(--text3)">${p.odds > 0 ? '+' : ''}${p.odds || '—'}</span>
           <div style="flex:1"></div>
           <span style="font-size:11px;font-weight:700;color:${hrColor(p.l5)}">L5 ${p.l5 != null ? p.l5+'%' : '—'}</span>
@@ -1838,7 +1847,7 @@ async function loadGamePregame(g) {
         <div style="display:flex;gap:8px;font-family:var(--display);font-size:11px;font-weight:700;flex-shrink:0">
           <span style="color:var(--text3)">L5 <span style="color:var(--text)">${best.l5 ?? '—'}</span></span>
           <span style="color:var(--text3)">Hit <span style="color:${hitCol}">${hit}%</span></span>
-          <span style="color:${overCol}">OVER ${best.line} ${arrow}</span>
+          <span style="color:${overCol}">OVER ${ensureHalfLine(best.line)} ${arrow}</span>
         </div>
       </div>`;
   }).join('');
