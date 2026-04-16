@@ -280,6 +280,43 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .hit-rate-cell.low  { color: var(--danger); }
 .hit-rate-cell.none { color: var(--text3); font-size: 12px; }
 
+/* UPGRADE PROMPT */
+.upgrade-overlay {
+  position: absolute; inset: 0; z-index: 10;
+  background: rgba(8,8,8,0.88); backdrop-filter: blur(4px);
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; border-radius: inherit; gap: 10px;
+}
+.upgrade-btn {
+  background: var(--gold); color: #000; border: none;
+  border-radius: 10px; padding: 10px 22px; font-size: 13px;
+  font-weight: 800; cursor: pointer; font-family: var(--body);
+  transition: opacity .15s;
+}
+.upgrade-btn:hover { opacity: .85; }
+
+.plan-card {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 16px; padding: 20px; cursor: pointer;
+  transition: border-color .2s, transform .2s;
+  position: relative; overflow: hidden;
+}
+.plan-card:hover { transform: translateY(-2px); }
+.plan-card.current { border-color: #00e676; }
+.plan-card.popular::before {
+  content: 'POPULAR'; position: absolute; top: 14px; right: 14px;
+  font-size: 9px; font-weight: 800; letter-spacing: .12em;
+  color: #00e676; background: rgba(0,230,118,.15);
+  border: 1px solid rgba(0,230,118,.3); border-radius: 20px;
+  padding: 3px 8px;
+}
+.plan-card-name { font-family: var(--display); font-size: 18px; font-weight: 900; margin-bottom: 4px; }
+.plan-card-price { font-family: var(--display); font-size: 32px; font-weight: 900; line-height: 1; }
+.plan-card-price span { font-size: 14px; font-weight: 400; color: var(--text3); }
+.plan-card-features { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.plan-feat { display: flex; align-items: center; gap: 7px; font-size: 12px; }
+.plan-feat-icon { width: 16px; text-align: center; flex-shrink: 0; }
+
 /* PLAYER PROPS MODAL */
 .pp-modal-overlay {
   position: fixed; inset: 0; z-index: 1002;
@@ -873,6 +910,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
         <div class="live-pill"><div class="live-dot"></div>ao vivo</div>
       </div>
       <div class="header-right">
+        <div id="plan-badge" onclick="showPricing()" style="font-size:10px;font-weight:800;letter-spacing:.1em;color:#555;border:1px solid #333;border-radius:20px;padding:3px 10px;cursor:pointer;transition:all .2s;text-transform:uppercase">Free</div>
         <div style="text-align:right">
           <div class="header-date" id="header-date"></div>
           <div class="header-update" id="header-update">conectando...</div>
@@ -913,11 +951,11 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
           <span class="search-clear" id="search-clear" onclick="clearSearch()">✕</span>
         </div>
         <!-- Filtros de prop -->
-        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap" id="prop-filter-btns">
           <button class="prop-filter-btn active" data-prop="pts" onclick="setPropFilter('pts',this)">Pontos</button>
-          <button class="prop-filter-btn" data-prop="reb" onclick="setPropFilter('reb',this)">Rebotes</button>
-          <button class="prop-filter-btn" data-prop="ast" onclick="setPropFilter('ast',this)">Assistências</button>
-          <button class="prop-filter-btn" data-prop="fg3m" onclick="setPropFilter('fg3m',this)">Cestas de 3</button>
+          <button class="prop-filter-btn" data-prop="reb" onclick="setPropFilter('reb',this)" id="btn-reb">Rebotes</button>
+          <button class="prop-filter-btn" data-prop="ast" onclick="setPropFilter('ast',this)" id="btn-ast">Assistências</button>
+          <button class="prop-filter-btn" data-prop="fg3m" onclick="setPropFilter('fg3m',this)" id="btn-fg3m">Cestas de 3</button>
         </div>
         <!-- Filtros de período -->
         <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
@@ -961,6 +999,25 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
     </div>
   </div>
 
+</div>
+
+<!-- PRICING MODAL -->
+<div class="pp-modal-overlay" id="pricing-overlay" onclick="closePricing(event)" style="align-items:center">
+  <div class="pp-modal" id="pricing-modal" style="border-radius:24px;max-width:680px;padding-bottom:24px">
+    <div class="pp-modal-hero" style="padding:24px 24px 20px">
+      <div class="pp-modal-close" onclick="document.getElementById('pricing-overlay').classList.remove('open');document.body.style.overflow=''">✕</div>
+      <div style="text-align:center">
+        <div style="font-family:var(--display);font-size:22px;font-weight:900;margin-bottom:4px">Escolha seu plano</div>
+        <div style="font-size:12px;color:var(--text3)">Cancele quando quiser · Sem compromisso</div>
+      </div>
+    </div>
+    <div style="padding:16px 20px;display:grid;grid-template-columns:repeat(2,1fr);gap:12px" id="pricing-cards">
+      <!-- renderizado via JS -->
+    </div>
+    <div style="text-align:center;padding:0 20px;font-size:11px;color:var(--text3)">
+      Pagamento em breve via Pix e Cartão · Suporte: contato@statcastbr.com
+    </div>
+  </div>
 </div>
 
 <!-- PLAYER PROPS MODAL -->
@@ -1049,6 +1106,29 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 </div>
 
 <script>
+// ─── PLANOS ──────────────────────────────────────────────────────────────────
+const PLANS = {
+  free:    { name: 'Free',    price: 0,   color: '#555',    props: ['pts'],                    alertsPerDay: 5,  ai: false, history: false },
+  basic:   { name: 'Basic',   price: 29,  color: '#fdb927', props: ['pts','reb','ast','fg3m'],  alertsPerDay: -1, ai: false, history: false },
+  pro:     { name: 'Pro',     price: 59,  color: '#00e676', props: ['pts','reb','ast','fg3m'],  alertsPerDay: -1, ai: true,  history: true  },
+  premium: { name: 'Premium', price: 99,  color: '#4fc3f7', props: ['pts','reb','ast','fg3m'],  alertsPerDay: -1, ai: true,  history: true  },
+};
+
+let currentPlan = 'free'; // atualizado ao fazer login
+
+function planCan(feature) {
+  const p = PLANS[currentPlan] || PLANS.free;
+  switch(feature) {
+    case 'reb':
+    case 'ast':
+    case 'fg3m':   return p.props.includes(feature);
+    case 'ai':     return p.ai;
+    case 'history':return p.history;
+    case 'alerts_unlimited': return p.alertsPerDay === -1;
+    default: return true;
+  }
+}
+
 const SUPABASE_URL = 'https://dhirxfoxcswctxcjzvhf.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_DC3I02jLVjM013WrODpgCg_xiPl1rsl';
 const { createClient } = supabase;
@@ -1303,6 +1383,11 @@ function confScoreHtml(score) {
 }
 
 function setPropFilter(prop, btn) {
+  // Verificar acesso ao plano
+  if (!planCan(prop)) {
+    showUpgrade(prop);
+    return;
+  }
   currentPropFilter = prop;
   document.querySelectorAll('.prop-filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -1768,6 +1853,76 @@ function _renderPPModalBody(bp) {
     </div>`;
 }
 
+// ─── PRICING ─────────────────────────────────────────────────────────────────
+function showPricing() {
+  renderPricingCards();
+  const ov = document.getElementById('pricing-overlay');
+  ov.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePricing(e) {
+  if (e.target === document.getElementById('pricing-overlay')) {
+    document.getElementById('pricing-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+}
+
+function renderPricingCards() {
+  const container = document.getElementById('pricing-cards');
+  const feats = {
+    free:    ['Pontos (limitado)', '5 alertas/dia', 'Sem análise IA', 'Sem histórico'],
+    basic:   ['PTS + REB + AST + 3PM', 'Alertas ilimitados', 'Hit rates completos', 'Sem análise IA'],
+    pro:     ['Tudo do Basic', 'Análise Claude IA', 'Score de confiança', 'Histórico de alertas'],
+    premium: ['Tudo do Pro', 'Notificações push', 'Acesso antecipado', 'Suporte prioritário'],
+  };
+  const checkIcon = '<span style="color:#00e676">✓</span>';
+  const crossIcon = '<span style="color:#333">✗</span>';
+
+  container.innerHTML = Object.entries(PLANS).map(([key, p]) => {
+    const isCurrent = key === currentPlan;
+    const isPopular = key === 'pro';
+    const featHtml = feats[key].map((f, i) => {
+      const hasFeat = key !== 'free' || i === 0;
+      return `<div class="plan-feat">
+        <div class="plan-feat-icon">${hasFeat ? checkIcon : crossIcon}</div>
+        <div style="color:${hasFeat ? 'var(--text2)' : 'var(--text3)'}">${f}</div>
+      </div>`;
+    }).join('');
+
+    const btnLabel = isCurrent ? 'Plano atual' : p.price === 0 ? 'Grátis' : `R$ ${p.price}/mês`;
+    const btnStyle = isCurrent
+      ? 'background:var(--bg4);color:var(--text3);cursor:default'
+      : `background:${p.color};color:${p.color === '#fdb927' ? '#000' : '#000'}`;
+
+    return `
+      <div class="plan-card ${isCurrent ? 'current' : ''} ${isPopular ? 'popular' : ''}"
+           style="border-color:${isCurrent ? '#00e676' : 'var(--border)'}">
+        <div class="plan-card-name" style="color:${p.color}">${p.name}</div>
+        <div class="plan-card-price">
+          ${p.price === 0 ? 'Grátis' : `R$${p.price}`}
+          ${p.price > 0 ? '<span>/mês</span>' : ''}
+        </div>
+        <div class="plan-card-features">${featHtml}</div>
+        <button class="upgrade-btn" style="margin-top:16px;width:100%;${btnStyle}" 
+          onclick="${isCurrent ? '' : `selectPlan('${key}')`}" ${isCurrent ? 'disabled' : ''}>
+          ${btnLabel}
+        </button>
+      </div>`;
+  }).join('');
+}
+
+function selectPlan(plan) {
+  // Por enquanto só mostra mensagem — integração de pagamento em breve
+  alert(`Em breve!\n\nO plano ${PLANS[plan].name} por R$${PLANS[plan].price}/mês estará disponível em breve.\nAguarde! 🚀`);
+}
+
+function showUpgrade(feature) {
+  const featNames = { reb: 'Rebotes', ast: 'Assistências', fg3m: 'Cestas de 3', ai: 'Análise IA', history: 'Histórico' };
+  const name = featNames[feature] || feature;
+  showPricing();
+}
+
 function closePPModal(e) {
   if (e.target === document.getElementById('pp-modal-overlay')) closePPModalDirect();
 }
@@ -2006,6 +2161,50 @@ function switchTab(tab) {
   document.getElementById('tab-signup').classList.toggle('active', tab==='signup');
   document.getElementById('form-login').style.display = tab==='login' ? 'block' : 'none';
   document.getElementById('form-signup').style.display = tab==='signup' ? 'block' : 'none';
+}
+
+async function loadUserPlan() {
+  try {
+    const session = sb.auth.session?.();
+    const token   = session?.access_token || (await sb.auth.getSession()).data?.session?.access_token;
+    if (!token) return;
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/subscriptions?select=plan,status&limit=1`, {
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${token}`,
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.[0]?.plan) {
+        currentPlan = data[0].plan;
+        console.log('Plano:', currentPlan);
+        updatePlanBadge();
+      }
+    }
+  } catch(e) { console.warn('loadUserPlan:', e); }
+}
+
+function updatePlanBadge() {
+  const badge = document.getElementById('plan-badge');
+  if (badge) {
+    const p = PLANS[currentPlan] || PLANS.free;
+    badge.textContent = p.name;
+    badge.style.color = p.color;
+    badge.style.borderColor = p.color;
+    badge.style.background = p.color + '18';
+  }
+  // Atualizar ícones de lock nos filtros
+  ['reb','ast','fg3m'].forEach(stat => {
+    const btn = document.getElementById('btn-' + stat);
+    if (!btn) return;
+    const locked = !planCan(stat);
+    const statNames = { reb: 'Rebotes', ast: 'Assistências', fg3m: 'Cestas de 3' };
+    btn.innerHTML = locked
+      ? `${statNames[stat]} 🔒`
+      : statNames[stat];
+    btn.style.opacity = locked ? '0.6' : '1';
+  });
 }
 
 async function handleLogin() {
