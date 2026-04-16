@@ -1,7 +1,7 @@
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 from urllib.request import Request, urlopen
-import json, time
+import json, time, math
 
 cache = {}
 CACHE_TTL = 300
@@ -134,9 +134,9 @@ def _calc_prop(game_rows, stat_key, season_avg, n5=5, n10=10):
     l5_val  = round(sum(float(r.get(stat_key, 0)) for r in last5)  / len(last5),  1)
     l10_val = round(sum(float(r.get(stat_key, 0)) for r in last10) / len(last10), 1)
 
-    # Linha sintética baseada na média da temporada (arredondada para .5)
+    # Linha sintética — sempre termina em .5 (padrão das casas de apostas)
     base = season_avg if season_avg > 0 else l5_val
-    line = round((base - 0.5) * 2) / 2  # arredonda para x.0 ou x.5
+    line = math.floor(base) + 0.5  # ex: 6.0→6.5, 7.3→7.5, 27.5→27.5
 
     hits     = sum(1 for r in last10 if float(r.get(stat_key, 0)) >= line)
     hit_rate = round((hits / len(last10)) * 100)
@@ -197,7 +197,7 @@ def get_pregame(player_id):
             ("AST", season_ast, "ast"), ("FG3M", season_3pm, "fg3m"),
         ]:
             if avg_val >= 1.5:
-                line = round((avg_val - 0.5) * 2) / 2
+                line = math.floor(avg_val) + 0.5  # sempre .5
                 props_fallback[label] = {
                     "l5": None, "l10": None,
                     "line": line, "hit_rate": None, "edge": None
@@ -269,14 +269,19 @@ def get_pregame(player_id):
 # Cache longo para dados de defesa (mudam pouco)
 def get_upcoming_schedule(days_ahead=7):
     """Busca próximos jogos via schedule CDN da NBA (suporta dias sem jogo)."""
-    cached = _cache_get("schedule_upcoming")
+    from datetime import datetime, timezone
+    today_key = "schedule_24h_" + datetime.now(timezone.utc).strftime("%Y%m%d%H")
+    cached = _cache_get(today_key)
     if cached:
         return cached
 
     try:
         from datetime import datetime, timedelta, timezone
 
-        # 1. Tentar via nba_api scoreboard (jogos de hoje)
+        now_utc = datetime.now(timezone.utc)
+        cutoff  = now_utc + timedelta(hours=24)
+
+        # 1. Jogos de hoje via scoreboard ao vivo
         today_games = []
         try:
             from nba_api.live.nba.endpoints import scoreboard as sb_endpoint
@@ -286,63 +291,60 @@ def get_upcoming_schedule(days_ahead=7):
             for g in raw:
                 ht = g.get("homeTeam", {}); at = g.get("awayTeam", {})
                 today_games.append({
-                    "gameId":      g.get("gameId"),
-                    "status":      g.get("gameStatus", 1),
-                    "statusText":  g.get("gameStatusText", ""),
-                    "gameTimeUTC": g.get("gameTimeUTC", ""),
-                    "gameDateLabel": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                    "gameId":        g.get("gameId"),
+                    "status":        g.get("gameStatus", 1),
+                    "statusText":    g.get("gameStatusText", ""),
+                    "gameTimeUTC":   g.get("gameTimeUTC", ""),
+                    "gameDateLabel": now_utc.strftime("%Y-%m-%d"),
                     "homeTeam": {"teamId": ht.get("teamId"), "abbr": ht.get("teamTricode","HME"), "name": ht.get("teamName",""), "score": ht.get("score",0)},
                     "awayTeam": {"teamId": at.get("teamId"), "abbr": at.get("teamTricode","AWY"), "name": at.get("teamName",""), "score": at.get("score",0)},
                 })
         except Exception:
             pass
 
-        # 2. Buscar schedule dos próximos dias via CDN
+        # 2. Próximas 24h via CDN schedule
         future_games = []
         try:
-            url = "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json"
+            url        = "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json"
             sched_data = _nba_fetch(url, timeout=9)
-            game_dates  = sched_data.get("leagueSchedule", {}).get("gameDates", [])
+            game_dates = sched_data.get("leagueSchedule", {}).get("gameDates", [])
 
-            now_utc  = datetime.now(timezone.utc)
-            tomorrow = (now_utc + timedelta(days=1)).strftime("%m/%d/%Y")
-            end_date = (now_utc + timedelta(days=days_ahead)).strftime("%m/%d/%Y")
-
-            from datetime import datetime as dt2
             for gd in game_dates:
-                game_date_str = gd.get("gameDate", "")
-                if not game_date_str:
-                    continue
-                try:
-                    gd_dt = dt2.strptime(game_date_str.split(" ")[0], "%m/%d/%Y")
-                    now_d  = dt2.strptime(now_utc.strftime("%m/%d/%Y"), "%m/%d/%Y")
-                    end_d  = dt2.strptime(end_date, "%m/%d/%Y")
-                    # Apenas dias futuros (não hoje — já coberto pelo scoreboard)
-                    if not (now_d < gd_dt <= end_d):
-                        continue
-                except ValueError:
-                    continue
-
                 for g in gd.get("games", []):
+                    game_time_str = g.get("gameDateTimeUTC", "")
+                    if not game_time_str:
+                        continue
+                    try:
+                        # Parse do horário UTC do jogo
+                        game_dt = datetime.strptime(
+                            game_time_str[:19], "%Y-%m-%dT%H:%M:%S"
+                        ).replace(tzinfo=timezone.utc)
+                    except ValueError:
+                        continue
+
+                    # Só jogos nas próximas 24h que ainda não estão no scoreboard
+                    if not (now_utc < game_dt <= cutoff):
+                        continue
+
+                    game_id = g.get("gameId","")
+                    if any(x.get("gameId") == game_id for x in today_games):
+                        continue  # já está no scoreboard
+
                     ht = g.get("homeTeam", {}); at = g.get("awayTeam", {})
-                    game_time_utc = g.get("gameDateTimeUTC", "")
                     future_games.append({
-                        "gameId":        g.get("gameId", ""),
-                        "status":        1,  # scheduled
+                        "gameId":        game_id,
+                        "status":        1,
                         "statusText":    "Agendado",
-                        "gameTimeUTC":   game_time_utc,
-                        "gameDateLabel": gd_dt.strftime("%Y-%m-%d"),
+                        "gameTimeUTC":   game_time_str,
+                        "gameDateLabel": game_dt.strftime("%Y-%m-%d"),
                         "homeTeam": {"teamId": ht.get("teamId"), "abbr": ht.get("teamTricode","HME"), "name": ht.get("teamCityName",""), "score": 0},
                         "awayTeam": {"teamId": at.get("teamId"), "abbr": at.get("teamTricode","AWY"), "name": at.get("teamCityName",""), "score": 0},
                     })
-        except Exception as e:
-            pass  # CDN falhou, só usa hoje
+        except Exception:
+            pass
 
         all_games = today_games + future_games
-
-        # Cache: 5min se tem ao vivo, 30min senão
-        has_live = any(g.get("status") == 2 for g in all_games)
-        _cache_set("schedule_upcoming", all_games)
+        _cache_set(today_key, all_games)
         return all_games
 
     except Exception as e:
