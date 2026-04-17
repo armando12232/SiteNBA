@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://js.stripe.com/v3/"></script>
 <style>
 :root {
   --bg: #080808;
@@ -1130,7 +1131,8 @@ function planCan(feature) {
 }
 
 const SUPABASE_URL = 'https://dhirxfoxcswctxcjzvhf.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_DC3I02jLVjM013WrODpgCg_xiPl1rsl';
+const SUPABASE_KEY   = 'sb_publishable_DC3I02jLVjM013WrODpgCg_xiPl1rsl';
+const STRIPE_PK   = 'pk_live_51TMy1pE4b8QtlSeDbEMgc7GTsml4B4Q6jEmfmr8LAXxIMrwS3V215lRrnC2LGZrTsithFKWEs2TCLqxCc1dszFqk00b7ayZNpe';
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -1912,10 +1914,36 @@ function renderPricingCards() {
   }).join('');
 }
 
-function selectPlan(plan) {
-  // Por enquanto só mostra mensagem — integração de pagamento em breve
-  alert(`Em breve!\n\nO plano ${PLANS[plan].name} por R$${PLANS[plan].price}/mês estará disponível em breve.\nAguarde! 🚀`);
+async function selectPlan(plan) {
+  const btn = event?.target;
+  if (btn) { btn.textContent = 'Aguarde...'; btn.disabled = true; }
+
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    const user = session?.user;
+
+    const res = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        plan,
+        user_id: user?.id   || '',
+        email:   user?.email || '',
+      })
+    });
+
+    const data = await res.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      throw new Error(data.error || 'Erro ao criar sessão');
+    }
+  } catch(e) {
+    alert('Erro: ' + e.message);
+    if (btn) { btn.textContent = `R$ ${PLANS[plan]?.price}/mês`; btn.disabled = false; }
+  }
 }
+
 
 function showUpgrade(feature) {
   const featNames = { reb: 'Rebotes', ast: 'Assistências', fg3m: 'Cestas de 3', ai: 'Análise IA', history: 'Histórico' };
@@ -2153,7 +2181,38 @@ function showDashboard(user) {
   document.getElementById('user-btn').textContent = ini;
   document.getElementById('user-email-display').textContent = user.email;
   document.getElementById('header-date').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'});
+  loadUserPlan();
+  checkPaymentReturn();
   startMonitor();
+}
+
+function checkPaymentReturn() {
+  const params  = new URLSearchParams(window.location.search);
+  const payment = params.get('payment');
+  const plan    = params.get('plan');
+  if (payment === 'success' && plan) {
+    window.history.replaceState({}, '', window.location.pathname);
+    setTimeout(() => {
+      loadUserPlan();
+      showToast('🎉 Plano ' + (PLANS[plan]?.name || plan) + ' ativado com sucesso!', 'success');
+    }, 1500);
+  } else if (payment === 'cancelled') {
+    window.history.replaceState({}, '', window.location.pathname);
+    showToast('Pagamento cancelado.', 'warn');
+  }
+}
+
+function showToast(msg, type) {
+  type = type || 'info';
+  const colors = { success: '#00e676', warn: '#ffd600', error: 'var(--danger)', info: 'var(--text2)' };
+  const toast  = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
+    'background:var(--bg3);border:1px solid ' + (colors[type]||'#fff') + ';color:' + (colors[type]||'#fff') + ';' +
+    'padding:12px 20px;border-radius:12px;font-size:13px;font-weight:700;' +
+    'z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.5);white-space:nowrap';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
 }
 
 function switchTab(tab) {
