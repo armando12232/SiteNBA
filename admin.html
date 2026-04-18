@@ -229,9 +229,20 @@ async function adminLogin() {
 
   accessToken = data.access_token;
 
-  // Verificar se é admin
-  const subRes = await fetch(`${SUPABASE_URL}/rest/v1/subscriptions?select=role&limit=1`, {
+  // Verificar se é admin usando service key
+  const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRoaXJ4Zm94Y3N3Y3R4Y2p6dmhmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTQxMjk2MCwiZXhwIjoyMDkwOTg4OTYwfQ.2v0U5_IXg9oQrFc-LI4Ke4D5wPhb6Wzs70_PE8PIpuY';
+  
+  // Buscar user_id via token do usuário
+  const meRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${accessToken}` }
+  });
+  const me = await meRes.json();
+  const userId = me?.id;
+  if (!userId) { errEl.style.display = 'block'; return; }
+
+  // Verificar role com service key (bypassa RLS)
+  const subRes = await fetch(`${SUPABASE_URL}/rest/v1/subscriptions?select=role&user_id=eq.${userId}&limit=1`, {
+    headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
   });
   const sub = await subRes.json();
   if (!sub?.[0] || sub[0].role !== 'admin') {
@@ -239,6 +250,7 @@ async function adminLogin() {
     accessToken = null;
     return;
   }
+  window._SERVICE_KEY = SERVICE_KEY;
 
   document.getElementById('admin-email-display').textContent = email;
   document.getElementById('login-screen').style.display = 'none';
@@ -255,9 +267,10 @@ function adminLogout() {
 
 // ─── CARREGAR DADOS ────────────────────────────────────────────────────────
 async function loadDashboard() {
+  const SK = window._SERVICE_KEY;
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/subscriptions?select=user_id,plan,status,role,created_at`,
-    { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${accessToken}` } }
+    { headers: { 'apikey': SK, 'Authorization': `Bearer ${SK}` } }
   );
   const subs = await res.json();
 
@@ -379,13 +392,14 @@ async function savePlan(userId) {
   btn.textContent = '...';
   btn.disabled = true;
 
+  const SK = window._SERVICE_KEY;
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/subscriptions?user_id=eq.${userId}`,
     {
       method: 'PATCH',
       headers: {
-        'apikey': SUPABASE_KEY,
-        'Authorization': `Bearer ${accessToken}`,
+        'apikey': SK,
+        'Authorization': `Bearer ${SK}`,
         'Content-Type': 'application/json',
         'Prefer': 'return=minimal',
       },
