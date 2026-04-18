@@ -1,23 +1,23 @@
-import json, os, math, time, urllib.request, urllib.parse
+import json, time, urllib.request
 from http.server import BaseHTTPRequestHandler
 
-RAPIDAPI_KEY = os.environ.get('RAPIDAPI_KEY', '8916f08b53msh9e0258a756f7e96p12c1d5jsn125e17bdbb2d')
+# ESPN API — gratuita, sem necessidade de key
+ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer'
 
-LEAGUES = {
-    'brasileirao': {'id': 71,  'name': 'Brasileirão',      'flag': '🇧🇷', 'season': 2025},
-    'champions':   {'id': 2,   'name': 'Champions League', 'flag': '🏆',  'season': 2024},
-    'premier':     {'id': 39,  'name': 'Premier League',   'flag': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'season': 2024},
-    'laliga':      {'id': 140, 'name': 'La Liga',          'flag': '🇪🇸', 'season': 2024},
-    'bundesliga':  {'id': 78,  'name': 'Bundesliga',       'flag': '🇩🇪', 'season': 2024},
-    'seriea':      {'id': 135, 'name': 'Serie A',          'flag': '🇮🇹', 'season': 2024},
-    'ligue1':      {'id': 61,  'name': 'Ligue 1',          'flag': '🇫🇷', 'season': 2024},
-    'libertadores':{'id': 13,  'name': 'Libertadores',     'flag': '🌎',  'season': 2025},
-}
-LEAGUE_IDS = {v['id'] for v in LEAGUES.values()}
+LEAGUES = [
+    {'key': 'brasileirao',  'slug': 'bra.1',                   'name': 'Brasileirao Serie A', 'flag': '🇧🇷'},
+    {'key': 'champions',    'slug': 'uefa.champions',           'name': 'Champions League',    'flag': '🏆'},
+    {'key': 'premier',      'slug': 'eng.1',                   'name': 'Premier League',      'flag': '🏴󠁧󠁢󠁥󠁮󠁧󠁿'},
+    {'key': 'laliga',       'slug': 'esp.1',                   'name': 'La Liga',             'flag': '🇪🇸'},
+    {'key': 'bundesliga',   'slug': 'ger.1',                   'name': 'Bundesliga',          'flag': '🇩🇪'},
+    {'key': 'seriea',       'slug': 'ita.1',                   'name': 'Serie A',             'flag': '🇮🇹'},
+    {'key': 'ligue1',       'slug': 'fra.1',                   'name': 'Ligue 1',             'flag': '🇫🇷'},
+    {'key': 'libertadores', 'slug': 'conmebol.libertadores',   'name': 'Libertadores',        'flag': '🌎'},
+]
 
 _cache = {}
 
-def _cache_get(key, ttl=3600):
+def _cache_get(key, ttl=60):
     e = _cache.get(key)
     if e and time.time() - e['ts'] < ttl:
         return e['data']
@@ -26,118 +26,106 @@ def _cache_get(key, ttl=3600):
 def _cache_set(key, data):
     _cache[key] = {'data': data, 'ts': time.time()}
 
-def _fetch(endpoint, params):
-    url = f'https://api-football-v1.p.rapidapi.com/v3/{endpoint}?{urllib.parse.urlencode(params)}'
+def _fetch_espn(slug):
+    url = f'{ESPN_BASE}/{slug}/scoreboard'
     req = urllib.request.Request(url, headers={
-        'X-RapidAPI-Key':  RAPIDAPI_KEY,
-        'X-RapidAPI-Host': 'api-football-v1.p.rapidapi.com',
+        'User-Agent': 'Mozilla/5.0',
+        'Accept': 'application/json',
     })
     try:
-        with urllib.request.urlopen(req, timeout=10) as r:
+        with urllib.request.urlopen(req, timeout=8) as r:
             return json.loads(r.read())
     except Exception as e:
-        print(f'API-Football error [{endpoint}]: {e}')
+        print(f'ESPN error [{slug}]: {e}')
         return None
 
-def get_fixtures_today():
-    from datetime import datetime, timezone
-    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-    ck = f'fixtures_{today}'
-    cached = _cache_get(ck, ttl=300)
-    if cached is not None:
-        return cached
-    data = _fetch('fixtures', {'date': today, 'timezone': 'America/Sao_Paulo'})
-    if not data:
-        return []
-    result = []
-    for f in (data.get('response') or []):
-        lid = f.get('league', {}).get('id')
-        if lid not in LEAGUE_IDS:
-            continue
-        league_info = next((v for v in LEAGUES.values() if v['id'] == lid), {})
-        status = f.get('fixture', {}).get('status', {}).get('short', '')
-        goals  = f.get('goals', {})
-        result.append({
-            'id':          f['fixture']['id'],
-            'date':        f['fixture']['date'],
-            'status':      status,
-            'status_long': f['fixture']['status'].get('long', ''),
-            'elapsed':     f['fixture']['status'].get('elapsed'),
-            'league_id':   lid,
-            'league_name': f['league']['name'],
-            'league_flag': league_info.get('flag', '⚽'),
-            'home':        f['teams']['home']['name'],
-            'home_logo':   f['teams']['home']['logo'],
-            'away':        f['teams']['away']['name'],
-            'away_logo':   f['teams']['away']['logo'],
-            'home_goals':  goals.get('home'),
-            'away_goals':  goals.get('away'),
-            'live':        status in ('1H', '2H', 'HT', 'ET', 'BT', 'P'),
-        })
-    _cache_set(ck, result)
-    return result
+def _parse_event(event, league):
+    comp = (event.get('competitions') or [{}])[0]
+    competitors = comp.get('competitors') or []
+    home = next((c for c in competitors if c.get('homeAway') == 'home'), {})
+    away = next((c for c in competitors if c.get('homeAway') == 'away'), {})
+    status = event.get('status', {})
+    state = status.get('type', {}).get('state', 'pre')
+    return {
+        'id':           event.get('id'),
+        'date':         event.get('date'),
+        'league_key':   league['key'],
+        'league_name':  league['name'],
+        'league_flag':  league['flag'],
+        'home':         home.get('team', {}).get('displayName', ''),
+        'home_logo':    home.get('team', {}).get('logo', ''),
+        'home_goals':   home.get('score'),
+        'away':         away.get('team', {}).get('displayName', ''),
+        'away_logo':    away.get('team', {}).get('logo', ''),
+        'away_goals':   away.get('score'),
+        'status':       state,
+        'status_long':  status.get('type', {}).get('detail', ''),
+        'elapsed':      status.get('displayClock') if state == 'in' else None,
+        'period':       status.get('period'),
+        'live':         state == 'in',
+        'finished':     state == 'post',
+        'venue':        (comp.get('venue') or {}).get('fullName', ''),
+    }
 
-def get_fixture_players(fixture_id):
-    ck = f'fp_{fixture_id}'
-    cached = _cache_get(ck, ttl=120)
+def get_fixtures(league_key=None):
+    ck = f'fixtures_{league_key or "all"}'
+    cached = _cache_get(ck, ttl=60)
     if cached is not None:
         return cached
-    data = _fetch('fixtures/players', {'fixture': fixture_id})
-    if not data:
-        return []
-    players = []
-    for team in (data.get('response') or []):
-        team_name = team.get('team', {}).get('name', '')
-        team_logo = team.get('team', {}).get('logo', '')
-        for p in (team.get('players') or []):
-            pi = p.get('player', {})
-            st = (p.get('statistics') or [{}])[0]
-            def g(path, default=0):
-                parts = path.split('.')
-                v = st
-                for part in parts:
-                    v = (v or {}).get(part)
-                return v if v is not None else default
-            players.append({
-                'id': pi.get('id'), 'name': pi.get('name', ''), 'photo': pi.get('photo', ''),
-                'team': team_name, 'team_logo': team_logo, 'minutes': g('games.minutes') or 0,
-                'rating': g('games.rating', None), 'shots': g('shots.total') or 0,
-                'shots_on': g('shots.on') or 0, 'goals': g('goals.total') or 0,
-                'assists': g('goals.assists') or 0, 'tackles': g('tackles.total') or 0,
-                'fouls': g('fouls.committed') or 0, 'cards_y': g('cards.yellow') or 0,
-                'dribbles': g('dribbles.success') or 0, 'passes': g('passes.total') or 0,
-                'key_passes': g('passes.key') or 0,
-            })
-    _cache_set(ck, players)
-    return players
+
+    leagues = [l for l in LEAGUES if not league_key or l['key'] == league_key]
+    all_fixtures = []
+
+    for league in leagues:
+        data = _fetch_espn(league['slug'])
+        if not data:
+            continue
+        for event in (data.get('events') or []):
+            all_fixtures.append(_parse_event(event, league))
+
+    # Ordenar: ao vivo primeiro, depois agendados, depois encerrados
+    order = {'in': 0, 'pre': 1, 'post': 2}
+    all_fixtures.sort(key=lambda f: order.get(f['status'], 3))
+
+    _cache_set(ck, all_fixtures)
+    return all_fixtures
+
+def get_live(league_key=None):
+    fixtures = get_fixtures(league_key)
+    return [f for f in fixtures if f['live']]
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         from urllib.parse import urlparse, parse_qs
         q = parse_qs(urlparse(self.path).query)
-        t = q.get('type', [''])[0]
+        t = q.get('type', ['fixtures'])[0]
+        league = q.get('league', [None])[0]
+
         try:
             if t == 'fixtures':
-                data = get_fixtures_today()
+                data = get_fixtures(league)
                 self._json(200, {'fixtures': data, 'count': len(data)})
-            elif t == 'players':
-                fid = q.get('fixture_id', [''])[0]
-                if not fid:
-                    self._json(400, {'error': 'fixture_id required'}); return
-                self._json(200, {'players': get_fixture_players(int(fid))})
+
+            elif t == 'live':
+                data = get_live(league)
+                self._json(200, {'fixtures': data, 'count': len(data), 'live': True})
+
             elif t == 'leagues':
-                self._json(200, {'leagues': [{'key': k, **v} for k, v in LEAGUES.items()]})
+                self._json(200, {'leagues': LEAGUES})
+
             elif t == 'status':
-                self._json(200, {'ok': True, 'key_set': bool(RAPIDAPI_KEY)})
+                self._json(200, {'ok': True, 'source': 'ESPN'})
+
             else:
                 self._json(400, {'error': f'type invalido: {t!r}'})
+
         except Exception as e:
             self._json(500, {'error': str(e)})
 
     def _json(self, status, data):
         body = json.dumps(data, ensure_ascii=False).encode()
         self.send_response(status)
-        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Type',   'application/json; charset=utf-8')
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
