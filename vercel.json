@@ -1,7 +1,9 @@
 {
   "functions": {
-    "api/nba.py": { "maxDuration": 30 },
-    "api/pregame.py": { "maxDuration": 30 },
-    "api/analyze.py": { "maxDuration": 25 }
+    "api/nba.py":         { "maxDuration": 30 },
+    "api/pregame.py":     { "maxDuration": 30 },
+    "api/analyze.py":     { "maxDuration": 25 },
+    "api/football.py":    { "maxDuration": 15 },
+    "api/bettingpros.py": { "maxDuration": 15 }
   }
 }
