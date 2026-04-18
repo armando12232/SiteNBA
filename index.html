@@ -939,12 +939,20 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
       </div>
 
       <div style="display:flex;gap:8px;margin-bottom:18px">
-        <button id="view-today-btn" onclick="switchView('today')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">🏀 Player Props</button>
-        <button id="view-live-btn" onclick="switchView('live')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--body)">🔴 Ao vivo</button>
-        <button id="view-football-btn" onclick="switchView('football')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">⚽ Futebol</button>
+        <button id="page-nba-btn" onclick="switchPage('nba')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--body)">🏀 NBA</button>
+        <button id="page-football-btn" onclick="switchPage('football')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">⚽ Futebol</button>
       </div>
 
-      <div id="today-view" style="display:none">
+            <!-- ══ PÁGINA NBA ══ -->
+      <div id="page-nba" style="display:block">
+        <!-- Sub-tabs NBA -->
+        <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px">
+          <button id="nba-tab-props-btn" onclick="switchNBATab('props')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--body)">📊 Player Props</button>
+          <button id="nba-tab-live-btn" onclick="switchNBATab('live')" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">🔴 Ao Vivo</button>
+        </div>
+
+        <!-- Props -->
+        <div id="today-view" style="display:block">
         <!-- Busca de jogador -->
         <div class="search-bar-wrap">
           <span class="search-icon">⌕</span>
@@ -972,26 +980,8 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
         <div id="props-table" style="display:none"></div>
       </div>
 
-      <div id="football-view" style="display:none">
-      <!-- Filtros de liga -->
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="league-filters">
-        <button class="prop-filter-btn active" data-league="all" onclick="setLeagueFilter('all',this)">🌍 Todas</button>
-        <button class="prop-filter-btn" data-league="brasileirao" onclick="setLeagueFilter('brasileirao',this)">🇧🇷 Brasileirão</button>
-        <button class="prop-filter-btn" data-league="champions" onclick="setLeagueFilter('champions',this)">🏆 Champions</button>
-        <button class="prop-filter-btn" data-league="premier" onclick="setLeagueFilter('premier',this)">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier</button>
-        <button class="prop-filter-btn" data-league="laliga" onclick="setLeagueFilter('laliga',this)">🇪🇸 La Liga</button>
-        <button class="prop-filter-btn" data-league="bundesliga" onclick="setLeagueFilter('bundesliga',this)">🇩🇪 Bundesliga</button>
-        <button class="prop-filter-btn" data-league="seriea" onclick="setLeagueFilter('seriea',this)">🇮🇹 Serie A</button>
-        <button class="prop-filter-btn" data-league="ligue1" onclick="setLeagueFilter('ligue1',this)">🇫🇷 Ligue 1</button>
-        <button class="prop-filter-btn" data-league="libertadores" onclick="setLeagueFilter('libertadores',this)">🌎 Libertadores</button>
-      </div>
-      <!-- Lista de jogos -->
-      <div id="football-games-list">
-        <div class="state-box"><div class="state-title">Carregando jogos...</div></div>
-      </div>
-    </div>
-
-    <div id="live-view">
+        <!-- Live NBA -->
+        <div id="live-view" style="display:none">
       <div class="filters">
         <button class="filter-btn active" onclick="setFilter('todos',this)">Todos</button>
         <button class="filter-btn f-fire" onclick="setFilter('fire',this)">🔥 Duplo/Triplo</button>
@@ -1014,6 +1004,47 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
         </div>
       </div>
       </div><!-- end live-view -->
+      </div>
+
+      <!-- ══ PÁGINA FUTEBOL ══ -->
+      <div id="page-football" style="display:none">
+        <!-- Sub-tabs Futebol -->
+        <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px">
+          <button id="football-tab-jogos-btn" onclick="switchFootballTab('jogos')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--body)">⚽ Jogos</button>
+          <button id="football-tab-live-btn" onclick="switchFootballTab('live')" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">🔴 Ao Vivo</button>
+        </div>
+
+        <!-- Jogos do dia (futebol) -->
+        <div id="football-jogos-tab" style="display:block">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="league-filters">
+            <button class="prop-filter-btn active" data-league="all" onclick="setLeagueFilter('all',this)">🌍 Todas</button>
+            <button class="prop-filter-btn" data-league="brasileirao" onclick="setLeagueFilter('brasileirao',this)">🇧🇷 Brasileirão</button>
+            <button class="prop-filter-btn" data-league="champions" onclick="setLeagueFilter('champions',this)">🏆 Champions</button>
+            <button class="prop-filter-btn" data-league="premier" onclick="setLeagueFilter('premier',this)">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier</button>
+            <button class="prop-filter-btn" data-league="laliga" onclick="setLeagueFilter('laliga',this)">🇪🇸 La Liga</button>
+            <button class="prop-filter-btn" data-league="bundesliga" onclick="setLeagueFilter('bundesliga',this)">🇩🇪 Bundesliga</button>
+            <button class="prop-filter-btn" data-league="seriea" onclick="setLeagueFilter('seriea',this)">🇮🇹 Serie A</button>
+            <button class="prop-filter-btn" data-league="ligue1" onclick="setLeagueFilter('ligue1',this)">🇫🇷 Ligue 1</button>
+            <button class="prop-filter-btn" data-league="libertadores" onclick="setLeagueFilter('libertadores',this)">🌎 Libertadores</button>
+          </div>
+          <div id="football-games-list">
+            <div class="state-box"><div class="state-title">Carregando jogos de futebol...</div></div>
+          </div>
+        </div>
+
+        <!-- Ao Vivo Futebol -->
+        <div id="football-live-tab" style="display:none">
+          <div id="football-live-list">
+            <div class="state-box">
+              <div style="font-size:40px;margin-bottom:12px">⚽</div>
+              <div class="state-title">Jogos Ao Vivo</div>
+              <div class="state-sub">Buscando jogos ao vivo nas principais ligas...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
 
 
 
@@ -3172,6 +3203,64 @@ function switchView(view) {
   if (view === 'live') { currentView = view; }
   if (view === 'football') loadFootballGames();
   currentView = view;
+}
+
+
+
+// ─── NAVEGAÇÃO POR PÁGINAS ─────────────────────────────────────────────────────
+let _currentPage = 'nba';
+let _currentNBATab = 'props';
+let _currentFootballTab = 'jogos';
+
+function switchPage(page) {
+  _currentPage = page;
+  ['nba', 'football'].forEach(p => {
+    const btn = document.getElementById('page-' + p + '-btn');
+    const el  = document.getElementById('page-' + p);
+    if (btn) {
+      btn.style.background    = p === page ? 'var(--bg3)' : 'var(--bg2)';
+      btn.style.borderColor   = p === page ? 'var(--border2)' : 'var(--border)';
+      btn.style.color         = p === page ? 'var(--text)' : 'var(--text3)';
+    }
+    if (el) el.style.display  = p === page ? 'block' : 'none';
+  });
+  if (page === 'nba')      { switchNBATab(_currentNBATab); }
+  if (page === 'football') { switchFootballTab(_currentFootballTab); }
+}
+
+function switchNBATab(tab) {
+  _currentNBATab = tab;
+  ['props', 'live'].forEach(t => {
+    const btn = document.getElementById('nba-tab-' + t + '-btn');
+    if (btn) {
+      btn.style.background  = t === tab ? 'var(--bg3)' : 'var(--bg2)';
+      btn.style.borderColor = t === tab ? 'var(--border2)' : 'var(--border)';
+      btn.style.color       = t === tab ? 'var(--text)' : 'var(--text3)';
+    }
+  });
+  const todayEl = document.getElementById('today-view');
+  const liveEl  = document.getElementById('live-view');
+  if (todayEl) todayEl.style.display = tab === 'props' ? 'block' : 'none';
+  if (liveEl)  liveEl.style.display  = tab === 'live'  ? 'block' : 'none';
+  if (tab === 'props') loadTodayGames();
+}
+
+function switchFootballTab(tab) {
+  _currentFootballTab = tab;
+  ['jogos', 'live'].forEach(t => {
+    const btn = document.getElementById('football-tab-' + t + '-btn');
+    if (btn) {
+      btn.style.background  = t === tab ? 'var(--bg3)' : 'var(--bg2)';
+      btn.style.borderColor = t === tab ? 'var(--border2)' : 'var(--border)';
+      btn.style.color       = t === tab ? 'var(--text)' : 'var(--text3)';
+    }
+  });
+  const jogosEl = document.getElementById('football-jogos-tab');
+  const liveEl  = document.getElementById('football-live-tab');
+  if (jogosEl) jogosEl.style.display = tab === 'jogos' ? 'block' : 'none';
+  if (liveEl)  liveEl.style.display  = tab === 'live'  ? 'block' : 'none';
+  if (tab === 'jogos') loadFootballGames();
+  if (tab === 'live')  loadFootballLive();
 }
 
 
