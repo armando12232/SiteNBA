@@ -1477,17 +1477,7 @@ async function loadTodayGames() {
 
     todayGamesCache = games;
 
-    // Buscar BP — tenta data de hoje (local), e ontem como fallback
-    const _localDate = () => {
-      const d = new Date();
-      d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); // ajusta para local
-      return d.toISOString().slice(0,10);
-    };
-    const _prevDate = (ds) => {
-      const d = new Date(ds + 'T12:00:00');
-      d.setDate(d.getDate() - 1);
-      return d.toISOString().slice(0,10);
-    };
+    // Buscar BP — usa data dos jogos do schedule (UTC correto)
     const _loadBP = (dateStr) =>
       fetch(`/api/bettingpros?date=${dateStr}&stats=pts,reb,ast,fg3m`)
         .then(r => r.json())
@@ -1503,19 +1493,16 @@ async function loadTodayGames() {
           return false;
         });
 
-    const dateStr = _localDate();
-    _loadBP(dateStr).then(ok => {
-      if (!ok) {
-        // Fallback: dia anterior (UTC pode estar adiantado)
-        const prevDate = _prevDate(dateStr);
-        console.log('BP vazio para', dateStr, '— tentando', prevDate);
-        _loadBP(prevDate).catch(() => {});
+    // Usar datas únicas dos jogos do schedule
+    const scheduleDates = [...new Set(games.map(g => g.gameDateLabel).filter(Boolean))];
+    const tryDates = scheduleDates.length > 0 ? scheduleDates : [new Date().toISOString().slice(0,10)];
+    console.log('Buscando BP para datas:', tryDates);
+    (async () => {
+      for (const dateStr of tryDates) {
+        const ok = await _loadBP(dateStr).catch(() => false);
+        if (ok) { console.log('BP carregado para', dateStr); break; }
       }
-    }).catch(e => {
-      console.warn('BettingPros falhou:', e);
-      // Tentar dia anterior direto
-      _loadBP(_prevDate(dateStr)).catch(() => {});
-    });
+    })();
 
     // Pré-jogo dos jogos em paralelo
     games.forEach(g => loadGamePregame(g).catch(() => {}));
@@ -3226,7 +3213,7 @@ function switchPage(page) {
     if (el) el.style.display  = p === page ? 'block' : 'none';
   });
   if (page === 'nba')      { switchNBATab(_currentNBATab); }
-  if (page === 'football') { switchFootballTab(_currentFootballTab); }
+  if (page === 'football') { _footballData = null; switchFootballTab(_currentFootballTab); }
 }
 
 function switchNBATab(tab) {
