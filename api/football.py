@@ -1,134 +1,194 @@
 import json, time, urllib.request
 from http.server import BaseHTTPRequestHandler
 
-# ESPN API — gratuita, sem necessidade de key
 ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer'
 
 LEAGUES = [
-    {'key': 'brasileirao',  'slug': 'bra.1',                   'name': 'Brasileirao Serie A', 'flag': '🇧🇷'},
-    {'key': 'champions',    'slug': 'uefa.champions',           'name': 'Champions League',    'flag': '🏆'},
-    {'key': 'premier',      'slug': 'eng.1',                   'name': 'Premier League',      'flag': '🏴󠁧󠁢󠁥󠁮󠁧󠁿'},
-    {'key': 'laliga',       'slug': 'esp.1',                   'name': 'La Liga',             'flag': '🇪🇸'},
-    {'key': 'bundesliga',   'slug': 'ger.1',                   'name': 'Bundesliga',          'flag': '🇩🇪'},
-    {'key': 'seriea',       'slug': 'ita.1',                   'name': 'Serie A',             'flag': '🇮🇹'},
-    {'key': 'ligue1',       'slug': 'fra.1',                   'name': 'Ligue 1',             'flag': '🇫🇷'},
-    {'key': 'libertadores', 'slug': 'conmebol.libertadores',   'name': 'Libertadores',        'flag': '🌎'},
+    {'key': 'brasileirao',  'slug': 'bra.1',                   'name': 'Brasileirao Serie A', 'flag': '\u{1F1E7}\u{1F1F7}'},
+    {'key': 'champions',    'slug': 'uefa.champions',           'name': 'Champions League',    'flag': '\u{1F3C6}'},
+    {'key': 'premier',      'slug': 'eng.1',                   'name': 'Premier League',       'flag': '\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}'},
+    {'key': 'laliga',       'slug': 'esp.1',                   'name': 'La Liga',              'flag': '\u{1F1EA}\u{1F1F8}'},
+    {'key': 'bundesliga',   'slug': 'ger.1',                   'name': 'Bundesliga',           'flag': '\u{1F1E9}\u{1F1EA}'},
+    {'key': 'seriea',       'slug': 'ita.1',                   'name': 'Serie A',              'flag': '\u{1F1EE}\u{1F1F9}'},
+    {'key': 'ligue1',       'slug': 'fra.1',                   'name': 'Ligue 1',              'flag': '\u{1F1EB}\u{1F1F7}'},
+    {'key': 'libertadores', 'slug': 'conmebol.libertadores',   'name': 'Libertadores',         'flag': '\u{1F30E}'},
 ]
+SLUG_MAP = {l['key']: l['slug'] for l in LEAGUES}
 
-_cache = {}
+def espn_fetch(url):
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    with urllib.request.urlopen(req, timeout=8) as r:
+        return json.loads(r.read())
 
-def _cache_get(key, ttl=60):
-    e = _cache.get(key)
-    if e and time.time() - e['ts'] < ttl:
-        return e['data']
-    return None
-
-def _cache_set(key, data):
-    _cache[key] = {'data': data, 'ts': time.time()}
-
-def _fetch_espn(slug):
-    url = f'{ESPN_BASE}/{slug}/scoreboard'
-    req = urllib.request.Request(url, headers={
-        'User-Agent': 'Mozilla/5.0',
-        'Accept': 'application/json',
-    })
-    try:
-        with urllib.request.urlopen(req, timeout=8) as r:
-            return json.loads(r.read())
-    except Exception as e:
-        print(f'ESPN error [{slug}]: {e}')
-        return None
-
-def _parse_event(event, league):
-    comp = (event.get('competitions') or [{}])[0]
-    competitors = comp.get('competitors') or []
-    home = next((c for c in competitors if c.get('homeAway') == 'home'), {})
-    away = next((c for c in competitors if c.get('homeAway') == 'away'), {})
-    status = event.get('status', {})
-    state = status.get('type', {}).get('state', 'pre')
+def parse_event(e):
     return {
-        'id':           event.get('id'),
-        'date':         event.get('date'),
-        'league_key':   league['key'],
-        'league_name':  league['name'],
-        'league_flag':  league['flag'],
-        'home':         home.get('team', {}).get('displayName', ''),
-        'home_logo':    home.get('team', {}).get('logo', ''),
-        'home_goals':   home.get('score'),
-        'away':         away.get('team', {}).get('displayName', ''),
-        'away_logo':    away.get('team', {}).get('logo', ''),
-        'away_goals':   away.get('score'),
-        'status':       state,
-        'status_long':  status.get('type', {}).get('detail', ''),
-        'elapsed':      status.get('displayClock') if state == 'in' else None,
-        'period':       status.get('period'),
-        'live':         state == 'in',
-        'finished':     state == 'post',
-        'venue':        (comp.get('venue') or {}).get('fullName', ''),
+        'type': e.get('type', {}).get('text', ''),
+        'clock': e.get('clock', {}).get('displayValue', ''),
+        'text': e.get('text', ''),
+        'team': e.get('team', {}).get('displayName', '') if e.get('team') else '',
+        'score': e.get('scoreValue', None),
     }
 
-def get_fixtures(league_key=None):
-    ck = f'fixtures_{league_key or "all"}'
-    cached = _cache_get(ck, ttl=60)
-    if cached is not None:
-        return cached
+def get_stats(game_id, league_key):
+    slug = SLUG_MAP.get(league_key, 'eng.1')
+    url = f'{ESPN_BASE}/{slug}/summary?event={game_id}'
+    try:
+        data = espn_fetch(url)
+    except Exception as e:
+        return {'error': str(e)}
 
-    leagues = [l for l in LEAGUES if not league_key or l['key'] == league_key]
-    all_fixtures = []
+    result = {}
 
-    for league in leagues:
-        data = _fetch_espn(league['slug'])
-        if not data:
-            continue
-        for event in (data.get('events') or []):
-            all_fixtures.append(_parse_event(event, league))
+    # Stats dos times
+    boxscore = data.get('boxscore', {})
+    teams_data = boxscore.get('teams', [])
+    stats_out = []
+    WANTED = ['possessionPct','totalShots','shotsOnTarget','wonCorners',
+              'foulsCommitted','yellowCards','redCards','offsides',
+              'saves','passPct','accuratePasses','totalPasses',
+              'effectiveTackles','interceptions']
+    for t in teams_data:
+        team_stats = {}
+        for s in t.get('statistics', []):
+            if s['name'] in WANTED:
+                team_stats[s['name']] = s.get('displayValue', s.get('value', ''))
+        stats_out.append({
+            'team': t.get('team', {}).get('displayName', ''),
+            'abbreviation': t.get('team', {}).get('abbreviation', ''),
+            'stats': team_stats
+        })
+    result['teams'] = stats_out
 
-    # Ordenar: ao vivo primeiro, depois agendados, depois encerrados
-    order = {'in': 0, 'pre': 1, 'post': 2}
-    all_fixtures.sort(key=lambda f: order.get(f['status'], 3))
+    # Eventos chave (gols, cartões)
+    key_events = data.get('keyEvents', [])
+    IMPORTANT = {'Goal', 'Yellow Card', 'Red Card', 'Penalty', 'Own Goal', 'Substitution'}
+    result['events'] = [
+        parse_event(e) for e in key_events
+        if e.get('type', {}).get('text', '') in IMPORTANT
+    ][:20]
 
-    _cache_set(ck, all_fixtures)
-    return all_fixtures
+    # Odds (se disponível)
+    odds = data.get('odds', [{}])
+    if odds:
+        o = odds[0]
+        result['odds'] = {
+            'spread': o.get('spread'),
+            'overUnder': o.get('overUnder'),
+            'provider': o.get('provider', {}).get('name', '')
+        }
 
-def get_live(league_key=None):
-    fixtures = get_fixtures(league_key)
-    return [f for f in fixtures if f['live']]
+    return result
 
 class handler(BaseHTTPRequestHandler):
+    def log_message(self, *a): pass
+
     def do_GET(self):
         from urllib.parse import urlparse, parse_qs
-        q = parse_qs(urlparse(self.path).query)
-        t = q.get('type', ['fixtures'])[0]
-        league = q.get('league', [None])[0]
+        parsed = urlparse(self.path)
+        params = parse_qs(parsed.query)
+        t = params.get('type', ['fixtures'])[0]
 
-        try:
-            if t == 'fixtures':
-                data = get_fixtures(league)
-                self._json(200, {'fixtures': data, 'count': len(data)})
-
-            elif t == 'live':
-                data = get_live(league)
-                self._json(200, {'fixtures': data, 'count': len(data), 'live': True})
-
-            elif t == 'leagues':
-                self._json(200, {'leagues': LEAGUES})
-
-            elif t == 'status':
-                self._json(200, {'ok': True, 'source': 'ESPN'})
-
+        # ── Stats endpoint ─────────────────────────────────────────────
+        if t == 'stats':
+            game_id   = params.get('gameId', [''])[0]
+            league_key = params.get('leagueKey', ['premier'])[0]
+            if not game_id:
+                body = json.dumps({'error': 'gameId required'}).encode()
             else:
-                self._json(400, {'error': f'type invalido: {t!r}'})
+                stats = get_stats(game_id, league_key)
+                body = json.dumps(stats).encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(body)
+            return
 
-        except Exception as e:
-            self._json(500, {'error': str(e)})
+        # ── Live endpoint ──────────────────────────────────────────────
+        if t == 'live':
+            fixtures = []
+            for league in LEAGUES:
+                try:
+                    url = f"{ESPN_BASE}/{league['slug']}/scoreboard"
+                    data = espn_fetch(url)
+                    for ev in data.get('events', []):
+                        comp = ev.get('competitions', [{}])[0]
+                        status = comp.get('status', {})
+                        state = status.get('type', {}).get('state', '')
+                        if state != 'in': continue
+                        teams = comp.get('competitors', [])
+                        home = next((t for t in teams if t.get('homeAway')=='home'), {})
+                        away = next((t for t in teams if t.get('homeAway')=='away'), {})
+                        elapsed = status.get('displayClock','')
+                        period  = status.get('period', None)
+                        fixtures.append({
+                            'id': str(ev.get('id','')),
+                            'date': comp.get('date',''),
+                            'league_key': league['key'],
+                            'league_name': league['name'],
+                            'league_flag': league['flag'],
+                            'home': home.get('team',{}).get('displayName',''),
+                            'home_logo': home.get('team',{}).get('logo',''),
+                            'home_goals': home.get('score', None),
+                            'away': away.get('team',{}).get('displayName',''),
+                            'away_logo': away.get('team',{}).get('logo',''),
+                            'away_goals': away.get('score', None),
+                            'status': 'in',
+                            'status_long': elapsed,
+                            'elapsed': elapsed,
+                            'period': period,
+                            'live': True,
+                            'finished': False,
+                            'venue': comp.get('venue',{}).get('fullName',''),
+                        })
+                except: pass
+            body = json.dumps({'fixtures': fixtures, 'count': len(fixtures), 'live': True}).encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(body)
+            return
 
-    def _json(self, status, data):
-        body = json.dumps(data, ensure_ascii=False).encode()
-        self.send_response(status)
-        self.send_header('Content-Type',   'application/json; charset=utf-8')
-        self.send_header('Content-Length', str(len(body)))
+        # ── Fixtures endpoint ──────────────────────────────────────────
+        fixtures = []
+        for league in LEAGUES:
+            try:
+                url = f"{ESPN_BASE}/{league['slug']}/scoreboard"
+                data = espn_fetch(url)
+                for ev in data.get('events', []):
+                    comp = ev.get('competitions', [{}])[0]
+                    status = comp.get('status', {})
+                    state = status.get('type', {}).get('state', '')
+                    teams = comp.get('competitors', [])
+                    home = next((t for t in teams if t.get('homeAway')=='home'), {})
+                    away = next((t for t in teams if t.get('homeAway')=='away'), {})
+                    elapsed = status.get('displayClock','') if state == 'in' else None
+                    period  = status.get('period', None) if state in ('in','post') else None
+                    fixtures.append({
+                        'id': str(ev.get('id','')),
+                        'date': comp.get('date',''),
+                        'league_key': league['key'],
+                        'league_name': league['name'],
+                        'league_flag': league['flag'],
+                        'home': home.get('team',{}).get('displayName',''),
+                        'home_logo': home.get('team',{}).get('logo',''),
+                        'home_goals': home.get('score', None),
+                        'away': away.get('team',{}).get('displayName',''),
+                        'away_logo': away.get('team',{}).get('logo',''),
+                        'away_goals': away.get('score', None),
+                        'status': state if state else 'pre',
+                        'status_long': status.get('type',{}).get('shortDetail',''),
+                        'elapsed': elapsed,
+                        'period': period,
+                        'live': state == 'in',
+                        'finished': state == 'post',
+                        'venue': comp.get('venue',{}).get('fullName',''),
+                    })
+            except: pass
+        body = json.dumps({'fixtures': fixtures, 'count': len(fixtures)}).encode()
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(body)
-
-    def log_message(self, *a): pass
