@@ -3253,6 +3253,82 @@ function switchNBATab(tab) {
   if (tab === 'props') loadTodayGames();
 }
 
+async function loadFootballLive() {
+  const el = document.getElementById('football-live-list');
+  if (!el) return;
+  el.innerHTML = '<div class="state-box"><div class="state-title">Buscando jogos ao vivo...</div></div>';
+  try {
+    const res = await fetch('/api/football?type=live');
+    const data = await res.json();
+    window._footballLiveData = data.fixtures || [];
+    renderFootballLive();
+    if (window._liveInterval) clearInterval(window._liveInterval);
+    window._liveInterval = setInterval(async () => {
+      if (window._currentFootballTab === 'live') {
+        const r2 = await fetch('/api/football?type=live');
+        const d2 = await r2.json();
+        window._footballLiveData = d2.fixtures || [];
+        renderFootballLive();
+      }
+    }, 60000);
+  } catch(e) {
+    el.innerHTML = '<div class="state-box"><div class="state-title">Erro ao carregar</div><div class="state-sub">' + e.message + '</div></div>';
+  }
+}
+
+function renderFootballLive() {
+  const el = document.getElementById('football-live-list');
+  if (!el) return;
+  const fixtures = window._footballLiveData || [];
+  if (!fixtures.length) {
+    el.innerHTML = '<div class="state-box"><div style="font-size:40px;margin-bottom:12px">⚽</div><div class="state-title">Sem jogos ao vivo</div><div class="state-sub">Nenhuma partida em andamento agora</div></div>';
+    return;
+  }
+  const byLeague = {};
+  for (const f of fixtures) {
+    if (!byLeague[f.league_name]) byLeague[f.league_name] = { flag: f.league_flag, name: f.league_name, games: [] };
+    byLeague[f.league_name].games.push(f);
+  }
+  el.innerHTML = Object.entries(byLeague).map(([name, grp]) => {
+    const cards = grp.games.map(f => {
+      const score = (f.home_goals != null && f.away_goals != null) ? f.home_goals + ' – ' + f.away_goals : '0 – 0';
+      const min = f.elapsed ? f.elapsed + "'" : 'AO VIVO';
+      return `<div style="background:var(--bg2);border:1px solid rgba(200,16,46,0.4);border-radius:16px;overflow:hidden;transition:all .2s;cursor:pointer"
+           onmouseenter="this.style.transform='translateY(-2px)'"
+           onmouseleave="this.style.transform=''"
+           onclick="openFtModal('${f.id}')">
+        <div style="height:3px;background:linear-gradient(90deg,var(--red),var(--red2))"></div>
+        <div style="padding:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:0">
+              <img src="${f.home_logo}" style="width:44px;height:44px;object-fit:contain" onerror="this.style.display='none'">
+              <div style="font-family:var(--display);font-size:13px;font-weight:800;text-align:center;color:var(--text);line-height:1.2">${f.home}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:80px">
+              <div style="font-family:var(--display);font-size:26px;font-weight:900;color:var(--text)">${score}</div>
+              <div style="display:flex;align-items:center;gap:4px">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--red);display:inline-block;animation:pulse 1.2s infinite"></span>
+                <span style="font-size:11px;font-weight:700;color:var(--red)">${min}</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:0">
+              <img src="${f.away_logo}" style="width:44px;height:44px;object-fit:contain" onerror="this.style.display='none'">
+              <div style="font-family:var(--display);font-size:13px;font-weight:800;text-align:center;color:var(--text);line-height:1.2">${f.away}</div>
+            </div>
+          </div>
+          ${f.venue ? `<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:10px">🏟️ ${f.venue}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+        <span>${grp.flag}</span><span>${grp.name}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">${cards}</div>
+    </div>`;
+  }).join('');
+}
+
 function switchFootballTab(tab) {
   _currentFootballTab = tab;
   ['jogos', 'live'].forEach(t => {
