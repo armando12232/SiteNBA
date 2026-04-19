@@ -1,17 +1,17 @@
-import json, time, urllib.request
+import json, urllib.request
 from http.server import BaseHTTPRequestHandler
 
 ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer'
 
 LEAGUES = [
-    {'key': 'brasileirao',  'slug': 'bra.1',                   'name': 'Brasileirao Serie A', 'flag': '\u{1F1E7}\u{1F1F7}'},
-    {'key': 'champions',    'slug': 'uefa.champions',           'name': 'Champions League',    'flag': '\u{1F3C6}'},
-    {'key': 'premier',      'slug': 'eng.1',                   'name': 'Premier League',       'flag': '\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}'},
-    {'key': 'laliga',       'slug': 'esp.1',                   'name': 'La Liga',              'flag': '\u{1F1EA}\u{1F1F8}'},
-    {'key': 'bundesliga',   'slug': 'ger.1',                   'name': 'Bundesliga',           'flag': '\u{1F1E9}\u{1F1EA}'},
-    {'key': 'seriea',       'slug': 'ita.1',                   'name': 'Serie A',              'flag': '\u{1F1EE}\u{1F1F9}'},
-    {'key': 'ligue1',       'slug': 'fra.1',                   'name': 'Ligue 1',              'flag': '\u{1F1EB}\u{1F1F7}'},
-    {'key': 'libertadores', 'slug': 'conmebol.libertadores',   'name': 'Libertadores',         'flag': '\u{1F30E}'},
+    {'key': 'brasileirao',  'slug': 'bra.1',                 'name': 'Brasileirao Serie A', 'flag': '\U0001F1E7\U0001F1F7'},
+    {'key': 'champions',    'slug': 'uefa.champions',         'name': 'Champions League',    'flag': '\U0001F3C6'},
+    {'key': 'premier',      'slug': 'eng.1',                 'name': 'Premier League',       'flag': '\U0001F3F4\U000E0067\U000E0062\U000E0065\U000E006E\U000E0067\U000E007F'},
+    {'key': 'laliga',       'slug': 'esp.1',                 'name': 'La Liga',              'flag': '\U0001F1EA\U0001F1F8'},
+    {'key': 'bundesliga',   'slug': 'ger.1',                 'name': 'Bundesliga',           'flag': '\U0001F1E9\U0001F1EA'},
+    {'key': 'seriea',       'slug': 'ita.1',                 'name': 'Serie A',              'flag': '\U0001F1EE\U0001F1F9'},
+    {'key': 'ligue1',       'slug': 'fra.1',                 'name': 'Ligue 1',              'flag': '\U0001F1EB\U0001F1F7'},
+    {'key': 'libertadores', 'slug': 'conmebol.libertadores', 'name': 'Libertadores',         'flag': '\U0001F30E'},
 ]
 SLUG_MAP = {l['key']: l['slug'] for l in LEAGUES}
 
@@ -20,18 +20,39 @@ def espn_fetch(url):
     with urllib.request.urlopen(req, timeout=8) as r:
         return json.loads(r.read())
 
-def parse_event(e):
+def parse_fixture(ev, league, state=None):
+    comp  = ev.get('competitions', [{}])[0]
+    status = comp.get('status', {})
+    s     = state or status.get('type', {}).get('state', 'pre')
+    teams = comp.get('competitors', [])
+    home  = next((t for t in teams if t.get('homeAway') == 'home'), {})
+    away  = next((t for t in teams if t.get('homeAway') == 'away'), {})
+    elapsed = status.get('displayClock', '') if s == 'in' else None
+    period  = status.get('period', None)   if s in ('in', 'post') else None
     return {
-        'type': e.get('type', {}).get('text', ''),
-        'clock': e.get('clock', {}).get('displayValue', ''),
-        'text': e.get('text', ''),
-        'team': e.get('team', {}).get('displayName', '') if e.get('team') else '',
-        'score': e.get('scoreValue', None),
+        'id':           str(ev.get('id', '')),
+        'date':         comp.get('date', ''),
+        'league_key':   league['key'],
+        'league_name':  league['name'],
+        'league_flag':  league['flag'],
+        'home':         home.get('team', {}).get('displayName', ''),
+        'home_logo':    home.get('team', {}).get('logo', ''),
+        'home_goals':   home.get('score', None),
+        'away':         away.get('team', {}).get('displayName', ''),
+        'away_logo':    away.get('team', {}).get('logo', ''),
+        'away_goals':   away.get('score', None),
+        'status':       s if s else 'pre',
+        'status_long':  status.get('type', {}).get('shortDetail', ''),
+        'elapsed':      elapsed,
+        'period':       period,
+        'live':         s == 'in',
+        'finished':     s == 'post',
+        'venue':        comp.get('venue', {}).get('fullName', ''),
     }
 
 def get_stats(game_id, league_key):
     slug = SLUG_MAP.get(league_key, 'eng.1')
-    url = f'{ESPN_BASE}/{slug}/summary?event={game_id}'
+    url  = f'{ESPL_BASE}/{slug}/summary?event={game_id}'
     try:
         data = espn_fetch(url)
     except Exception as e:
@@ -39,42 +60,50 @@ def get_stats(game_id, league_key):
 
     result = {}
 
-    # Stats dos times
-    boxscore = data.get('boxscore', {})
+    # Stats por time
+    boxscore   = data.get('boxscore', {})
     teams_data = boxscore.get('teams', [])
+    WANTED = [
+        'possessionPct', 'totalShots', 'shotsOnTarget', 'wonCorners',
+        'foulsCommitted', 'yellowCards', 'redCards', 'offsides',
+        'saves', 'passPct', 'accuratePasses', 'totalPasses',
+        'effectiveTackles', 'interceptions',
+    ]
     stats_out = []
-    WANTED = ['possessionPct','totalShots','shotsOnTarget','wonCorners',
-              'foulsCommitted','yellowCards','redCards','offsides',
-              'saves','passPct','accuratePasses','totalPasses',
-              'effectiveTackles','interceptions']
     for t in teams_data:
         team_stats = {}
         for s in t.get('statistics', []):
             if s['name'] in WANTED:
                 team_stats[s['name']] = s.get('displayValue', s.get('value', ''))
         stats_out.append({
-            'team': t.get('team', {}).get('displayName', ''),
+            'team':         t.get('team', {}).get('displayName', ''),
             'abbreviation': t.get('team', {}).get('abbreviation', ''),
-            'stats': team_stats
+            'stats':        team_stats,
         })
     result['teams'] = stats_out
 
-    # Eventos chave (gols, cartões)
-    key_events = data.get('keyEvents', [])
+    # Eventos chave (gols, cartoes)
     IMPORTANT = {'Goal', 'Yellow Card', 'Red Card', 'Penalty', 'Own Goal', 'Substitution'}
+    key_events = data.get('keyEvents', [])
     result['events'] = [
-        parse_event(e) for e in key_events
+        {
+            'type':  e.get('type', {}).get('text', ''),
+            'clock': e.get('clock', {}).get('displayValue', ''),
+            'text':  e.get('text', ''),
+            'team':  e.get('team', {}).get('displayName', '') if e.get('team') else '',
+        }
+        for e in key_events
         if e.get('type', {}).get('text', '') in IMPORTANT
     ][:20]
 
-    # Odds (se disponível)
+    # Odds
     odds = data.get('odds', [{}])
-    if odds:
+    if odds and odds[0]:
         o = odds[0]
         result['odds'] = {
-            'spread': o.get('spread'),
+            'spread':    o.get('spread'),
             'overUnder': o.get('overUnder'),
-            'provider': o.get('provider', {}).get('name', '')
+            'provider':  o.get('provider', {}).get('name', ''),
         }
 
     return result
@@ -84,109 +113,49 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         from urllib.parse import urlparse, parse_qs
-        parsed = urlparse(self.path)
-        params = parse_qs(parsed.query)
+        params = parse_qs(urlparse(self.path).query)
         t = params.get('type', ['fixtures'])[0]
 
-        # ── Stats endpoint ─────────────────────────────────────────────
+        # ── Stats ──────────────────────────────────────────────────────────
         if t == 'stats':
-            game_id   = params.get('gameId', [''])[0]
+            game_id    = params.get('gameId',    [''])[0]
             league_key = params.get('leagueKey', ['premier'])[0]
-            if not game_id:
-                body = json.dumps({'error': 'gameId required'}).encode()
-            else:
-                stats = get_stats(game_id, league_key)
-                body = json.dumps(stats).encode()
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(body)
+            body = json.dumps(
+                get_stats(game_id, league_key) if game_id
+                else {'error': 'gameId required'}
+            ).encode()
+            self._json(body)
             return
 
-        # ── Live endpoint ──────────────────────────────────────────────
+        # ── Live ───────────────────────────────────────────────────────────
         if t == 'live':
             fixtures = []
             for league in LEAGUES:
                 try:
-                    url = f"{ESPN_BASE}/{league['slug']}/scoreboard"
-                    data = espn_fetch(url)
+                    data = espn_fetch(f"{ESPN_BASE}/{league['slug']}/scoreboard")
                     for ev in data.get('events', []):
-                        comp = ev.get('competitions', [{}])[0]
-                        status = comp.get('status', {})
-                        state = status.get('type', {}).get('state', '')
-                        if state != 'in': continue
-                        teams = comp.get('competitors', [])
-                        home = next((t for t in teams if t.get('homeAway')=='home'), {})
-                        away = next((t for t in teams if t.get('homeAway')=='away'), {})
-                        elapsed = status.get('displayClock','')
-                        period  = status.get('period', None)
-                        fixtures.append({
-                            'id': str(ev.get('id','')),
-                            'date': comp.get('date',''),
-                            'league_key': league['key'],
-                            'league_name': league['name'],
-                            'league_flag': league['flag'],
-                            'home': home.get('team',{}).get('displayName',''),
-                            'home_logo': home.get('team',{}).get('logo',''),
-                            'home_goals': home.get('score', None),
-                            'away': away.get('team',{}).get('displayName',''),
-                            'away_logo': away.get('team',{}).get('logo',''),
-                            'away_goals': away.get('score', None),
-                            'status': 'in',
-                            'status_long': elapsed,
-                            'elapsed': elapsed,
-                            'period': period,
-                            'live': True,
-                            'finished': False,
-                            'venue': comp.get('venue',{}).get('fullName',''),
-                        })
-                except: pass
-            body = json.dumps({'fixtures': fixtures, 'count': len(fixtures), 'live': True}).encode()
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(body)
+                        comp   = ev.get('competitions', [{}])[0]
+                        state  = comp.get('status', {}).get('type', {}).get('state', '')
+                        if state != 'in':
+                            continue
+                        fixtures.append(parse_fixture(ev, league, 'in'))
+                except:
+                    pass
+            self._json(json.dumps({'fixtures': fixtures, 'count': len(fixtures), 'live': True}).encode())
             return
 
-        # ── Fixtures endpoint ──────────────────────────────────────────
+        # ── Fixtures ───────────────────────────────────────────────────────
         fixtures = []
         for league in LEAGUES:
             try:
-                url = f"{ESPN_BASE}/{league['slug']}/scoreboard"
-                data = espn_fetch(url)
+                data = espn_fetch(f"{ESPL_BASE}/{league['slug']}/scoreboard")
                 for ev in data.get('events', []):
-                    comp = ev.get('competitions', [{}])[0]
-                    status = comp.get('status', {})
-                    state = status.get('type', {}).get('state', '')
-                    teams = comp.get('competitors', [])
-                    home = next((t for t in teams if t.get('homeAway')=='home'), {})
-                    away = next((t for t in teams if t.get('homeAway')=='away'), {})
-                    elapsed = status.get('displayClock','') if state == 'in' else None
-                    period  = status.get('period', None) if state in ('in','post') else None
-                    fixtures.append({
-                        'id': str(ev.get('id','')),
-                        'date': comp.get('date',''),
-                        'league_key': league['key'],
-                        'league_name': league['name'],
-                        'league_flag': league['flag'],
-                        'home': home.get('team',{}).get('displayName',''),
-                        'home_logo': home.get('team',{}).get('logo',''),
-                        'home_goals': home.get('score', None),
-                        'away': away.get('team',{}).get('displayName',''),
-                        'away_logo': away.get('team',{}).get('logo',''),
-                        'away_goals': away.get('score', None),
-                        'status': state if state else 'pre',
-                        'status_long': status.get('type',{}).get('shortDetail',''),
-                        'elapsed': elapsed,
-                        'period': period,
-                        'live': state == 'in',
-                        'finished': state == 'post',
-                        'venue': comp.get('venue',{}).get('fullName',''),
-                    })
-            except: pass
-        body = json.dumps({'fixtures': fixtures, 'count': len(fixtures)}).encode()
+                    fixtures.append(parse_fixture(ev, league))
+            except:
+                pass
+        self._json(json.dumps({'fixtures': fixtures, 'count': len(fixtures)}).encode())
+
+    def _json(self, body):
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
