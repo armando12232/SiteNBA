@@ -2221,6 +2221,7 @@ function showDashboard(user) {
   document.getElementById('header-date').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'});
   loadUserPlan();
   checkPaymentReturn();
+  switchPage('nba');
   startMonitor();
 }
 
