@@ -836,6 +836,20 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .ft-live-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(200,16,46,.15);border:1px solid rgba(200,16,46,.4);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:var(--red)}
 .ft-live-dot{width:6px;height:6px;border-radius:50%;background:var(--red);animation:pulse 1.2s infinite}
 
+
+.ft-stat-bar-wrap { display:flex; flex-direction:column; gap:8px; }
+.ft-stat-row { display:flex; align-items:center; gap:8px; }
+.ft-stat-val { font-size:13px; font-weight:800; color:var(--text); min-width:32px; text-align:center; }
+.ft-stat-label { font-size:11px; color:var(--text3); text-align:center; flex:1; }
+.ft-stat-bar-bg { flex:1; height:6px; background:var(--bg4); border-radius:3px; overflow:hidden; }
+.ft-stat-bar-fill { height:100%; border-radius:3px; transition:width 0.6s ease; }
+.ft-event-list { display:flex; flex-direction:column; gap:6px; }
+.ft-event-item { display:flex; align-items:flex-start; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); }
+.ft-event-item:last-child { border-bottom:none; }
+.ft-event-clock { font-size:11px; font-weight:700; color:var(--text3); min-width:28px; }
+.ft-event-icon { font-size:15px; min-width:20px; text-align:center; }
+.ft-event-text { font-size:12px; color:var(--text2); line-height:1.4; flex:1; }
+
 </style>
 </head>
 <body>
@@ -3373,7 +3387,7 @@ function openFtModal(fixtureId) {
   const statusEl = document.getElementById('ft-modal-status');
   scoreEl.style.fontSize = '36px';
   if (hasScore) {
-    scoreEl.textContent = f.home_goals + ' – ' + f.away_goals;
+    scoreEl.textContent = f.home_goals + ' \u2013 ' + f.away_goals;
   } else {
     const dt = new Date(f.date);
     scoreEl.textContent = dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
@@ -3396,19 +3410,114 @@ function openFtModal(fixtureId) {
   const fs = document.getElementById('ft-modal-finished-section');
   if (isLive) {
     ls.style.display='flex'; fs.style.display='none';
-    document.getElementById('ft-modal-live-score').textContent = hasScore ? f.home_goals+' – '+f.away_goals : '0 – 0';
-    document.getElementById('ft-modal-elapsed').textContent = f.elapsed ? f.elapsed+"'" : '–';
-    const pn={1:'1º Tempo',2:'2º Tempo',3:'Prorrogação',4:'Pênaltis'};
-    document.getElementById('ft-modal-live-period').textContent = pn[f.period]||'–';
+    document.getElementById('ft-modal-live-score').textContent = hasScore ? f.home_goals+' \u2013 '+f.away_goals : '0 \u2013 0';
+    document.getElementById('ft-modal-elapsed').textContent = f.elapsed ? f.elapsed+"'" : '\u2013';
+    const pn={1:'1\u00ba Tempo',2:'2\u00ba Tempo',3:'Prorroga\u00e7\u00e3o',4:'P\u00eanaltis'};
+    document.getElementById('ft-modal-live-period').textContent = pn[f.period]||'\u2013';
   } else if (isFinished) {
     ls.style.display='none'; fs.style.display='flex';
     document.getElementById('ft-modal-fin-home-logo').src = f.home_logo||'';
     document.getElementById('ft-modal-fin-away-logo').src = f.away_logo||'';
-    document.getElementById('ft-modal-final-score').textContent = f.home_goals+' – '+f.away_goals;
+    document.getElementById('ft-modal-final-score').textContent = f.home_goals+' \u2013 '+f.away_goals;
   } else { ls.style.display='none'; fs.style.display='none'; }
+
+  // Stats section — esconder até carregar
+  const statsSection = document.getElementById('ft-modal-stats-section');
+  const eventsSection = document.getElementById('ft-modal-events-section');
+  if (statsSection) statsSection.style.display = 'none';
+  if (eventsSection) eventsSection.style.display = 'none';
 
   document.getElementById('ft-modal-overlay').classList.add('open');
   document.body.style.overflow='hidden';
+
+  // Carregar stats se jogo ao vivo ou encerrado
+  if ((isLive || isFinished) && f.league_key) {
+    loadFtStats(f.id, f.league_key, f.home, f.away);
+  }
+}
+
+function loadFtStats(gameId, leagueKey, homeName, awayName) {
+  const statsSection = document.getElementById('ft-modal-stats-section');
+  const eventsSection = document.getElementById('ft-modal-events-section');
+  if (!statsSection) return;
+
+  statsSection.style.display = 'flex';
+  statsSection.innerHTML = `<div class="ft-modal-section-title">Estatísticas</div>
+    <div style="text-align:center;color:var(--text3);font-size:12px;padding:8px">Carregando...</div>`;
+
+  fetch(`/api/football?type=stats&gameId=${gameId}&leagueKey=${leagueKey}`)
+    .then(r=>r.json())
+    .then(data=>{
+      const teams = data.teams || [];
+      const home = teams[0], away = teams[1];
+      if (!home || !away) { statsSection.innerHTML = '<div class="ft-modal-section-title">Estatísticas</div><div style="color:var(--text3);font-size:12px;text-align:center">Sem dados disponíveis</div>'; return; }
+
+      const STATS_LABELS = {
+        possessionPct: ['Posse de Bola', '%'],
+        totalShots:    ['Chutes',         ''],
+        shotsOnTarget: ['No Gol',         ''],
+        wonCorners:    ['Escanteios',      ''],
+        foulsCommitted:['Faltas',          ''],
+        yellowCards:   ['Cartões \u{1F7E8}',''],
+        redCards:      ['Cartões \u{1F7E5}',''],
+        offsides:      ['Impedimentos',    ''],
+        saves:         ['Defesas',         ''],
+        passPct:       ['Passes %',        '%'],
+        effectiveTackles:['Desarmes',      ''],
+        interceptions: ['Interceptações',  ''],
+      };
+
+      const rows = Object.entries(STATS_LABELS).map(([key, [label, unit]]) => {
+        const hVal = parseFloat(home.stats[key] || '0');
+        const aVal = parseFloat(away.stats[key] || '0');
+        if (hVal === 0 && aVal === 0) return '';
+        const total = hVal + aVal || 1;
+        const hPct = Math.round(hVal / total * 100);
+        const aPct = 100 - hPct;
+        return `<div class="ft-stat-row">
+          <span class="ft-stat-val">${home.stats[key]||'0'}${unit}</span>
+          <div style="flex:1;display:flex;flex-direction:column;gap:3px">
+            <span class="ft-stat-label">${label}</span>
+            <div style="display:flex;gap:3px">
+              <div class="ft-stat-bar-bg"><div class="ft-stat-bar-fill" style="width:${hPct}%;background:var(--accent);float:right"></div></div>
+              <div class="ft-stat-bar-bg"><div class="ft-stat-bar-fill" style="width:${aPct}%;background:var(--red2)"></div></div>
+            </div>
+          </div>
+          <span class="ft-stat-val">${away.stats[key]||'0'}${unit}</span>
+        </div>`;
+      }).filter(Boolean).join('');
+
+      // Header dos times nas stats
+      const statsHTML = `
+        <div class="ft-modal-section-title">Estatísticas</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <span style="font-size:11px;font-weight:700;color:var(--accent)">${homeName}</span>
+          <span style="font-size:11px;font-weight:700;color:var(--red2)">${awayName}</span>
+        </div>
+        <div class="ft-stat-bar-wrap">${rows}</div>
+      `;
+      statsSection.innerHTML = statsHTML;
+
+      // Eventos chave
+      const events = data.events || [];
+      if (events.length && eventsSection) {
+        eventsSection.style.display = 'flex';
+        const ICONS = {
+          'Goal': '\u26BD', 'Own Goal': '\u26BD\uFE0F',
+          'Yellow Card': '\u{1F7E8}', 'Red Card': '\u{1F7E5}',
+          'Penalty': '\u26BD', 'Substitution': '\u{1F504}'
+        };
+        const evHTML = events.map(e => `
+          <div class="ft-event-item">
+            <span class="ft-event-clock">${e.clock || ''}</span>
+            <span class="ft-event-icon">${ICONS[e.type]||'\u2022'}</span>
+            <span class="ft-event-text">${e.text || e.type}</span>
+          </div>
+        `).join('');
+        eventsSection.innerHTML = `<div class="ft-modal-section-title">Eventos</div><div class="ft-event-list">${evHTML}</div>`;
+      }
+    })
+    .catch(()=>{ if(statsSection) statsSection.innerHTML = '<div class="ft-modal-section-title">Estatísticas</div><div style="color:var(--text3);font-size:12px;text-align:center">Erro ao carregar</div>'; });
 }
 function closeFtModal() {
   document.getElementById('ft-modal-overlay').classList.remove('open');
@@ -3465,6 +3574,10 @@ init();
           <img id="ft-modal-fin-away-logo" src="" style="width:40px;height:40px;object-fit:contain" onerror="this.style.display='none'">
         </div>
       </div>
+      <!-- Estatísticas -->
+      <div class="ft-modal-section" id="ft-modal-stats-section" style="display:none;flex-direction:column;gap:10px"></div>
+      <!-- Eventos chave -->
+      <div class="ft-modal-section" id="ft-modal-events-section" style="display:none;flex-direction:column;gap:8px"></div>
     </div>
   </div>
 </div>
