@@ -106,6 +106,40 @@ def get_stats(game_id, league_key):
             'provider':  o.get('provider', {}).get('name', ''),
         }
 
+    # Rosters com stats de jogadores
+    PLAYER_STATS = {
+        'totalGoals', 'goalAssists', 'totalShots', 'shotsOnTarget',
+        'yellowCards', 'redCards', 'foulsCommitted', 'foulsSuffered',
+        'offsides', 'subIns', 'shotsFaced', 'goalsConceded',
+    }
+    rosters_out = []
+    for r in data.get('rosters', []):
+        players = []
+        for p in r.get('roster', []):
+            athlete = p.get('athlete', {})
+            pstats = {}
+            for s in p.get('stats', []):
+                if s.get('name') in PLAYER_STATS:
+                    pstats[s['name']] = s.get('displayValue', '0')
+            players.append({
+                'name':       athlete.get('displayName', ''),
+                'short':      athlete.get('shortName', ''),
+                'jersey':     p.get('jersey', ''),
+                'position':   p.get('position', {}).get('abbreviation', ''),
+                'positionFull': p.get('position', {}).get('displayName', ''),
+                'starter':    bool(p.get('starter')),
+                'subbedIn':   bool(p.get('subbedIn')),
+                'subbedOut':  bool(p.get('subbedOut')),
+                'stats':      pstats,
+            })
+        rosters_out.append({
+            'team':      r.get('team', {}).get('displayName', ''),
+            'homeAway':  r.get('homeAway', ''),
+            'formation': r.get('formation', {}).get('name', '') if isinstance(r.get('formation'), dict) else '',
+            'players':   players,
+        })
+    result['rosters'] = rosters_out
+
     return result
 
 class handler(BaseHTTPRequestHandler):
@@ -116,7 +150,7 @@ class handler(BaseHTTPRequestHandler):
         params = parse_qs(urlparse(self.path).query)
         t = params.get('type', ['fixtures'])[0]
 
-        # ââ Stats ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+        # ── Stats ──────────────────────────────────────────────────────────
         if t == 'stats':
             game_id    = params.get('gameId',    [''])[0]
             league_key = params.get('leagueKey', ['premier'])[0]
@@ -127,7 +161,7 @@ class handler(BaseHTTPRequestHandler):
             self._json(body)
             return
 
-        # ââ Live âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+        # ── Live ───────────────────────────────────────────────────────────
         if t == 'live':
             fixtures = []
             for league in LEAGUES:
@@ -144,7 +178,7 @@ class handler(BaseHTTPRequestHandler):
             self._json(json.dumps({'fixtures': fixtures, 'count': len(fixtures), 'live': True}).encode())
             return
 
-        # ââ Fixtures âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+        # ── Fixtures ───────────────────────────────────────────────────────
         fixtures = []
         for league in LEAGUES:
             try:
