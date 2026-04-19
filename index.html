@@ -3092,7 +3092,8 @@ async function loadFootballGames() {
   try {
     const res = await fetch('/api/football?type=fixtures');
     const data = await res.json();
-    _footballData = data.fixtures || [];
+    // Aba Jogos: exclui jogos ao vivo (eles ficam só na aba Ao Vivo)
+    _footballData = (data.fixtures || []).filter(f => !f.live);
     renderFootballGames();
   } catch(e) {
     el.innerHTML = '<div class="state-box"><div class="state-title">Erro ao carregar jogos</div><div class="state-sub">' + e.message + '</div></div>';
