@@ -3100,6 +3100,7 @@ async function loadFootballGames() {
     const data = await res.json();
     // Aba Jogos: exclui jogos ao vivo (eles ficam só na aba Ao Vivo)
     _footballData = (data.fixtures || []).filter(f => !f.live);
+    window._footballData = _footballData;
     renderFootballGames();
   } catch(e) {
     el.innerHTML = '<div class="state-box"><div class="state-title">Erro ao carregar jogos</div><div class="state-sub">' + e.message + '</div></div>';
@@ -3274,7 +3275,7 @@ function switchFootballTab(tab) {
 
 // ── Modal Futebol ──────────────────────────────────────────────────────
 function openFtModal(fixtureId) {
-  const allFix = (_footballData || []).concat(_footballLiveData || []);
+  const allFix = (window._footballData || []).concat(window._footballLiveData || []);
   const f = allFix.find(x => x.id === fixtureId);
   if (!f) return;
   const isLive = !!f.live, isFinished = !!f.finished;
