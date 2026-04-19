@@ -52,7 +52,7 @@ def parse_fixture(ev, league, state=None):
 
 def get_stats(game_id, league_key):
     slug = SLUG_MAP.get(league_key, 'eng.1')
-    url  = f'{ESPL_BASE}/{slug}/summary?event={game_id}'
+    url  = f'{ESPN_BASE}/{slug}/summary?event={game_id}'
     try:
         data = espn_fetch(url)
     except Exception as e:
@@ -116,7 +116,7 @@ class handler(BaseHTTPRequestHandler):
         params = parse_qs(urlparse(self.path).query)
         t = params.get('type', ['fixtures'])[0]
 
-        # ── Stats ──────────────────────────────────────────────────────────
+        # ââ Stats ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
         if t == 'stats':
             game_id    = params.get('gameId',    [''])[0]
             league_key = params.get('leagueKey', ['premier'])[0]
@@ -127,7 +127,7 @@ class handler(BaseHTTPRequestHandler):
             self._json(body)
             return
 
-        # ── Live ───────────────────────────────────────────────────────────
+        # ââ Live âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
         if t == 'live':
             fixtures = []
             for league in LEAGUES:
@@ -144,11 +144,11 @@ class handler(BaseHTTPRequestHandler):
             self._json(json.dumps({'fixtures': fixtures, 'count': len(fixtures), 'live': True}).encode())
             return
 
-        # ── Fixtures ───────────────────────────────────────────────────────
+        # ââ Fixtures âââââââââââââââââââââââââââââââââââââââââââââââââââââââ
         fixtures = []
         for league in LEAGUES:
             try:
-                data = espn_fetch(f"{ESPL_BASE}/{league['slug']}/scoreboard")
+                data = espn_fetch(f"{ESPN_BASE}/{league['slug']}/scoreboard")
                 for ev in data.get('events', []):
                     fixtures.append(parse_fixture(ev, league))
             except:
