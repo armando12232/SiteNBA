@@ -818,6 +818,24 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
   .modal-hero-photo { height: 140px; right: 10px; }
   .modal-hero-name { font-size: 22px; }
 }
+
+.ft-modal-overlay{position:fixed;inset:0;z-index:1002;background:rgba(0,0,0,.92);backdrop-filter:blur(10px);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s}
+.ft-modal-overlay.open{opacity:1;pointer-events:all}
+.ft-modal{background:var(--bg2);border:1px solid var(--border2);border-radius:24px 24px 0 0;width:100%;max-width:600px;max-height:88vh;overflow-y:auto;scrollbar-width:none;transform:translateY(60px);transition:transform .26s cubic-bezier(.22,.68,0,1.2);padding-bottom:36px}
+.ft-modal::-webkit-scrollbar{display:none}
+.ft-modal-overlay.open .ft-modal{transform:translateY(0)}
+.ft-modal-hero{position:relative;background:linear-gradient(160deg,#080808 0%,var(--bg2) 100%);border-bottom:1px solid var(--border);padding:20px 20px 24px}
+.ft-modal-close{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:50%;background:var(--bg3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--text2);transition:all .15s}
+.ft-modal-close:hover{background:var(--bg4);color:var(--text)}
+.ft-modal-body{padding:20px;display:flex;flex-direction:column;gap:16px}
+.ft-modal-section{background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.ft-modal-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:2px}
+.ft-modal-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ft-modal-label{font-size:13px;color:var(--text3)}
+.ft-modal-value{font-size:13px;font-weight:700;color:var(--text);text-align:right}
+.ft-live-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(200,16,46,.15);border:1px solid rgba(200,16,46,.4);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:var(--red)}
+.ft-live-dot{width:6px;height:6px;border-radius:50%;background:var(--red);animation:pulse 1.2s infinite}
+
 </style>
 </head>
 <body>
@@ -3129,7 +3147,7 @@ function renderFootballGames() {
       return `
         <div style="background:var(--bg2);border:1px solid ${borderColor};border-radius:16px;overflow:hidden;transition:all .2s" 
              onmouseenter="this.style.transform='translateY(-2px)'" 
-             onmouseleave="this.style.transform=''">
+             onmouseleave="this.style.transform=''" onclick="openFtModal('${f.id}')">
           <div style="height:3px;background:${isLive ? 'linear-gradient(90deg,var(--red),var(--red2))' : 'var(--border)'}"></div>
           <div style="padding:16px">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
@@ -3253,5 +3271,123 @@ function switchFootballTab(tab) {
 }
 
 
+
+// ── Modal Futebol ──────────────────────────────────────────────────────
+function openFtModal(fixtureId) {
+  const allFix = (_footballData || []).concat(_footballLiveData || []);
+  const f = allFix.find(x => x.id === fixtureId);
+  if (!f) return;
+  const isLive = !!f.live, isFinished = !!f.finished;
+  const hasScore = f.home_goals != null;
+
+  document.getElementById('ft-modal-hero-bar').style.background = isLive
+    ? 'linear-gradient(90deg,var(--red),#ff6b6b)'
+    : isFinished ? 'linear-gradient(90deg,var(--accent),var(--accent2))' : 'var(--border)';
+
+  document.getElementById('ft-modal-flag').textContent = f.league_flag || '';
+  document.getElementById('ft-modal-league').textContent = f.league_name || '';
+  document.getElementById('ft-modal-live-badge').style.display = isLive ? 'inline-flex' : 'none';
+  document.getElementById('ft-modal-home-logo').src = f.home_logo || '';
+  document.getElementById('ft-modal-away-logo').src = f.away_logo || '';
+  document.getElementById('ft-modal-home-name').textContent = f.home || '';
+  document.getElementById('ft-modal-away-name').textContent = f.away || '';
+
+  const scoreEl = document.getElementById('ft-modal-score');
+  const statusEl = document.getElementById('ft-modal-status');
+  scoreEl.style.fontSize = '36px';
+  if (hasScore) {
+    scoreEl.textContent = f.home_goals + ' – ' + f.away_goals;
+  } else {
+    const dt = new Date(f.date);
+    scoreEl.textContent = dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    scoreEl.style.fontSize = '24px';
+  }
+  statusEl.textContent = isLive ? (f.elapsed ? f.elapsed+"'" : 'Ao Vivo') : isFinished ? 'Encerrado' : 'Agendado';
+  statusEl.style.color = isLive ? 'var(--red)' : isFinished ? 'var(--text3)' : 'var(--accent)';
+
+  const dt = new Date(f.date);
+  document.getElementById('ft-modal-date').textContent =
+    dt.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+  document.getElementById('ft-modal-time').textContent =
+    dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+
+  const vr = document.getElementById('ft-modal-venue-row');
+  if (f.venue) { document.getElementById('ft-modal-venue').textContent = f.venue; vr.style.display='flex'; }
+  else vr.style.display='none';
+
+  const ls = document.getElementById('ft-modal-live-section');
+  const fs = document.getElementById('ft-modal-finished-section');
+  if (isLive) {
+    ls.style.display='flex'; fs.style.display='none';
+    document.getElementById('ft-modal-live-score').textContent = hasScore ? f.home_goals+' – '+f.away_goals : '0 – 0';
+    document.getElementById('ft-modal-elapsed').textContent = f.elapsed ? f.elapsed+"'" : '–';
+    const pn={1:'1º Tempo',2:'2º Tempo',3:'Prorrogação',4:'Pênaltis'};
+    document.getElementById('ft-modal-live-period').textContent = pn[f.period]||'–';
+  } else if (isFinished) {
+    ls.style.display='none'; fs.style.display='flex';
+    document.getElementById('ft-modal-fin-home-logo').src = f.home_logo||'';
+    document.getElementById('ft-modal-fin-away-logo').src = f.away_logo||'';
+    document.getElementById('ft-modal-final-score').textContent = f.home_goals+' – '+f.away_goals;
+  } else { ls.style.display='none'; fs.style.display='none'; }
+
+  document.getElementById('ft-modal-overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeFtModal() {
+  document.getElementById('ft-modal-overlay').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+
 init();
 </script>
+
+<div class="ft-modal-overlay" id="ft-modal-overlay" onclick="if(event.target===this)closeFtModal()">
+  <div class="ft-modal">
+    <div class="ft-modal-hero">
+      <div class="ft-modal-close" onclick="closeFtModal()">✕</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:16px">
+        <span id="ft-modal-flag" style="font-size:16px"></span>
+        <span id="ft-modal-league" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3)"></span>
+        <span id="ft-modal-live-badge" class="ft-live-badge" style="display:none;margin-left:4px"><span class="ft-live-dot"></span> AO VIVO</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px">
+          <img id="ft-modal-home-logo" src="" style="width:64px;height:64px;object-fit:contain" onerror="this.style.display='none'">
+          <div id="ft-modal-home-name" style="font-family:var(--display);font-size:14px;font-weight:800;text-align:center;color:var(--text);line-height:1.2"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:90px">
+          <div id="ft-modal-score" style="font-family:var(--display);font-size:36px;font-weight:900;color:var(--text);letter-spacing:2px;text-align:center"></div>
+          <div id="ft-modal-status" style="font-size:12px;font-weight:700"></div>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px">
+          <img id="ft-modal-away-logo" src="" style="width:64px;height:64px;object-fit:contain" onerror="this.style.display='none'">
+          <div id="ft-modal-away-name" style="font-family:var(--display);font-size:14px;font-weight:800;text-align:center;color:var(--text);line-height:1.2"></div>
+        </div>
+      </div>
+      <div id="ft-modal-hero-bar" style="position:absolute;top:0;left:0;right:0;height:3px;border-radius:24px 24px 0 0"></div>
+    </div>
+    <div class="ft-modal-body">
+      <div class="ft-modal-section">
+        <div class="ft-modal-section-title">Informações</div>
+        <div class="ft-modal-row"><span class="ft-modal-label">📅 Data</span><span class="ft-modal-value" id="ft-modal-date"></span></div>
+        <div class="ft-modal-row"><span class="ft-modal-label">🕐 Horário</span><span class="ft-modal-value" id="ft-modal-time"></span></div>
+        <div class="ft-modal-row" id="ft-modal-venue-row"><span class="ft-modal-label">🏟️ Estádio</span><span class="ft-modal-value" id="ft-modal-venue"></span></div>
+      </div>
+      <div class="ft-modal-section" id="ft-modal-live-section" style="display:none">
+        <div class="ft-modal-section-title">Situação ao Vivo</div>
+        <div class="ft-modal-row"><span class="ft-modal-label">⚽ Placar</span><span class="ft-modal-value" id="ft-modal-live-score"></span></div>
+        <div class="ft-modal-row"><span class="ft-modal-label">⏱️ Minuto</span><span class="ft-modal-value" id="ft-modal-elapsed"></span></div>
+        <div class="ft-modal-row"><span class="ft-modal-label">🔄 Período</span><span class="ft-modal-value" id="ft-modal-live-period"></span></div>
+      </div>
+      <div class="ft-modal-section" id="ft-modal-finished-section" style="display:none">
+        <div class="ft-modal-section-title">Resultado Final</div>
+        <div style="display:flex;justify-content:center;align-items:center;gap:16px;padding:8px 0">
+          <img id="ft-modal-fin-home-logo" src="" style="width:40px;height:40px;object-fit:contain" onerror="this.style.display='none'">
+          <span id="ft-modal-final-score" style="font-family:var(--display);font-size:32px;font-weight:900;color:var(--text)"></span>
+          <img id="ft-modal-fin-away-logo" src="" style="width:40px;height:40px;object-fit:contain" onerror="this.style.display='none'">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
