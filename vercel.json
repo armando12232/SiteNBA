@@ -1,9 +1,24 @@
 {
   "functions": {
-    "api/nba.py":         { "maxDuration": 30 },
-    "api/pregame.py":     { "maxDuration": 30 },
-    "api/analyze.py":     { "maxDuration": 25 },
-    "api/football.py":    { "maxDuration": 15 },
-    "api/bettingpros.py": { "maxDuration": 15 }
-  }
+    "api/nba.py": { "runtime": "python3.12" },
+    "api/bettingpros.py": { "runtime": "python3.12" },
+    "api/football.py": { "runtime": "python3.12" },
+    "api/checkout.py": { "runtime": "python3.12" },
+    "api/analyze.py": { "runtime": "python3.12" },
+    "api/lines.py": { "runtime": "python3.12" }
+  },
+  "headers": [
+    {
+      "source": "/",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    }
+  ]
 }
