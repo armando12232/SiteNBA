@@ -3439,6 +3439,8 @@ function openFtModal(fixtureId) {
   const eventsSection = document.getElementById('ft-modal-events-section');
   if (statsSection) statsSection.style.display = 'none';
   if (eventsSection) eventsSection.style.display = 'none';
+  const playersSec = document.getElementById('ft-modal-players-section');
+  if (playersSec) playersSec.style.display = 'none';
 
   document.getElementById('ft-modal-overlay').classList.add('open');
   document.body.style.overflow='hidden';
@@ -3529,6 +3531,12 @@ function loadFtStats(gameId, leagueKey, homeName, awayName) {
         `).join('');
         eventsSection.innerHTML = `<div class="ft-modal-section-title">Eventos</div><div class="ft-event-list">${evHTML}</div>`;
       }
+      // Jogadores
+      const rosters = data.rosters || [];
+      if (rosters.length) {
+        window._ftRosters = rosters;
+        renderFtPlayers(rosters, 'home');
+      }
     })
     .catch(()=>{ if(statsSection) statsSection.innerHTML = '<div class="ft-modal-section-title">Estatísticas</div><div style="color:var(--text3);font-size:12px;text-align:center">Erro ao carregar</div>'; });
 }
@@ -3586,8 +3594,8 @@ function renderFtPlayers(rosters, tab) {
       '<span class="ft-formation-tag">' + (tab === 'home' ? homeFmt : awayFmt) + '</span>' +
     '</div>' +
     '<div class="ft-player-tabs">' +
-      '<button class="ft-player-tab ' + (tab==='home'?'active':'') + '" onclick="renderFtPlayers(window._ftRosters,'home')">' + homeName + '</button>' +
-      '<button class="ft-player-tab ' + (tab==='away'?'active':'') + '" onclick="renderFtPlayers(window._ftRosters,'away')">' + awayName + '</button>' +
+      '<button class="ft-player-tab ' + (tab==='home'?'active':'') + '" onclick="renderFtPlayers(window._ftRosters,&apos;home&apos;)">' + homeName + '</button>' +
+      '<button class="ft-player-tab ' + (tab==='away'?'active':'') + '" onclick="renderFtPlayers(window._ftRosters,&apos;away&apos;)">' + awayName + '</button>' +
     '</div>' +
     '<div style="font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Titulares</div>' +
     starters.map(rowHTML).join('') +
@@ -3652,6 +3660,8 @@ init();
       <div class="ft-modal-section" id="ft-modal-stats-section" style="display:none;flex-direction:column;gap:10px"></div>
       <!-- Eventos chave -->
       <div class="ft-modal-section" id="ft-modal-events-section" style="display:none;flex-direction:column;gap:8px"></div>
+      <!-- Jogadores -->
+      <div class="ft-modal-section" id="ft-modal-players-section" style="display:none"></div>
     </div>
   </div>
 </div>
