@@ -3148,6 +3148,13 @@ function renderFootballGames() {
     return;
   }
 
+  // Ordenar: ao vivo primeiro, depois agendados por horário, depois encerrados
+  fixtures = [...fixtures].sort((a, b) => {
+    const order = g => g.live ? 0 : !g.finished ? 1 : 2;
+    if (order(a) !== order(b)) return order(a) - order(b);
+    return new Date(a.date) - new Date(b.date);
+  });
+
   // Agrupar por liga
   const byLeague = {};
   for (const f of fixtures) {
@@ -3157,58 +3164,91 @@ function renderFootballGames() {
   }
 
   el.innerHTML = Object.entries(byLeague).map(([name, grp]) => {
-    const cards = grp.games.map(f => {
-      const isLive = f.live;
-      const score  = (f.home_goals !== null && f.away_goals !== null)
-        ? f.home_goals + ' – ' + f.away_goals
-        : 'x';
-      const statusText = f.elapsed
-        ? (isLive ? f.elapsed + "'" : f.status_long || f.status)
-        : (f.status_long || 'Agendado');
-      const borderColor = isLive ? 'rgba(200,16,46,0.5)' : 'var(--border)';
+    // Separar por status
+    const live      = grp.games.filter(f => f.live);
+    const scheduled = grp.games.filter(f => !f.live && !f.finished);
+    const finished  = grp.games.filter(f => f.finished);
+
+    function cardHTML(f) {
+      const isLive     = !!f.live;
+      const isFinished = !!f.finished;
+      const hasScore   = f.home_goals !== null && f.away_goals !== null;
+      const score      = hasScore ? f.home_goals + ' – ' + f.away_goals : null;
+
+      // Horário local (Brasília = UTC-3)
+      const dt = new Date(f.date);
+      const timeStr = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+
+      // Status badge
+      let badge = '';
+      if (isLive) {
+        const min = f.elapsed ? f.elapsed + "'" : 'AO VIVO';
+        badge = `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(200,16,46,.15);color:var(--red2);border:1px solid rgba(200,16,46,.4);border-radius:20px;padding:3px 8px;font-size:10px;font-weight:700">
+          <span style="width:5px;height:5px;border-radius:50%;background:var(--red);display:inline-block;animation:pulse 1.2s infinite"></span>${min}</span>`;
+      } else if (isFinished) {
+        badge = `<span style="background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:20px;padding:3px 8px;font-size:10px;font-weight:700">FT</span>`;
+      } else {
+        badge = `<span style="background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:20px;padding:3px 8px;font-size:10px;font-weight:600">${timeStr}</span>`;
+      }
+
+      const topBar = isLive
+        ? 'linear-gradient(90deg,var(--red),var(--red2))'
+        : isFinished ? 'var(--border)' : 'transparent';
+      const border = isLive ? 'rgba(200,16,46,0.5)' : 'var(--border)';
+      const opacity = isFinished ? '0.6' : '1';
+      const scoreColor = isFinished ? 'var(--text3)' : 'var(--text)';
+      const centerContent = score
+        ? `<div style="font-family:var(--display);font-size:26px;font-weight:800;color:${scoreColor};line-height:1">${score}</div>`
+        : `<div style="font-family:var(--display);font-size:20px;font-weight:700;color:var(--text3);line-height:1">vs</div>`;
 
       return `
-        <div style="background:var(--bg2);border:1px solid ${borderColor};border-radius:16px;overflow:hidden;transition:all .2s" 
-             onmouseenter="this.style.transform='translateY(-2px)'" 
-             onmouseleave="this.style.transform=''" onclick="openFtModal('${f.id}')">
-          <div style="height:3px;background:${isLive ? 'linear-gradient(90deg,var(--red),var(--red2))' : 'var(--border)'}"></div>
-          <div style="padding:16px">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-              <!-- Time Casa -->
-              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:0">
-                <img src="${f.home_logo}" style="width:44px;height:44px;object-fit:contain" onerror="this.style.display='none'">
-                <div style="font-family:var(--display);font-size:13px;font-weight:800;text-align:center;color:var(--text);line-height:1.2">${f.home}</div>
+        <div style="background:var(--bg2);border:1px solid ${border};border-radius:16px;overflow:hidden;transition:all .2s;opacity:${opacity};cursor:pointer"
+             onmouseenter="this.style.transform='translateY(-2px)';this.style.opacity='1'"
+             onmouseleave="this.style.transform='';this.style.opacity='${opacity}'"
+             onclick="openFtModal('${f.id}')">
+          <div style="height:3px;background:${topBar}"></div>
+          <div style="padding:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;min-width:0">
+                <img src="${f.home_logo}" style="width:40px;height:40px;object-fit:contain" onerror="this.style.display='none'">
+                <div style="font-family:var(--display);font-size:12px;font-weight:800;text-align:center;color:var(--text);line-height:1.2">${f.home}</div>
               </div>
-              <!-- Placar / Horário -->
-              <div style="text-align:center;flex-shrink:0">
-                <div style="font-family:var(--display);font-size:28px;font-weight:800;color:var(--text);line-height:1">${score}</div>
-                <div style="margin-top:6px">
-                  ${isLive
-                    ? `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(200,16,46,.15);color:var(--red2);border:1px solid rgba(200,16,46,.4);border-radius:20px;padding:3px 8px;font-size:10px;font-weight:700">${statusText}</span>`
-                    : `<span style="background:var(--bg3);color:var(--text3);border:1px solid var(--border);border-radius:20px;padding:3px 8px;font-size:10px;font-weight:600">${statusText}</span>`}
-                </div>
+              <div style="text-align:center;flex-shrink:0;min-width:80px">
+                ${centerContent}
+                <div style="margin-top:6px">${badge}</div>
               </div>
-              <!-- Time Visitante -->
-              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:0">
-                <img src="${f.away_logo}" style="width:44px;height:44px;object-fit:contain" onerror="this.style.display='none'">
-                <div style="font-family:var(--display);font-size:13px;font-weight:800;text-align:center;color:var(--text);line-height:1.2">${f.away}</div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;min-width:0">
+                <img src="${f.away_logo}" style="width:40px;height:40px;object-fit:contain" onerror="this.style.display='none'">
+                <div style="font-family:var(--display);font-size:12px;font-weight:800;text-align:center;color:var(--text);line-height:1.2">${f.away}</div>
               </div>
             </div>
           </div>
         </div>`;
-    }).join('');
+    }
 
+    function section(games, label) {
+      if (!games.length) return '';
+      return `
+        <div style="margin-bottom:14px">
+          ${label ? `<div style="font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">${label}</div>` : ''}
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px">
+            ${games.map(cardHTML).join('')}
+          </div>
+        </div>`;
+    }
+
+    const liveCount = live.length + scheduled.length + finished.length;
     return `
-      <div style="margin-bottom:20px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="margin-bottom:24px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
           <span style="font-size:18px">${grp.flag}</span>
           <span style="font-family:var(--display);font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)">${grp.name}</span>
           <div style="flex:1;height:1px;background:var(--border)"></div>
-          <span style="font-size:11px;color:var(--text3)">${grp.games.length} jogo${grp.games.length!==1?'s':''}</span>
+          <span style="font-size:11px;color:var(--text3)">${liveCount} jogo${liveCount!==1?'s':''}</span>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
-          ${cards}
-        </div>
+        ${section(live, live.length ? '🔴 Ao Vivo' : '')}
+        ${section(scheduled, scheduled.length && (live.length || finished.length) ? '📅 Em Breve' : '')}
+        ${section(finished, finished.length && (live.length || scheduled.length) ? '✅ Encerrados' : '')}
       </div>`;
   }).join('');
 }
