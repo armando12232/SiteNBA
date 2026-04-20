@@ -52,7 +52,7 @@ def parse_fixture(ev, league, state=None):
 
 def get_stats(game_id, league_key):
     slug = SLUG_MAP.get(league_key, 'eng.1')
-    url  = f'{ESPL_BASE}/{slug}/summary?event={game_id}'
+    url  = f'{ESPN_BASE}/{slug}/summary?event={game_id}'
     try:
         data = espn_fetch(url)
     except Exception as e:
@@ -82,7 +82,7 @@ def get_stats(game_id, league_key):
         })
     result['teams'] = stats_out
 
-    # Eventos chave
+    # Eventos chave (gols, cartoes)
     IMPORTANT = {'Goal', 'Yellow Card', 'Red Card', 'Penalty', 'Own Goal', 'Substitution'}
     key_events = data.get('keyEvents', [])
     result['events'] = [
@@ -106,10 +106,12 @@ def get_stats(game_id, league_key):
             'provider':  o.get('provider', {}).get('name', ''),
         }
 
-    # Rosters - stats por jogador
-    PLAYER_STATS = {'totalGoals', 'goalAssists', 'totalShots', 'shotsOnTarget',
-                    'yellowCards', 'redCards', 'foulsCommitted', 'foulsSuffered',
-                    'offsides', 'subIns', 'shotsFaced', 'goalsConceded', 'saves'}
+    # Rosters com stats de jogadores
+    PLAYER_STATS = {
+        'totalGoals', 'goalAssists', 'totalShots', 'shotsOnTarget',
+        'yellowCards', 'redCards', 'foulsCommitted', 'foulsSuffered',
+        'offsides', 'subIns', 'shotsFaced', 'goalsConceded',
+    }
     rosters_out = []
     for r in data.get('rosters', []):
         players = []
@@ -136,7 +138,7 @@ def get_stats(game_id, league_key):
             'formation': r.get('formation', {}).get('name', '') if isinstance(r.get('formation'), dict) else '',
             'players':   players,
         })
-    result['aosters'] = rosters_out
+    result['rosters'] = rosters_out
 
     return result
 
@@ -148,6 +150,7 @@ class handler(BaseHTTPRequestHandler):
         params = parse_qs(urlparse(self.path).query)
         t = params.get('type', ['fixtures'])[0]
 
+        # ── Stats ──────────────────────────────────────────────────────────
         if t == 'stats':
             game_id    = params.get('gameId',    [''])[0]
             league_key = params.get('leagueKey', ['premier'])[0]
@@ -158,26 +161,32 @@ class handler(BaseHTTPRequestHandler):
             self._json(body)
             return
 
+        # ── Live ───────────────────────────────────────────────────────────
         if t == 'live':
             fixtures = []
             for league in LEAGUES:
                 try:
-                    data = espn_fetch(f"{ESPL_BASE}/{league['slug']}/scoreboard")
+                    data = espn_fetch(f"{ESPN_BASE}/{league['slug']}/scoreboard")
                     for ev in data.get('events', []):
-                        comp = ev.get('competitions', [{}])[0]
-                        if comp.get('status', {}).get('type', {}).get('state', '') != 'in': continue
+                        comp   = ev.get('competitions', [{}])[0]
+                        state  = comp.get('status', {}).get('type', {}).get('state', '')
+                        if state != 'in':
+                            continue
                         fixtures.append(parse_fixture(ev, league, 'in'))
-                except: pass
+                except:
+                    pass
             self._json(json.dumps({'fixtures': fixtures, 'count': len(fixtures), 'live': True}).encode())
             return
 
+        # ── Fixtures ───────────────────────────────────────────────────────
         fixtures = []
         for league in LEAGUES:
             try:
-                data = espn_fetch(f"{ESPL_BASE}/{league['slug']}/scoreboard")
+                data = espn_fetch(f"{ESPN_BASE}/{league['slug']}/scoreboard")
                 for ev in data.get('events', []):
                     fixtures.append(parse_fixture(ev, league))
-            except: pass
+            except:
+                pass
         self._json(json.dumps({'fixtures': fixtures, 'count': len(fixtures)}).encode())
 
     def _json(self, body):
