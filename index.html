@@ -850,6 +850,19 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .ft-event-icon { font-size:15px; min-width:20px; text-align:center; }
 .ft-event-text { font-size:12px; color:var(--text2); line-height:1.4; flex:1; }
 
+
+.ft-player-tabs { display:flex; gap:8px; margin-bottom:12px; }
+.ft-player-tab { flex:1; padding:6px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text3); font-size:11px; font-weight:700; cursor:pointer; text-align:center; text-transform:uppercase; letter-spacing:.5px; transition:all .2s; }
+.ft-player-tab.active { background:var(--accent); color:#000; border-color:var(--accent); }
+.ft-player-row { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--border); }
+.ft-player-row:last-child { border-bottom:none; }
+.ft-player-num { font-size:11px; font-weight:700; color:var(--text3); min-width:20px; text-align:center; }
+.ft-player-pos { font-size:9px; font-weight:800; padding:2px 5px; border-radius:4px; background:var(--bg4); color:var(--text3); min-width:28px; text-align:center; }
+.ft-player-name { font-size:12px; font-weight:600; color:var(--text); flex:1; }
+.ft-player-badge { font-size:13px; }
+.ft-player-stat { font-size:11px; font-weight:700; color:var(--text3); min-width:16px; text-align:right; }
+.ft-formation-tag { font-size:10px; font-weight:700; color:var(--accent); background:rgba(100,220,100,.1); padding:2px 7px; border-radius:6px; }
+
 </style>
 </head>
 <body>
@@ -3518,6 +3531,67 @@ function loadFtStats(gameId, leagueKey, homeName, awayName) {
       }
     })
     .catch(()=>{ if(statsSection) statsSection.innerHTML = '<div class="ft-modal-section-title">Estatísticas</div><div style="color:var(--text3);font-size:12px;text-align:center">Erro ao carregar</div>'; });
+}
+
+function renderFtPlayers(rosters, tab) {
+  const sec = document.getElementById('ft-modal-players-section');
+  if (!sec || !rosters.length) return;
+  const homeR = rosters.find(r => r.homeAway === 'home') || rosters[0];
+  const awayR = rosters.find(r => r.homeAway === 'away') || rosters[1];
+  const roster = tab === 'home' ? homeR : awayR;
+  if (!roster) return;
+
+  const POS_COLOR = { G:'#f59e0b', D:'#3b82f6', M:'#22c55e', F:'#ef4444' };
+  const players = roster.players || [];
+  const starters = players.filter(p => p.starter);
+  const subs = players.filter(p => !p.starter);
+
+  function badgesFor(p) {
+    let b = '';
+    if (parseInt(p.stats.totalGoals) > 0) b += '⚽'.repeat(parseInt(p.stats.totalGoals));
+    if (parseInt(p.stats.goalAssists) > 0) b += '🌟';
+    if (parseInt(p.stats.yellowCards) > 0) b += '🟨';
+    if (parseInt(p.stats.redCards) > 0) b += '🟥';
+    if (p.subbedIn) b += '↑';
+    if (p.subbedOut) b += '↓';
+    return b;
+  }
+
+  function rowHTML(p) {
+    const gk = p.position === 'G';
+    const mainStat = gk
+      ? (p.stats.saves || '0') + ' defesas'
+      : (p.stats.totalShots || '0') + ' ch.';
+    const posColor = POS_COLOR[p.position] || 'var(--text3)';
+    return '<div class="ft-player-row">' +
+      '<span class="ft-player-num">' + (p.jersey || '-') + '</span>' +
+      '<span class="ft-player-pos" style="color:' + posColor + ';border-color:' + posColor + '">' + (p.position || '?') + '</span>' +
+      '<span class="ft-player-name">' + (p.short || p.name) + '</span>' +
+      '<span class="ft-player-badge">' + badgesFor(p) + '</span>' +
+      '<span class="ft-player-stat">' + mainStat + '</span>' +
+    '</div>';
+  }
+
+  const homeName = homeR.team || 'Casa';
+  const awayName = awayR.team || 'Fora';
+  const homeFmt = homeR.formation || '';
+  const awayFmt = awayR.formation || '';
+
+  sec.style.display = 'flex';
+  sec.style.flexDirection = 'column';
+  sec.style.gap = '10px';
+  sec.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:space-between">' +
+      '<div class="ft-modal-section-title" style="margin:0">Jogadores</div>' +
+      '<span class="ft-formation-tag">' + (tab === 'home' ? homeFmt : awayFmt) + '</span>' +
+    '</div>' +
+    '<div class="ft-player-tabs">' +
+      '<button class="ft-player-tab ' + (tab==='home'?'active':'') + '" onclick="renderFtPlayers(window._ftRosters,'home')">' + homeName + '</button>' +
+      '<button class="ft-player-tab ' + (tab==='away'?'active':'') + '" onclick="renderFtPlayers(window._ftRosters,'away')">' + awayName + '</button>' +
+    '</div>' +
+    '<div style="font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Titulares</div>' +
+    starters.map(rowHTML).join('') +
+    (subs.length ? '<div style="font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:8px">Banco / Entrou</div>' + subs.map(rowHTML).join('') : '');
 }
 function closeFtModal() {
   document.getElementById('ft-modal-overlay').classList.remove('open');
