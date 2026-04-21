@@ -1008,11 +1008,19 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
     </div>
 
     <div class="main">
-      <div class="stats-row">
+      <!-- Stats NBA -->
+      <div class="stats-row" id="stats-row-nba">
         <div class="stat-card s-games"><div class="stat-label">jogos ao vivo</div><div class="stat-value gold" id="stat-games">—</div></div>
         <div class="stat-card s-alerts"><div class="stat-label">alertas ativos</div><div class="stat-value green" id="stat-alerts">—</div></div>
         <div class="stat-card s-risk"><div class="stat-label">em risco</div><div class="stat-value red" id="stat-risk">—</div></div>
         <div class="stat-card s-blocked"><div class="stat-label">bloqueados</div><div class="stat-value amber" id="stat-blocked">—</div></div>
+      </div>
+      <!-- Stats Futebol -->
+      <div class="stats-row" id="stats-row-football" style="display:none">
+        <div class="stat-card s-games"><div class="stat-label">ao vivo agora</div><div class="stat-value gold" id="ft-stat-live">—</div></div>
+        <div class="stat-card s-alerts"><div class="stat-label">jogos hoje</div><div class="stat-value green" id="ft-stat-today">—</div></div>
+        <div class="stat-card s-risk"><div class="stat-label">encerrados</div><div class="stat-value" id="ft-stat-done" style="color:var(--text3)">—</div></div>
+        <div class="stat-card s-blocked"><div class="stat-label">ligas ativas</div><div class="stat-value amber" id="ft-stat-leagues">—</div></div>
       </div>
 
       <div style="display:flex;gap:8px;margin-bottom:18px">
@@ -2708,6 +2716,19 @@ async function runMonitor() {
   }
 }
 
+function updateFootballStats() {
+  var fixtures = window._footballData || [];
+  var live    = fixtures.filter(function(f) { return f.live; }).length;
+  var done    = fixtures.filter(function(f) { return f.finished; }).length;
+  var total   = fixtures.length;
+  var leagues = new Set(fixtures.map(function(f) { return f.league_key; })).size;
+  var el;
+  el = document.getElementById('ft-stat-live');    if (el) el.textContent = live;
+  el = document.getElementById('ft-stat-today');   if (el) el.textContent = total;
+  el = document.getElementById('ft-stat-done');    if (el) el.textContent = done;
+  el = document.getElementById('ft-stat-leagues'); if (el) el.textContent = leagues;
+}
+
 function updateStats() {
   const alertCount = allAlerts.filter(a => a.type !== 'risk').length;
   const riskCount = allAlerts.filter(a => a.type === 'risk').length;
@@ -3160,6 +3181,7 @@ async function loadFootballGames() {
     // Aba Jogos: exclui jogos ao vivo (eles ficam só na aba Ao Vivo)
     _footballData = (data.fixtures || []).filter(f => !f.live);
     window._footballData = _footballData;
+    if (typeof updateFootballStats === 'function') updateFootballStats();
     renderFootballGames();
   } catch(e) {
     el.innerHTML = '<div class="state-box"><div class="state-title">Erro ao carregar jogos</div><div class="state-sub">' + e.message + '</div></div>';
@@ -3317,14 +3339,16 @@ let _currentFootballTab = 'jogos';
 function switchPage(page) {
   _currentPage = page;
   ['nba', 'football'].forEach(p => {
-    const btn = document.getElementById('page-' + p + '-btn');
-    const el  = document.getElementById('page-' + p);
+    var btn = document.getElementById('page-' + p + '-btn');
+    var el  = document.getElementById('page-' + p);
+    var statsRow = document.getElementById('stats-row-' + p);
     if (btn) {
       btn.style.background    = p === page ? 'var(--bg3)' : 'var(--bg2)';
       btn.style.borderColor   = p === page ? 'var(--border2)' : 'var(--border)';
       btn.style.color         = p === page ? 'var(--text)' : 'var(--text3)';
     }
-    if (el) el.style.display  = p === page ? 'block' : 'none';
+    if (el) el.style.display = p === page ? 'block' : 'none';
+    if (statsRow) statsRow.style.display = p === page ? 'grid' : 'none';
   });
   if (page === 'nba')      { switchNBATab(_currentNBATab); }
   if (page === 'football') { _footballData = null; switchFootballTab(_currentFootballTab); }
