@@ -142,6 +142,108 @@ def get_stats(game_id, league_key):
 
     return result
 
+def get_pregame(game_id, league_key):
+    slug = SLUG_MAP.get(league_key, 'eng.1')
+    url  = f'{ESPN_BASE}/{slug}/summary?event={game_id}'
+    try:
+        data = espn_fetch(url)
+    except Exception as e:
+        return {'error': str(e)}
+
+    result = {}
+
+    # Informações do jogo (venue, record dos times)
+    header = data.get('header', {})
+    comp0  = (header.get('competitions') or [{}])[0]
+    competitors = comp0.get('competitors', [])
+    teams_info = []
+    for c in competitors:
+        record_total = next((r.get('displayValue','') for r in (c.get('record') or []) if r.get('type') == 'total'), '')
+        record_pts   = next((r.get('displayValue','') for r in (c.get('record') or []) if r.get('type') == 'points'), '')
+        teams_info.append({
+            'team':     c.get('team', {}).get('displayName', ''),
+            'logo':     c.get('team', {}).get('logo', ''),
+            'homeAway': c.get('homeAway', ''),
+            'record':   record_total,
+            'points':   record_pts,
+        })
+    result['teams'] = teams_info
+
+    gi = data.get('gameInfo', {})
+    result['venue'] = gi.get('venue', {}).get('fullName', '')
+    result['city']  = gi.get('venue', {}).get('address', {}).get('city', '')
+
+    # Classificação (standings)
+    groups = (data.get('standings') or {}).get('groups') or []
+    if groups:
+        entries = (groups[0].get('standings') or {}).get('entries') or []
+        result['standings'] = [
+            {
+                'team':   str(e.get('team', '')),
+                'rank':   next((s.get('displayValue') for s in e.get('stats',[]) if s.get('name')=='rank'), ''),
+                'pts':    next((s.get('displayValue') for s in e.get('stats',[]) if s.get('name')=='points'), ''),
+                'wins':   next((s.get('displayValue') for s in e.get('stats',[]) if s.get('name')=='wins'), ''),
+                'draws':  next((s.get('displayValue') for s in e.get('stats',[]) if s.get('name')=='ties'), ''),
+                'losses': next((s.get('displayValue') for s in e.get('stats',[]) if s.get('name')=='losses'), ''),
+                'gp':     next((s.get('displayValue') for s in e.get('stats',[]) if s.get('name')=='gamesPlayed'), ''),
+            }
+            for e in entries
+        ]
+
+    # Leaders (artilheiros, assists, chutes)
+    leaders_raw = data.get('leaders') or []
+    leaders_out = []
+    for cat in leaders_raw:
+        for sub in (cat.get('leaders') or []):
+            top = []
+            for x in (sub.get('leaders') or [])[:3]:
+                top.append({
+                    'name':  (x.get('athlete') or {}).get('displayName', ''),
+                    'value': x.get('shortDisplayValue', x.get('displayValue', '')),
+                    'team':  str((x.get('team') or {}).get('displayName', '') or ''),
+                })
+            if top:
+                leaders_out.append({
+                    'category': sub.get('displayName', sub.get('name', '')),
+                    'leaders':  top,
+                })
+    result['leaders'] = leaders_out
+
+    # Odds
+    odds_raw = (data.get('odds') or [{}])[0]
+    if odds_raw:
+        home_comp = next((c for c in competitors if c.get('homeAway') == 'home'), {})
+        away_comp = next((c for c in competitors if c.get('homeAway') == 'away'), {})
+        result['odds'] = {
+            'spread':    odds_raw.get('spread'),
+            'overUnder': odds_raw.get('overUnder'),
+            'homeML':    (odds_raw.get('homeTeamOdds') or {}).get('moneyLine'),
+            'awayML':    (odds_raw.get('awayTeamOdds') or {}).get('moneyLine'),
+            'drawOdds':  (odds_raw.get('drawOdds') or {}).get('moneyLine'),
+            'provider':  (odds_raw.get('provider') or {}).get('name', ''),
+        }
+
+    # H2H (últimos confrontos diretos)
+    h2h_raw = data.get('headToHeadGames') or []
+    h2h_out = []
+    for g in h2h_raw[:5]:
+        comp = (g.get('competitions') or [{}])[0]
+        teams_h = comp.get('competitors', [])
+        home_h = next((t for t in teams_h if t.get('homeAway') == 'home'), {})
+        away_h = next((t for t in teams_h if t.get('homeAway') == 'away'), {})
+        h2h_out.append({
+            'date':      comp.get('date', ''),
+            'home':      (home_h.get('team') or {}).get('displayName', ''),
+            'homeScore': home_h.get('score', ''),
+            'away':      (away_h.get('team') or {}).get('displayName', ''),
+            'awayScore': away_h.get('score', ''),
+            'winner':    home_h.get('winner', False),
+        })
+    result['h2h'] = h2h_out
+
+    return result
+
+
 class handler(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
 
@@ -149,6 +251,17 @@ class handler(BaseHTTPRequestHandler):
         from urllib.parse import urlparse, parse_qs
         params = parse_qs(urlparse(self.path).query)
         t = params.get('type', ['fixtures'])[0]
+
+        # ── Pregame ────────────────────────────────────────────────────────
+        if t == 'pregame':
+            game_id    = params.get('gameId',    [''])[0]
+            league_key = params.get('leagueKey', ['premier'])[0]
+            body = json.dumps(
+                get_pregame(game_id, league_key) if game_id
+                else {'error': 'gameId required'}
+            ).encode()
+            self._json(body)
+            return
 
         # ── Stats ──────────────────────────────────────────────────────────
         if t == 'stats':
