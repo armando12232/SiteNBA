@@ -863,6 +863,33 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .ft-player-stat { font-size:11px; font-weight:700; color:var(--text3); min-width:16px; text-align:right; }
 .ft-formation-tag { font-size:10px; font-weight:700; color:var(--accent); background:rgba(100,220,100,.1); padding:2px 7px; border-radius:6px; }
 
+
+/* Pré-jogo stats */
+.ft-pregame-section { display:flex; flex-direction:column; gap:10px; }
+.ft-pregame-tabs { display:flex; gap:6px; margin-bottom:4px; flex-wrap:wrap; }
+.ft-pregame-tab { padding:5px 12px; border-radius:20px; border:1px solid var(--border); background:transparent; color:var(--text3); font-size:11px; font-weight:700; cursor:pointer; transition:all .2s; }
+.ft-pregame-tab.active { background:var(--accent); color:#000; border-color:var(--accent); }
+.ft-standing-row { display:flex; align-items:center; gap:6px; padding:6px 8px; border-radius:8px; font-size:12px; }
+.ft-standing-row.highlight { background:rgba(100,220,100,.1); border:1px solid rgba(100,220,100,.25); }
+.ft-standing-rank { font-size:11px; font-weight:700; color:var(--text3); min-width:18px; text-align:center; }
+.ft-standing-team { flex:1; font-weight:600; color:var(--text); }
+.ft-standing-stat { font-size:11px; color:var(--text3); min-width:22px; text-align:center; }
+.ft-standing-pts { font-size:12px; font-weight:800; color:var(--accent); min-width:26px; text-align:right; }
+.ft-odds-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+.ft-odds-box { background:var(--bg3); border-radius:10px; padding:10px 8px; text-align:center; }
+.ft-odds-label { font-size:10px; color:var(--text3); font-weight:600; text-transform:uppercase; margin-bottom:4px; }
+.ft-odds-val { font-size:16px; font-weight:800; color:var(--text); }
+.ft-leader-row { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--border); }
+.ft-leader-row:last-child { border-bottom:none; }
+.ft-leader-rank { font-size:12px; font-weight:800; color:var(--text3); min-width:18px; }
+.ft-leader-name { flex:1; font-size:12px; font-weight:600; color:var(--text); }
+.ft-leader-val { font-size:12px; font-weight:700; color:var(--accent); }
+.ft-h2h-row { display:flex; align-items:center; gap:6px; padding:7px 0; border-bottom:1px solid var(--border); font-size:11px; }
+.ft-h2h-row:last-child { border-bottom:none; }
+.ft-h2h-date { color:var(--text3); min-width:56px; }
+.ft-h2h-team { flex:1; font-weight:600; }
+.ft-h2h-score { font-weight:800; color:var(--text); min-width:32px; text-align:center; }
+
 </style>
 </head>
 <body>
@@ -3476,6 +3503,8 @@ function openFtModal(fixtureId) {
   if (eventsSection) eventsSection.style.display = 'none';
   const playersSec = document.getElementById('ft-modal-players-section');
   if (playersSec) playersSec.style.display = 'none';
+  const pregameSec = document.getElementById('ft-modal-pregame-section');
+  if (pregameSec) pregameSec.style.display = 'none';
 
   document.getElementById('ft-modal-overlay').classList.add('open');
   document.body.style.overflow='hidden';
@@ -3483,6 +3512,10 @@ function openFtModal(fixtureId) {
   // Carregar stats se jogo ao vivo ou encerrado
   if ((isLive || isFinished) && f.league_key) {
     loadFtStats(f.id, f.league_key, f.home, f.away);
+  }
+  // Carregar pré-jogo se agendado
+  if (!isLive && !isFinished && f.league_key) {
+    loadFtPregame(f.id, f.league_key, f.home, f.away);
   }
 }
 
@@ -3636,6 +3669,160 @@ function renderFtPlayers(rosters, tab) {
     starters.map(rowHTML).join('') +
     (subs.length ? '<div style="font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:8px">Banco / Entrou</div>' + subs.map(rowHTML).join('') : '');
 }
+
+
+function loadFtPregame(gameId, leagueKey, homeName, awayName) {
+  var sec = document.getElementById('ft-modal-pregame-section');
+  if (!sec) return;
+  sec.style.display = 'flex';
+  sec.style.flexDirection = 'column';
+  sec.style.gap = '12px';
+  sec.innerHTML = '<div class="ft-modal-section-title">Pr\u00e9-Jogo</div><div style="text-align:center;color:var(--text3);font-size:12px;padding:8px">Carregando...</div>';
+
+  fetch('/api/football?type=pregame&gameId=' + gameId + '&leagueKey=' + leagueKey)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) {
+        sec.innerHTML = '<div class="ft-modal-section-title">Pr\u00e9-Jogo</div><div style="color:var(--text3);font-size:12px;text-align:center">Dados indispon\u00edveis</div>';
+        return;
+      }
+      window._pregameData = data;
+      window._pregameHome = homeName;
+      window._pregameAway = awayName;
+      window._pregameTab  = 'standings';
+      sec.innerHTML = ftPregameRender(data, 'standings', homeName, awayName);
+    })
+    .catch(function() {
+      sec.innerHTML = '<div class="ft-modal-section-title">Pr\u00e9-Jogo</div><div style="color:var(--text3);font-size:12px;text-align:center">Erro ao carregar</div>';
+    });
+}
+
+function ftPregameTab(tab) {
+  window._pregameTab = tab;
+  var sec = document.getElementById('ft-modal-pregame-section');
+  if (!sec || !window._pregameData) return;
+  var body = sec.querySelector('#ft-pregame-body');
+  if (!body) return;
+  var btnMap = {standings:'Classifica\u00e7\u00e3o', odds:'Odds', leaders:'Destaques', h2h:'H2H'};
+  sec.querySelectorAll('.ft-pregame-tab').forEach(function(b) {
+    b.classList.toggle('active', b.textContent === btnMap[tab]);
+  });
+  var tmp = document.createElement('div');
+  tmp.innerHTML = ftPregameRender(window._pregameData, tab, window._pregameHome, window._pregameAway);
+  var newBody = tmp.querySelector('#ft-pregame-body');
+  if (newBody) body.innerHTML = newBody.innerHTML;
+}
+
+function ftPregameRender(data, tab, homeName, awayName) {
+  var odds      = data.odds || {};
+  var standings = data.standings || [];
+  var leaders   = data.leaders || [];
+  var h2h       = data.h2h || [];
+
+  var tabDefs = [
+    ['standings', 'Classifica\u00e7\u00e3o'],
+    ['odds',      'Odds'],
+    ['leaders',   'Destaques']
+  ];
+  if (h2h.length) tabDefs.push(['h2h', 'H2H']);
+
+  var tabsHTML = tabDefs.map(function(td) {
+    return '<button class="ft-pregame-tab' + (tab === td[0] ? ' active' : '') +
+      '" onclick="ftPregameTab(&apos;' + td[0] + '&apos;)">' + td[1] + '</button>';
+  }).join('');
+
+  var bodyHTML = '';
+
+  if (tab === 'standings') {
+    var header = '<div class="ft-standing-row" style="border-bottom:1px solid var(--border);margin-bottom:4px">' +
+      '<span class="ft-standing-rank">#</span>' +
+      '<span class="ft-standing-team" style="color:var(--text3);font-size:11px">Time</span>' +
+      '<span class="ft-standing-stat" style="color:var(--text3);font-size:10px">J</span>' +
+      '<span class="ft-standing-stat" style="color:var(--text3);font-size:10px">V</span>' +
+      '<span class="ft-standing-stat" style="color:var(--text3);font-size:10px">E</span>' +
+      '<span class="ft-standing-stat" style="color:var(--text3);font-size:10px">D</span>' +
+      '<span class="ft-standing-pts">PTS</span></div>';
+
+    var rows = standings.map(function(e) {
+      var isHome = e.team === homeName;
+      var isAway = e.team === awayName;
+      var cls = (isHome || isAway) ? ' highlight' : '';
+      var badge = isHome ? ' \uD83C\uDFE0' : isAway ? ' \u2708\uFE0F' : '';
+      return '<div class="ft-standing-row' + cls + '">' +
+        '<span class="ft-standing-rank">' + (e.rank || '-') + '</span>' +
+        '<span class="ft-standing-team">' + e.team + badge + '</span>' +
+        '<span class="ft-standing-stat">' + (e.gp || '-') + '</span>' +
+        '<span class="ft-standing-stat">' + (e.wins || '-') + '</span>' +
+        '<span class="ft-standing-stat">' + (e.draws || '-') + '</span>' +
+        '<span class="ft-standing-stat">' + (e.losses || '-') + '</span>' +
+        '<span class="ft-standing-pts">' + (e.pts || '-') + '</span></div>';
+    }).join('');
+    bodyHTML = '<div style="max-height:280px;overflow-y:auto;scrollbar-width:none">' + header + rows + '</div>';
+
+  } else if (tab === 'odds') {
+    if (!odds.homeML && !odds.overUnder) {
+      bodyHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:16px">Odds n\u00e3o dispon\u00edveis</div>';
+    } else {
+      var homeTeam = (data.teams || []).find(function(t) { return t.homeAway === 'home'; });
+      var awayTeam = (data.teams || []).find(function(t) { return t.homeAway === 'away'; });
+      function fml(v) { return v ? (v > 0 ? '+' + v : String(v)) : '-'; }
+      bodyHTML =
+        '<div class="ft-odds-grid">' +
+          '<div class="ft-odds-box"><div class="ft-odds-label">' + ((homeTeam && homeTeam.team) || homeName) + '</div>' +
+          '<div class="ft-odds-val" style="color:var(--accent)">' + fml(odds.homeML) + '</div></div>' +
+          '<div class="ft-odds-box"><div class="ft-odds-label">Empate</div>' +
+          '<div class="ft-odds-val">' + fml(odds.drawOdds) + '</div></div>' +
+          '<div class="ft-odds-box"><div class="ft-odds-label">' + ((awayTeam && awayTeam.team) || awayName) + '</div>' +
+          '<div class="ft-odds-val" style="color:var(--red2)">' + fml(odds.awayML) + '</div></div>' +
+        '</div>';
+      if (odds.overUnder) {
+        bodyHTML += '<div style="display:flex;gap:8px;margin-top:8px">' +
+          '<div class="ft-odds-box" style="flex:1"><div class="ft-odds-label">Over/Under</div>' +
+          '<div class="ft-odds-val">' + odds.overUnder + '</div></div></div>';
+      }
+      if (odds.provider) {
+        bodyHTML += '<div style="font-size:10px;color:var(--text3);text-align:right;margin-top:4px">via ' + odds.provider + '</div>';
+      }
+    }
+
+  } else if (tab === 'leaders') {
+    if (!leaders.length) {
+      bodyHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:16px">Sem dados</div>';
+    } else {
+      bodyHTML = leaders.slice(0, 4).map(function(cat) {
+        var rows = (cat.leaders || []).slice(0, 3).map(function(l, i) {
+          return '<div class="ft-leader-row">' +
+            '<span class="ft-leader-rank">' + (i + 1) + '.</span>' +
+            '<span class="ft-leader-name">' + (l.name || '-') + '</span>' +
+            '<span class="ft-leader-val">' + (l.value || '-') + '</span></div>';
+        }).join('');
+        return '<div style="margin-bottom:10px">' +
+          '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:6px">' + cat.category + '</div>' +
+          rows + '</div>';
+      }).join('');
+    }
+
+  } else if (tab === 'h2h') {
+    if (!h2h.length) {
+      bodyHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:16px">Sem confrontos</div>';
+    } else {
+      bodyHTML = h2h.map(function(g) {
+        var dt = new Date(g.date);
+        var ds = dt.toLocaleDateString('pt-BR', {day:'numeric', month:'short', year:'2-digit', timeZone:'America/Sao_Paulo'});
+        return '<div class="ft-h2h-row">' +
+          '<span class="ft-h2h-date">' + ds + '</span>' +
+          '<span class="ft-h2h-team" style="text-align:right">' + (g.home || '-') + '</span>' +
+          '<span class="ft-h2h-score">' + (g.homeScore || '0') + ' - ' + (g.awayScore || '0') + '</span>' +
+          '<span class="ft-h2h-team">' + (g.away || '-') + '</span></div>';
+      }).join('');
+    }
+  }
+
+  return '<div class="ft-modal-section-title">Pr\u00e9-Jogo</div>' +
+    '<div class="ft-pregame-tabs">' + tabsHTML + '</div>' +
+    '<div id="ft-pregame-body">' + bodyHTML + '</div>';
+}
+
 function closeFtModal() {
   document.getElementById('ft-modal-overlay').classList.remove('open');
   document.body.style.overflow='';
@@ -3697,6 +3884,8 @@ init();
       <div class="ft-modal-section" id="ft-modal-events-section" style="display:none;flex-direction:column;gap:8px"></div>
       <!-- Jogadores -->
       <div class="ft-modal-section" id="ft-modal-players-section" style="display:none"></div>
+      <!-- Pré-jogo -->
+      <div class="ft-modal-section" id="ft-modal-pregame-section" style="display:none"></div>
     </div>
   </div>
 </div>
