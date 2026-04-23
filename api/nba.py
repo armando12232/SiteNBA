@@ -351,8 +351,8 @@ def get_upcoming_schedule(days_ahead=7):
         return {"error": str(e)}
 
 
-def get_defense_ranking(team_abbr, position):
-    cache_key = f"defense_{team_abbr}_{position}"
+def get_defense_ranking(team_abbr, position, stat="pts"):
+    cache_key = f"defense_{team_abbr}_{position}_{stat}"
     cached = _cache_get(cache_key)
     if cached:
         return cached
@@ -364,6 +364,16 @@ def get_defense_ranking(team_abbr, position):
     }
     pos_upper = (position or "").upper().split("-")[0]
     category = pos_map.get(pos_upper, "Guards")
+
+    # Map stat to NBA API column
+    stat_col_map = {
+        "pts": "PTS",
+        "reb": "REB",
+        "ast": "AST",
+        "fg3m": "FG3M",
+    }
+    stat_key = (stat or "pts").lower()
+    stat_col = stat_col_map.get(stat_key, "PTS")
 
     try:
         url = (
@@ -386,13 +396,26 @@ def get_defense_ranking(team_abbr, position):
             return None
 
         abbr_idx = headers.index("TEAM_ABBREVIATION") if "TEAM_ABBREVIATION" in headers else None
-        pts_idx  = headers.index("PTS") if "PTS" in headers else None
+        # leaguedashptdefend uses D_FGM/D_FGA/etc — for pts use PTS if available
+        # Fallback columns for the stat of interest
+        col_candidates = {
+            "PTS":  ["PTS", "D_PTS"],
+            "REB":  ["REB", "D_REB", "DREB"],
+            "AST":  ["AST", "D_AST"],
+            "FG3M": ["FG3M", "D_FG3M"],
+        }
+        stat_idx = None
+        for c in col_candidates.get(stat_col, [stat_col]):
+            if c in headers:
+                stat_idx = headers.index(c)
+                break
 
-        if abbr_idx is None or pts_idx is None:
+        if abbr_idx is None or stat_idx is None:
             return None
 
-        team_data = [{"abbr": r[abbr_idx], "pts": float(r[pts_idx] or 0)} for r in rows]
-        sorted_teams = sorted(team_data, key=lambda x: x["pts"], reverse=True)
+        team_data = [{"abbr": r[abbr_idx], "val": float(r[stat_idx] or 0)} for r in rows]
+        # Rank: higher value = worse defense = higher rank number
+        sorted_teams = sorted(team_data, key=lambda x: x["val"], reverse=True)
         target = next((t for t in team_data if t["abbr"] == team_abbr.upper()), None)
         if not target:
             return None
@@ -404,11 +427,12 @@ def get_defense_ranking(team_abbr, position):
             "team": team_abbr.upper(),
             "position": position,
             "category": category,
-            "pts_allowed": round(target["pts"], 1),
+            "stat": stat_key,
+            "pts_allowed": round(target["val"], 1),  # keep key name for frontend compat
             "rank": rank,
             "total": total,
             "rating": "ruim" if rank <= 10 else "media" if rank <= 20 else "boa",
-            "favorable": rank <= 15,
+            "favorable": rank >= (total - 9),  # top 10 worst = favorable for offense
         }
         _cache_set(cache_key, result)
         return result
@@ -449,9 +473,10 @@ class handler(BaseHTTPRequestHandler):
             elif req_type == "defense":
                 team_abbr = params.get("teamAbbr", [""])[0]
                 position  = params.get("position", ["G"])[0]
+                stat      = params.get("stat", ["pts"])[0]
                 if not team_abbr:
                     self._send(400, {"error": "missing teamAbbr"}); return
-                result = get_defense_ranking(team_abbr, position)
+                result = get_defense_ranking(team_abbr, position, stat)
                 self._send(200, result or {"error": "not found"})
 
             else:
