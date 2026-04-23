@@ -1604,6 +1604,68 @@ async function loadTodayGames() {
   }
 }
 
+// ─── DVP (Defense vs Position) ───────────────────────────────────────────────
+window._dvpCache = window._dvpCache || {};
+window._dvpInflight = window._dvpInflight || {};
+
+async function fetchDVP(oppTeam, position, stat) {
+  if (!oppTeam || !position) return null;
+  // Normalize position to single letter (G/F/C)
+  const pos = String(position).trim().charAt(0).toUpperCase();
+  if (!['G','F','C'].includes(pos)) return null;
+  const key = `${oppTeam}|${pos}|${stat}`;
+  if (window._dvpCache[key]) return window._dvpCache[key];
+  if (window._dvpInflight[key]) return window._dvpInflight[key];
+
+  const p = fetch(`/api/nba?type=defense&teamAbbr=${oppTeam}&position=${pos}&stat=${stat}`)
+    .then(r => r.json())
+    .then(d => {
+      if (d && !d.error && d.pts_allowed != null) {
+        window._dvpCache[key] = d;
+        return d;
+      }
+      window._dvpCache[key] = null;
+      return null;
+    })
+    .catch(() => { window._dvpCache[key] = null; return null; })
+    .finally(() => { delete window._dvpInflight[key]; });
+
+  window._dvpInflight[key] = p;
+  return p;
+}
+
+function dvpChip(dvp) {
+  if (!dvp || !dvp.rank || !dvp.total) return '';
+  const rank = dvp.rank, total = dvp.total;
+  // Top 10 piores defesas (rank alto = defesa ruim = favorável ao ataque)
+  const favorable = rank >= (total - 9); // top 10 piores
+  const tough     = rank <= 10;           // top 10 melhores defesas
+  const icon  = favorable ? '🟢' : tough ? '🔴' : '🟡';
+  const color = favorable ? 'var(--green)' : tough ? 'var(--danger)' : 'var(--gold)';
+  return `<span class="dvp-chip" title="${dvp.category || ''} · ${dvp.pts_allowed} permitidos/jogo"
+    style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:${color};background:${color}18;border:1px solid ${color}33;border-radius:5px;padding:1px 5px;margin-left:4px">
+    ${icon} DVP ${rank}º
+  </span>`;
+}
+
+async function hydrateDVPForRows() {
+  const rows = document.querySelectorAll('[data-dvp-row]');
+  const tasks = [];
+  rows.forEach(row => {
+    const opp  = row.getAttribute('data-dvp-opp');
+    const pos  = row.getAttribute('data-dvp-pos');
+    const stat = row.getAttribute('data-dvp-stat');
+    if (!opp || !pos || !stat) return;
+    tasks.push(
+      fetchDVP(opp, pos, stat).then(dvp => {
+        const slot = row.querySelector('[data-dvp-slot]');
+        if (slot && dvp) slot.innerHTML = dvpChip(dvp);
+      })
+    );
+  });
+  await Promise.allSettled(tasks);
+}
+
 function renderPropsTable() {
   const loading = document.getElementById('today-loading');
   const table   = document.getElementById('props-table');
@@ -1621,7 +1683,7 @@ function renderPropsTable() {
     if (currentSearchQuery && !name.toLowerCase().includes(currentSearchQuery)) continue;
 
     // Encontrar o jogo deste jogador pelos games agendados
-    let gameLabel = '', gameDateLabel = '', gameKey = '';
+    let gameLabel = '', gameDateLabel = '', gameKey = '', opponent = '';
     for (const [key, g] of Object.entries(games)) {
       const isHome = g.homeTeam.abbr === bp.team;
       const isAway = g.awayTeam.abbr === bp.team;
@@ -1629,6 +1691,7 @@ function renderPropsTable() {
         gameLabel     = `${g.awayTeam.abbr} × ${g.homeTeam.abbr}`;
         gameDateLabel = g.gameDateLabel || '';
         gameKey       = key;
+        opponent      = isHome ? g.awayTeam.abbr : g.homeTeam.abbr;
         break;
       }
     }
@@ -1652,6 +1715,7 @@ function renderPropsTable() {
     allPlayers.push({
       player_name: name,
       team:        bp.team,
+      opponent,
       position:    bp.position,
       image:       bp.image,
       player_id:   playerId,
@@ -1741,7 +1805,7 @@ function renderPropsTable() {
         : null;
 
       return `
-        <div class="props-table-row" onclick="openPlayerPropsModal('${p.player_name}','${p.gameLabel}')" style="cursor:pointer">
+        <div class="props-table-row" data-dvp-row data-dvp-opp="${p.opponent||''}" data-dvp-pos="${p.position||''}" data-dvp-stat="${currentPropFilter}" onclick="openPlayerPropsModal('${p.player_name}','${p.gameLabel}','${p.opponent||''}')" style="cursor:pointer">
           <div style="display:flex;align-items:center;gap:10px;min-width:0">
             <img src="${p.player_id ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png` : (p.image || '')}"
                  style="width:48px;height:48px;border-radius:10px;object-fit:cover;object-position:top;flex-shrink:0;background:var(--bg3)"
@@ -1752,6 +1816,7 @@ function renderPropsTable() {
                 ${p.gameLabel} &middot; <span style="color:var(--gold);font-weight:700">O ${ensureHalfLine(prop.line)}</span>
                 ${prop.rec_side === 'over' ? '<span style="color:var(--green)"> ↑</span>' : prop.rec_side === 'under' ? '<span style="color:var(--danger)"> ↓</span>' : ''}
                 ${streak ? `<span style="color:var(--text3);margin-left:4px">${streak} streak</span>` : ''}
+                <span data-dvp-slot></span>
               </div>
             </div>
           </div>
@@ -1795,16 +1860,20 @@ function renderPropsTable() {
         </div>
       </div>`;
   }).join('');
+
+  // Hidratar DVP após renderizar (assíncrono)
+  hydrateDVPForRows();
 }
 
 // ─── PLAYER PROPS MODAL ──────────────────────────────────────────────────────
 let _ppModalCurrentStat = 'pts';
 
-function openPlayerPropsModal(playerName, gameLabel) {
+function openPlayerPropsModal(playerName, gameLabel, opponent) {
   const bp = (window._bpData || {})[playerName];
   if (!bp) return;
 
   _ppModalCurrentStat = currentPropFilter;
+  window._ppModalOpponent = opponent || '';
 
   const overlay = document.getElementById('pp-modal-overlay');
 
@@ -1971,11 +2040,54 @@ function _renderPPModalBody(bp) {
     ${availableProps.length > 1 ? `<div class="pp-section-title">Prop</div><div class="pp-prop-tabs">${tabsHtml}</div>` : ''}
     ${statGrid}
     ${hitRatesHtml}
+    <div id="pp-dvp-section" style="margin-top:16px"></div>
     ${streakHtml}
     ${allPropsHtml}
     <div style="margin-top:20px;text-align:center;font-size:11px;color:var(--text3)">
       Dados: BettingPros · Atualizado hoje
     </div>`;
+
+  // Hidratar DVP no modal
+  const opp = window._ppModalOpponent;
+  const pos = bp.position;
+  if (opp && pos && prop) {
+    const dvpBox = document.getElementById('pp-dvp-section');
+    if (dvpBox) {
+      dvpBox.innerHTML = `<div class="pp-section-title">🛡️ Defesa do adversário (${opp})</div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--text3)">Carregando DVP...</div>`;
+      fetchDVP(opp, pos, stat).then(dvp => {
+        if (!dvp) {
+          dvpBox.innerHTML = `<div class="pp-section-title">🛡️ Defesa do adversário (${opp})</div>
+            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--text3)">Dados de defesa indisponíveis</div>`;
+          return;
+        }
+        const rank = dvp.rank, total = dvp.total, pts = dvp.pts_allowed;
+        const favorable = rank >= (total - 9);
+        const tough = rank <= 10;
+        const color = favorable ? 'var(--green)' : tough ? 'var(--danger)' : 'var(--gold)';
+        const icon  = favorable ? '🟢' : tough ? '🔴' : '🟡';
+        const label = favorable
+          ? `${icon} Defesa fraca contra ${dvp.category || pos} — cede <strong style="color:${color}">${pts}</strong> ${stat === 'pts' ? 'pts' : stat}/jogo (${rank}º pior de ${total})`
+          : tough
+            ? `${icon} Defesa forte contra ${dvp.category || pos} — cede <strong style="color:${color}">${pts}</strong> ${stat === 'pts' ? 'pts' : stat}/jogo (${rank}º de ${total})`
+            : `${icon} Defesa média contra ${dvp.category || pos} — cede <strong style="color:${color}">${pts}</strong> ${stat === 'pts' ? 'pts' : stat}/jogo (${rank}º de ${total})`;
+        dvpBox.innerHTML = `
+          <div class="pp-section-title">🛡️ Defesa do adversário (${opp})</div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="flex:1;line-height:1.5;font-size:12px;color:var(--text2)">${label}</div>
+              <div style="text-align:center;min-width:50px">
+                <div style="font-family:var(--display);font-size:26px;font-weight:800;color:${color};line-height:1">${rank}º</div>
+                <div style="font-size:9px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase">de ${total}</div>
+              </div>
+            </div>
+            <div style="margin-top:10px;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${Math.round((rank/total)*100)}%;background:${color};border-radius:3px;opacity:.85"></div>
+            </div>
+          </div>`;
+      });
+    }
+  }
 }
 
 // ─── PRICING ─────────────────────────────────────────────────────────────────
