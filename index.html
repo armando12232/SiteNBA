@@ -1634,6 +1634,31 @@ async function fetchDVP(oppTeam, position, stat) {
   return p;
 }
 
+// ─── Streak visual dots ──────────────────────────────────────────────────────
+function streakDots(playerName, stat, line) {
+  // Busca last5_games no cache de pré-jogo
+  const pgCache = window._todayPregameCache || {};
+  let games = null;
+  for (const players of Object.values(pgCache)) {
+    const found = players?.find(p => p.player_name === playerName);
+    if (found?.last5_games?.length) { games = found.last5_games; break; }
+  }
+  if (!games || !games.length || line == null) return '';
+
+  // Gera bolinhas: últimos 5 (mais recente à direita)
+  // games vem ordenado do mais recente [0] ao mais antigo [4]
+  // Queremos mostrar antigo → recente (esquerda → direita)
+  const ordered = [...games].reverse();
+  const dots = ordered.map(g => {
+    const val = g[stat] ?? g.pts;
+    if (val == null) return '<span style="opacity:.3">○</span>';
+    const hit = val >= line;
+    const col = hit ? 'var(--green)' : 'var(--danger)';
+    return `<span title="${g.opp || ''}: ${val}" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${col};margin:0 1px"></span>`;
+  }).join('');
+  return `<span class="streak-dots" style="display:inline-flex;align-items:center;margin-left:6px;vertical-align:middle">${dots}</span>`;
+}
+
 function dvpChip(dvp) {
   if (!dvp || !dvp.rank || !dvp.total) return '';
   const rank = dvp.rank, total = dvp.total;
@@ -1815,6 +1840,7 @@ function renderPropsTable() {
               <div style="font-size:11px;color:var(--text3);margin-top:2px">
                 ${p.gameLabel} &middot; <span style="color:var(--gold);font-weight:700">O ${ensureHalfLine(prop.line)}</span>
                 ${prop.rec_side === 'over' ? '<span style="color:var(--green)"> ↑</span>' : prop.rec_side === 'under' ? '<span style="color:var(--danger)"> ↓</span>' : ''}
+                ${streakDots(p.player_name, currentPropFilter, prop.line)}
                 ${streak ? `<span style="color:var(--text3);margin-left:4px">${streak} streak</span>` : ''}
                 <span data-dvp-slot></span>
               </div>
