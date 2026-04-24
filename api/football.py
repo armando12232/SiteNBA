@@ -68,6 +68,10 @@ def get_stats(game_id, league_key):
         'foulsCommitted', 'yellowCards', 'redCards', 'offsides',
         'saves', 'passPct', 'accuratePasses', 'totalPasses',
         'effectiveTackles', 'interceptions',
+        # xG (variações ESPN)
+        'expectedGoals', 'xG', 'xg', 'totalExpectedGoals',
+        # Extras úteis
+        'shotsInsideBox', 'shotsOutsideBox', 'bigChancesCreated', 'bigChancesMissed',
     ]
     stats_out = []
     for t in teams_data:
