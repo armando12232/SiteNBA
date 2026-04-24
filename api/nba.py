@@ -31,6 +31,214 @@ def _nba_fetch(url, timeout=9):
     with urlopen(req, timeout=timeout) as r:
         return json.loads(r.read())
 
+
+# ─── TheSportsDB (free tier, key 123) ────────────────────────────────────────
+TSDB_BASE = 'https://www.thesportsdb.com/api/v1/json/123'
+TSDB_NBA_LEAGUE_ID = '4387'
+
+def _tsdb_fetch(path):
+    """GET em TheSportsDB com cache interno."""
+    cache_key = f"tsdb_{path}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    try:
+        url = f"{TSDB_BASE}/{path}"
+        req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urlopen(req, timeout=8) as r:
+            data = json.loads(r.read())
+        _cache_set(cache_key, data)
+        return data
+    except Exception:
+        return None
+
+
+def _tsdb_norm(s):
+    """Normaliza nome de time: minúsculas, sem acentos."""
+    if not s:
+        return ''
+    import unicodedata
+    s = unicodedata.normalize('NFKD', s).encode('ASCII', 'ignore').decode('ASCII')
+    return s.lower().strip()
+
+
+def tsdb_nba_teams():
+    """Retorna mapa { abbr: {id, name, badge, fanart} } para NBA."""
+    cache_key = "tsdb_nba_teams_map"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+
+    data = _tsdb_fetch(f"lookup_all_teams.php?id={TSDB_NBA_LEAGUE_ID}")
+    if not data or not data.get('teams'):
+        return {}
+
+    out = {}
+    for t in data['teams']:
+        team_name = t.get('strTeam', '')
+        # TSDB não tem abbr NBA padrão — inferir por match de palavras-chave
+        name_norm = _tsdb_norm(team_name)
+        entry = {
+            'id':       t.get('idTeam'),
+            'name':     team_name,
+            'badge':    t.get('strBadge') or t.get('strTeamBadge'),
+            'logo':     t.get('strLogo'),
+            'fanart':   t.get('strFanart1') or t.get('strFanart2'),
+            'stadium':  t.get('strStadium'),
+            'city':     t.get('strLocation') or t.get('strKeywords'),
+            'desc':     (t.get('strDescriptionEN') or '')[:500],
+            'jersey':   t.get('strEquipment'),
+            'founded':  t.get('intFormedYear'),
+        }
+        # Múltiplas chaves de busca
+        out[name_norm] = entry
+        out[team_name] = entry
+        # Por palavra-chave (último termo = mascote)
+        parts = team_name.split()
+        if parts:
+            out[_tsdb_norm(parts[-1])] = entry
+
+    _cache_set(cache_key, out)
+    return out
+
+
+# Mapa estático NBA abbr → nome TSDB (para match rápido via abbr NBA)
+NBA_ABBR_TO_TSDB_NAME = {
+    'ATL': 'Atlanta Hawks',      'BOS': 'Boston Celtics',
+    'BKN': 'Brooklyn Nets',      'CHA': 'Charlotte Hornets',
+    'CHI': 'Chicago Bulls',      'CLE': 'Cleveland Cavaliers',
+    'DAL': 'Dallas Mavericks',   'DEN': 'Denver Nuggets',
+    'DET': 'Detroit Pistons',    'GSW': 'Golden State Warriors',
+    'HOU': 'Houston Rockets',    'IND': 'Indiana Pacers',
+    'LAC': 'LA Clippers',        'LAL': 'Los Angeles Lakers',
+    'MEM': 'Memphis Grizzlies',  'MIA': 'Miami Heat',
+    'MIL': 'Milwaukee Bucks',    'MIN': 'Minnesota Timberwolves',
+    'NOP': 'New Orleans Pelicans','NYK': 'New York Knicks',
+    'OKC': 'Oklahoma City Thunder','ORL': 'Orlando Magic',
+    'PHI': 'Philadelphia 76ers', 'PHX': 'Phoenix Suns',
+    'POR': 'Portland Trail Blazers','SAC': 'Sacramento Kings',
+    'SAS': 'San Antonio Spurs',  'TOR': 'Toronto Raptors',
+    'UTA': 'Utah Jazz',          'WAS': 'Washington Wizards',
+}
+
+
+def get_tsdb_team_info(abbr):
+    """Retorna info visual do time (badge HD, fanart, cidade, descrição)."""
+    if not abbr:
+        return None
+    abbr_upper = abbr.upper()
+    tsdb_name = NBA_ABBR_TO_TSDB_NAME.get(abbr_upper)
+    if not tsdb_name:
+        return None
+    teams_map = tsdb_nba_teams()
+    info = teams_map.get(tsdb_name) or teams_map.get(_tsdb_norm(tsdb_name))
+    if not info:
+        return None
+    return {
+        'abbr':    abbr_upper,
+        'name':    info.get('name'),
+        'badge':   info.get('badge'),
+        'logo':    info.get('logo'),
+        'fanart':  info.get('fanart'),
+        'stadium': info.get('stadium'),
+        'city':    info.get('city'),
+        'desc':    info.get('desc'),
+        'founded': info.get('founded'),
+    }
+
+
+def get_tsdb_team_last_games(abbr):
+    """Últimos 5 jogos do time via TSDB. Retorna resultado W/L + placar."""
+    if not abbr:
+        return None
+    tsdb_name = NBA_ABBR_TO_TSDB_NAME.get(abbr.upper())
+    if not tsdb_name:
+        return None
+    teams_map = tsdb_nba_teams()
+    info = teams_map.get(tsdb_name) or teams_map.get(_tsdb_norm(tsdb_name))
+    if not info or not info.get('id'):
+        return None
+
+    cache_key = f"tsdb_last_games_{info['id']}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+
+    data = _tsdb_fetch(f"eventslast.php?id={info['id']}")
+    if not data or not data.get('results'):
+        return None
+
+    team_norm = _tsdb_norm(tsdb_name)
+    games = []
+    for ev in data['results'][:10]:
+        home = ev.get('strHomeTeam', '')
+        away = ev.get('strAwayTeam', '')
+        hs = ev.get('intHomeScore')
+        as_ = ev.get('intAwayScore')
+        if hs is None or as_ is None:
+            continue
+        try:
+            hs = int(hs); as_ = int(as_)
+        except:
+            continue
+        is_home = _tsdb_norm(home) == team_norm
+        my_score  = hs if is_home else as_
+        opp_score = as_ if is_home else hs
+        opp       = away if is_home else home
+        result = 'W' if my_score > opp_score else 'L'
+        games.append({
+            'date':     ev.get('dateEvent', ''),
+            'result':   result,
+            'score':    f"{my_score}-{opp_score}",
+            'opp':      opp,
+            'homeAway': 'home' if is_home else 'away',
+        })
+
+    games.sort(key=lambda x: x['date'], reverse=True)
+    out = {'form': ''.join(g['result'] for g in games[:5]), 'games': games[:5]}
+    _cache_set(cache_key, out)
+    return out
+
+
+def get_tsdb_roster(abbr):
+    """Roster completo do time via TSDB (elenco com fotos e posições)."""
+    if not abbr:
+        return None
+    tsdb_name = NBA_ABBR_TO_TSDB_NAME.get(abbr.upper())
+    if not tsdb_name:
+        return None
+    teams_map = tsdb_nba_teams()
+    info = teams_map.get(tsdb_name) or teams_map.get(_tsdb_norm(tsdb_name))
+    if not info or not info.get('id'):
+        return None
+
+    cache_key = f"tsdb_roster_{info['id']}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+
+    data = _tsdb_fetch(f"lookup_all_players.php?id={info['id']}")
+    if not data or not data.get('player'):
+        return None
+
+    players = []
+    for p in data['player'][:50]:
+        players.append({
+            'name':     p.get('strPlayer', ''),
+            'position': p.get('strPosition', ''),
+            'number':   p.get('strNumber', ''),
+            'height':   p.get('strHeight', ''),
+            'weight':   p.get('strWeight', ''),
+            'country':  p.get('strNationality', ''),
+            'thumb':    p.get('strThumb') or p.get('strCutout'),
+            'born':     p.get('dateBorn', ''),
+        })
+
+    out = {'team': tsdb_name, 'players': players, 'count': len(players)}
+    _cache_set(cache_key, out)
+    return out
+
+
 def get_live_games():
     from nba_api.live.nba.endpoints import scoreboard
     board = scoreboard.ScoreBoard()
@@ -477,6 +685,27 @@ class handler(BaseHTTPRequestHandler):
                 if not team_abbr:
                     self._send(400, {"error": "missing teamAbbr"}); return
                 result = get_defense_ranking(team_abbr, position, stat)
+                self._send(200, result or {"error": "not found"})
+
+            elif req_type == "team_info":
+                abbr = params.get("abbr", [""])[0]
+                if not abbr:
+                    self._send(400, {"error": "missing abbr"}); return
+                result = get_tsdb_team_info(abbr)
+                self._send(200, result or {"error": "not found"})
+
+            elif req_type == "team_last":
+                abbr = params.get("abbr", [""])[0]
+                if not abbr:
+                    self._send(400, {"error": "missing abbr"}); return
+                result = get_tsdb_team_last_games(abbr)
+                self._send(200, result or {"error": "not found"})
+
+            elif req_type == "roster":
+                abbr = params.get("abbr", [""])[0]
+                if not abbr:
+                    self._send(400, {"error": "missing abbr"}); return
+                result = get_tsdb_roster(abbr)
                 self._send(200, result or {"error": "not found"})
 
             else:
