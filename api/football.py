@@ -3,6 +3,21 @@ from http.server import BaseHTTPRequestHandler
 
 ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer'
 
+# TheSportsDB (free tier, key=3) — usada pra forma recente e lineups
+TSDB_BASE = 'https://www.thesportsdb.com/api/v1/json/3'
+
+# Mapeamento league_key → league_id da TheSportsDB
+TSDB_LEAGUE_IDS = {
+    'brasileirao':  '4351',
+    'premier':      '4328',
+    'laliga':       '4335',
+    'bundesliga':   '4331',
+    'seriea':       '4332',
+    'ligue1':       '4334',
+    'champions':    '4480',
+    'libertadores': '4483',
+}
+
 # Cache simples em memória (por processo serverless)
 import time
 _CACHE = {}
@@ -33,6 +48,67 @@ def espn_fetch(url):
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
     with urllib.request.urlopen(req, timeout=8) as r:
         return json.loads(r.read())
+
+
+def tsdb_fetch(path):
+    """GET em TheSportsDB com cache interno."""
+    cache_key = f"tsdb_{path}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{TSDB_BASE}/{path}"
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            data = json.loads(r.read())
+        _cache_set(cache_key, data)
+        return data
+    except Exception:
+        return None
+
+
+def tsdb_teams_by_league(league_key):
+    """Retorna mapa { nome_normalizado: team_id } para uma liga."""
+    cache_key = f"tsdb_teams_{league_key}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+    league_id = TSDB_LEAGUE_IDS.get(league_key)
+    if not league_id:
+        return {}
+    data = tsdb_fetch(f"lookup_all_teams.php?id={league_id}")
+    if not data or not data.get('teams'):
+        return {}
+    teams_map = {}
+    for t in data['teams']:
+        tid = t.get('idTeam')
+        if not tid:
+            continue
+        # Indexar por várias variações de nome pra maximar match
+        names = [t.get('strTeam'), t.get('strTeamShort'), t.get('strAlternate')]
+        for n in names:
+            if not n:
+                continue
+            for part in str(n).split(','):
+                key = _norm_name(part.strip())
+                if key:
+                    teams_map[key] = {
+                        'id':       tid,
+                        'name':     t.get('strTeam'),
+                        'badge':    t.get('strBadge') or t.get('strTeamBadge'),
+                        'stadium':  t.get('strStadium'),
+                    }
+    _cache_set(cache_key, teams_map)
+    return teams_map
+
+
+def _norm_name(s):
+    """Normaliza nome: minúsculas, sem acentos, sem espaços extras."""
+    if not s:
+        return ''
+    import unicodedata
+    s = unicodedata.normalize('NFKD', s).encode('ASCII', 'ignore').decode('ASCII')
+    return s.lower().strip()
 
 def parse_fixture(ev, league, state=None):
     comp  = ev.get('competitions', [{}])[0]
@@ -262,53 +338,47 @@ def get_pregame(game_id, league_key):
     return result
 
 
-def get_team_form(league_slug, team_id, team_name):
-    """Busca últimos 5 jogos finalizados de um time. Retorna string W/D/L."""
-    cache_key = f"form_{league_slug}_{team_id}"
+def get_team_form_tsdb(team_id, team_name):
+    """Últimos 5 jogos via TheSportsDB. Muito mais rápido que ESPN schedule."""
+    cache_key = f"tsdb_form_{team_id}"
     cached = _cache_get(cache_key)
     if cached:
         return cached
 
-    try:
-        url = f'{ESPN_BASE}/{league_slug}/teams/{team_id}/schedule'
-        data = espn_fetch(url)
-    except Exception:
-        return ''
+    data = tsdb_fetch(f"eventslast.php?id={team_id}")
+    if not data or not data.get('results'):
+        return None
 
-    events = data.get('events', []) or []
-    # Filtrar só jogos finalizados, ordenar por data desc
-    finished = []
-    for ev in events:
-        comp = (ev.get('competitions') or [{}])[0]
-        status = comp.get('status', {}).get('type', {}).get('state', '')
-        if status != 'post':
+    team_norm = _norm_name(team_name)
+    games = []
+    for ev in data['results'][:10]:
+        home_name = ev.get('strHomeTeam', '')
+        away_name = ev.get('strAwayTeam', '')
+        home_score = ev.get('intHomeScore')
+        away_score = ev.get('intAwayScore')
+        if home_score is None or away_score is None:
             continue
-        comps = comp.get('competitors', [])
-        my = next((c for c in comps if (c.get('team') or {}).get('displayName','').lower() == team_name.lower()), None)
-        if not my:
-            # fallback: checar por id
-            my = next((c for c in comps if str((c.get('team') or {}).get('id','')) == str(team_id)), None)
-        if not my:
-            continue
-        opp = next((c for c in comps if c != my), {})
         try:
-            my_score  = int(my.get('score', 0) or 0)
-            opp_score = int(opp.get('score', 0) or 0)
+            hs = int(home_score); as_ = int(away_score)
         except:
             continue
+
+        is_home = _norm_name(home_name) == team_norm
+        my_score  = hs if is_home else as_
+        opp_score = as_ if is_home else hs
+        opp_name  = away_name if is_home else home_name
+
         result = 'W' if my_score > opp_score else ('D' if my_score == opp_score else 'L')
-        finished.append({
-            'date':   comp.get('date',''),
-            'result': result,
-            'score':  f"{my_score}-{opp_score}",
-            'opp':    (opp.get('team') or {}).get('abbreviation','') or (opp.get('team') or {}).get('displayName','')[:3].upper(),
-            'homeAway': my.get('homeAway',''),
+        games.append({
+            'date':     ev.get('dateEvent', ''),
+            'result':   result,
+            'score':    f"{my_score}-{opp_score}",
+            'opp':      opp_name[:10],
+            'homeAway': 'home' if is_home else 'away',
         })
 
-    # Ordenar por data desc e pegar 5
-    finished.sort(key=lambda x: x['date'], reverse=True)
-    recent = finished[:5]
-    # String simplificada ('WWDLW') + detalhes
+    games.sort(key=lambda x: x['date'], reverse=True)
+    recent = games[:5]
     form_str = ''.join(g['result'] for g in recent)
     result = {'form': form_str, 'games': recent}
     _cache_set(cache_key, result)
@@ -316,7 +386,7 @@ def get_team_form(league_slug, team_id, team_name):
 
 
 def get_league_form(league_key):
-    """Retorna forma de todos os times da liga."""
+    """Forma recente de todos os times da liga via TheSportsDB."""
     slug = SLUG_MAP.get(league_key)
     if not slug:
         return {'error': 'invalid league'}
@@ -326,32 +396,31 @@ def get_league_form(league_key):
     if cached:
         return cached
 
-    try:
-        teams_data = espn_fetch(f'{ESPN_BASE}/{slug}/teams')
-    except Exception as e:
-        return {'error': str(e)}
+    teams_map = tsdb_teams_by_league(league_key)
+    if not teams_map:
+        return {}
 
-    sports  = (teams_data.get('sports') or [{}])[0]
-    leagues = (sports.get('leagues') or [{}])[0]
-    teams   = leagues.get('teams', [])
+    # Deduplica por team_id (pois indexamos por múltiplos nomes)
+    unique_teams = {}
+    for info in teams_map.values():
+        unique_teams[info['id']] = info
 
     out = {}
-    for t in teams[:30]:
-        team_obj = t.get('team', {}) or {}
-        team_id   = team_obj.get('id')
-        team_name = team_obj.get('displayName', '')
-        team_abbr = team_obj.get('abbreviation', '')
-        if not team_id or not team_name:
-            continue
-        form = get_team_form(slug, team_id, team_name)
-        if form and isinstance(form, dict) and form.get('form'):
-            # Chave: nome + abbr (frontend matcha por nome)
-            out[team_name] = form
-            if team_abbr:
-                out[team_abbr] = form
+    for team_id, info in list(unique_teams.items())[:30]:
+        form = get_team_form_tsdb(team_id, info['name'])
+        if form and form.get('form'):
+            # Indexar por nome principal
+            out[info['name']] = form
+            # Indexar também pela versão normalizada pra facilitar match
+            out[_norm_name(info['name'])] = form
 
     _cache_set(cache_key, out)
     return out
+
+
+# Mantida por compat — não usada mais
+def get_team_form(league_slug, team_id, team_name):
+    return {'form': '', 'games': []}
 
 
 class handler(BaseHTTPRequestHandler):
