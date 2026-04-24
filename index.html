@@ -3,11 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>StatCast BR — Props Monitor</title>
+<title>StatCast BR — Monitor de Props NBA e Futebol</title>
+<meta name="description" content="Monitore player props da NBA em tempo real. Hit rates, PropScore, DVP e alertas ao vivo para apostas esportivas. Dados de futebol com xG, estatísticas e classificação.">
+<meta name="keywords" content="NBA props, player props NBA, apostas NBA, hit rate NBA, futebol ao vivo, estatísticas NBA, BasketBall props Brasil">
+<meta name="author" content="StatCast BR">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#fdb927">
+
+<!-- Open Graph (WhatsApp, Facebook, etc.) -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://site-nba-ten.vercel.app">
+<meta property="og:title" content="StatCast BR — Monitor de Props NBA e Futebol">
+<meta property="og:description" content="Hit rates em tempo real, DVP, PropScore e alertas ao vivo para player props NBA. Dados de futebol com xG e estatísticas completas.">
+<meta property="og:image" content="https://site-nba-ten.vercel.app/og-image.png">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="StatCast BR — Monitor de Props NBA">
+<meta name="twitter:description" content="Hit rates, DVP e alertas ao vivo para player props NBA.">
+<meta name="twitter:image" content="https://site-nba-ten.vercel.app/og-image.png">
+
+<!-- Canonical -->
+<link rel="canonical" href="https://site-nba-ten.vercel.app">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://js.stripe.com/v3/"></script>
+<script src="https://js.stripe.com/v3/"></script>
 <style>
 :root {
   --bg: #080808;
@@ -974,7 +996,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
           </div>
         </div>
 
-        <div class="auth-footer">Ao criar conta você concorda com os termos de uso</div>
+        <div class="auth-footer">Ao criar conta você concorda com os <a href="/termos.html" target="_blank" style="color:var(--gold);text-decoration:none">Termos de Uso</a> e a <a href="/privacidade.html" target="_blank" style="color:var(--gold);text-decoration:none">Política de Privacidade</a></div>
       </div>
     </div>
   </div>
@@ -2337,6 +2359,7 @@ function showDashboard(user) {
   currentUser = user;
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('app-footer').style.display = 'block';
   const ini = initials(user.email.split('@')[0]);
   document.getElementById('user-btn').textContent = ini;
   document.getElementById('user-email-display').textContent = user.email;
@@ -4017,3 +4040,16 @@ init();
     </div>
   </div>
 </div>
+
+<!-- Rodapé legal -->
+<footer id="app-footer" style="display:none;border-top:1px solid var(--border);padding:16px 24px;text-align:center;background:var(--bg2)">
+  <div style="display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;font-size:11px;color:var(--text3)">
+    <span>© 2026 StatCast BR</span>
+    <span style="opacity:.3">|</span>
+    <a href="/privacidade.html" target="_blank" style="color:var(--text3);text-decoration:none;transition:color .2s" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--text3)'">Política de Privacidade</a>
+    <span style="opacity:.3">|</span>
+    <a href="/termos.html" target="_blank" style="color:var(--text3);text-decoration:none;transition:color .2s" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--text3)'">Termos de Uso</a>
+    <span style="opacity:.3">|</span>
+    <a href="mailto:armandoluiz500@gmail.com" style="color:var(--text3);text-decoration:none;transition:color .2s" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--text3)'">Contato</a>
+  </div>
+</footer>
