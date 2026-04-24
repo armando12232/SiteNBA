@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Política de Privacidade — StatCast BR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080808; --bg2: #0f0f0f; --bg3: #161616; --bg4: #1e1e1e;
+      --border: rgba(255,255,255,0.06); --border2: rgba(255,255,255,0.12);
+      --text: #ffffff; --text2: #aaaaaa; --text3: #555555;
+      --gold: #fdb927; --green: #00e676;
+      --display: 'Barlow Condensed', sans-serif;
+      --body: 'Barlow', sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; line-height: 1.7; }
+
+    .header {
+      background: var(--bg2); border-bottom: 1px solid var(--border2);
+      padding: 18px 24px; display: flex; align-items: center; gap: 16px;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .header-logo { font-family: var(--display); font-size: 22px; font-weight: 800; color: var(--gold); letter-spacing: .02em; }
+    .header-back { margin-left: auto; font-size: 13px; color: var(--text3); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color .2s; }
+    .header-back:hover { color: var(--gold); }
+
+    .container { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+
+    .page-title {
+      font-family: var(--display); font-size: 48px; font-weight: 800;
+      letter-spacing: .02em; line-height: 1;
+      margin-bottom: 8px;
+    }
+    .page-title span { color: var(--gold); }
+    .page-subtitle { font-size: 14px; color: var(--text3); margin-bottom: 48px; }
+
+    .section { margin-bottom: 36px; }
+    .section-title {
+      font-family: var(--display); font-size: 20px; font-weight: 700;
+      color: var(--gold); letter-spacing: .08em; text-transform: uppercase;
+      margin-bottom: 12px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section p { font-size: 14px; color: var(--text2); margin-bottom: 10px; }
+    .section ul { padding-left: 20px; font-size: 14px; color: var(--text2); }
+    .section ul li { margin-bottom: 6px; }
+
+    .highlight-box {
+      background: rgba(253,185,39,.06); border: 1px solid rgba(253,185,39,.2);
+      border-radius: 10px; padding: 16px 20px; margin: 20px 0;
+      font-size: 13px; color: var(--text2);
+    }
+    .highlight-box strong { color: var(--gold); }
+
+    .contact-box {
+      background: var(--bg2); border: 1px solid var(--border2);
+      border-radius: 14px; padding: 24px; text-align: center; margin-top: 48px;
+    }
+    .contact-box p { font-size: 13px; color: var(--text3); margin-bottom: 8px; }
+    .contact-box a { color: var(--gold); text-decoration: none; font-weight: 600; }
+
+    .divider { height: 1px; background: var(--border); margin: 40px 0; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">⚡ StatCast BR</div>
+  <a href="/" class="header-back">← Voltar ao app</a>
+</div>
+
+<div class="container">
+  <div class="page-title">Política de <span>Privacidade</span></div>
+  <div class="page-subtitle">Última atualização: abril de 2026 &nbsp;·&nbsp; Versão 1.0</div>
+
+  <div class="highlight-box">
+    <strong>Resumo:</strong> Coletamos apenas o necessário para operar o serviço. Não vendemos seus dados. Você pode solicitar exclusão a qualquer momento. Esta política cumpre a <strong>Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018)</strong>.
+  </div>
+
+  <div class="section">
+    <div class="section-title">1. Quem somos</div>
+    <p>StatCast BR é uma plataforma de análise de estatísticas esportivas e props de apostas, operada como projeto independente com sede no Brasil.</p>
+    <p>Para dúvidas sobre privacidade, entre em contato: <strong>armandoluiz500@gmail.com</strong></p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">2. Dados que coletamos</div>
+    <p>Coletamos as seguintes categorias de dados pessoais:</p>
+    <ul>
+      <li><strong>Dados de cadastro:</strong> endereço de e-mail e senha (armazenada em hash via Supabase Auth)</li>
+      <li><strong>Dados de assinatura:</strong> plano contratado, status e datas via Stripe (não armazenamos dados de cartão — processados diretamente pela Stripe)</li>
+      <li><strong>Dados de uso:</strong> logs de acesso, erros e interações para melhoria do serviço</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">3. Como usamos seus dados</div>
+    <ul>
+      <li>Autenticar seu acesso à plataforma</li>
+      <li>Processar e gerenciar sua assinatura</li>
+      <li>Enviar e-mails transacionais (confirmação de conta, senha)</li>
+      <li>Detectar e prevenir fraudes e abusos</li>
+      <li>Melhorar funcionalidades com base em dados agregados e anonimizados</li>
+    </ul>
+    <p style="margin-top:10px">Não usamos seus dados para publicidade de terceiros nem os compartilhamos com parceiros comerciais.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">4. Base legal (LGPD)</div>
+    <p>O tratamento dos seus dados se baseia em:</p>
+    <ul>
+      <li><strong>Execução de contrato</strong> (Art. 7º, V): necessário para prestar o serviço contratado</li>
+      <li><strong>Legítimo interesse</strong> (Art. 7º, IX): segurança, prevenção de fraude e melhoria do serviço</li>
+      <li><strong>Consentimento</strong> (Art. 7º, I): para comunicações de marketing, quando aplicável</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">5. Com quem compartilhamos</div>
+    <ul>
+      <li><strong>Supabase:</strong> banco de dados e autenticação (servidores na AWS)</li>
+      <li><strong>Stripe:</strong> processamento de pagamentos (PCI-DSS compliant)</li>
+      <li><strong>Vercel:</strong> hospedagem da aplicação</li>
+    </ul>
+    <p style="margin-top:10px">Todos os subprocessadores são contratualmente obrigados a proteger seus dados conforme padrões equivalentes a esta política.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">6. Seus direitos (LGPD)</div>
+    <p>Nos termos da LGPD, você tem direito a:</p>
+    <ul>
+      <li>Confirmar a existência de tratamento dos seus dados</li>
+      <li>Acessar seus dados pessoais</li>
+      <li>Corrigir dados incompletos ou desatualizados</li>
+      <li>Solicitar anonimização, bloqueio ou eliminação de dados desnecessários</li>
+      <li>Portabilidade dos dados a outro fornecedor</li>
+      <li>Revogar consentimento a qualquer momento</li>
+      <li>Solicitar exclusão completa da conta e dados</li>
+    </ul>
+    <p style="margin-top:10px">Para exercer qualquer direito, envie e-mail para <strong>armandoluiz500@gmail.com</strong> com o assunto "LGPD — [seu direito]". Respondemos em até 15 dias úteis.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">7. Retenção de dados</div>
+    <ul>
+      <li>Dados de conta: mantidos enquanto a conta estiver ativa</li>
+      <li>Após exclusão da conta: eliminados em até 30 dias (exceto obrigações legais fiscais)</li>
+      <li>Logs de acesso: 90 dias</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">8. Segurança</div>
+    <ul>
+      <li>Tráfego criptografado via HTTPS/TLS</li>
+      <li>Senhas armazenadas em hash bcrypt (nunca em texto puro)</li>
+      <li>Row Level Security ativo no banco de dados</li>
+      <li>Acesso a dados de produção restrito</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <div class="section-title">9. Cookies</div>
+    <p>Utilizamos apenas cookies essenciais para manter a sessão autenticada. Não utilizamos cookies de rastreamento ou publicidade de terceiros.</p>
+  </div>
+
+  <div class="section">
+    <div class="section-title">10. Alterações</div>
+    <p>Esta política pode ser atualizada. Notificaremos por e-mail em caso de alterações materiais. O uso contínuo após notificação implica aceitação.</p>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="contact-box">
+    <p>Dúvidas sobre privacidade?</p>
+    <a href="mailto:armandoluiz500@gmail.com">armandoluiz500@gmail.com</a>
+  </div>
+</div>
+
+</body>
+</html>
