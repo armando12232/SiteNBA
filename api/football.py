@@ -3,8 +3,8 @@ from http.server import BaseHTTPRequestHandler
 
 ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer'
 
-# TheSportsDB (free tier, key=3) — usada pra forma recente e lineups
-TSDB_BASE = 'https://www.thesportsdb.com/api/v1/json/3'
+# TheSportsDB (free tier, key=123) — usada pra forma recente e lineups
+TSDB_BASE = 'https://www.thesportsdb.com/api/v1/json/123'
 
 # Mapeamento league_key → league_id da TheSportsDB
 TSDB_LEAGUE_IDS = {
