@@ -3328,15 +3328,34 @@ async function fetchLeagueForm(leagueKey) {
   return p;
 }
 
+function _normName(s) {
+  if (!s) return '';
+  return s.toString().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+
 function formDotsHTML(teamName, leagueKey) {
   const cache = (window._ftFormCache || {})[leagueKey];
   if (!cache) return '<span data-form-slot></span>';
-  const entry = cache[teamName];
+
+  // Tenta match exato, depois normalizado, depois contém
+  let entry = cache[teamName];
+  if (!entry) entry = cache[_normName(teamName)];
+  if (!entry) {
+    const nn = _normName(teamName);
+    const keyMatch = Object.keys(cache).find(k => {
+      const kn = _normName(k);
+      return kn.includes(nn) || nn.includes(kn);
+    });
+    if (keyMatch) entry = cache[keyMatch];
+  }
+
   if (!entry || !entry.form) return '<span data-form-slot></span>';
-  // Gera 5 bolinhas (antigo → recente, esquerda → direita)
-  const chars = entry.form.split('').reverse(); // API retorna mais recente primeiro
+
+  // Gera bolinhas (antigo → recente, esquerda → direita)
+  const chars = entry.form.split('').reverse();
+  const games = entry.games || [];
   const dots = chars.map((c, i) => {
-    const g = entry.games ? entry.games[chars.length - 1 - i] : null;
+    const g = games[chars.length - 1 - i];
     const col = c === 'W' ? 'var(--green)' : c === 'D' ? 'var(--gold)' : 'var(--danger)';
     const tip = g ? `${g.opp || '?'} ${g.homeAway === 'home' ? 'H' : 'A'} ${g.score}` : c;
     return `<span title="${tip}" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${col};margin:0 1px"></span>`;
