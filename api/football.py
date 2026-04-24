@@ -3,6 +3,20 @@ from http.server import BaseHTTPRequestHandler
 
 ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer'
 
+# Cache simples em memória (por processo serverless)
+import time
+_CACHE = {}
+_CACHE_TTL = 600  # 10 min
+
+def _cache_get(key):
+    entry = _CACHE.get(key)
+    if entry and time.time() - entry[0] < _CACHE_TTL:
+        return entry[1]
+    return None
+
+def _cache_set(key, value):
+    _CACHE[key] = (time.time(), value)
+
 LEAGUES = [
     {'key': 'brasileirao',  'slug': 'bra.1',                 'name': 'Brasileirao Serie A', 'flag': '\U0001F1E7\U0001F1F7'},
     {'key': 'champions',    'slug': 'uefa.champions',         'name': 'Champions League',    'flag': '\U0001F3C6'},
@@ -248,6 +262,98 @@ def get_pregame(game_id, league_key):
     return result
 
 
+def get_team_form(league_slug, team_id, team_name):
+    """Busca últimos 5 jogos finalizados de um time. Retorna string W/D/L."""
+    cache_key = f"form_{league_slug}_{team_id}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+
+    try:
+        url = f'{ESPN_BASE}/{league_slug}/teams/{team_id}/schedule'
+        data = espn_fetch(url)
+    except Exception:
+        return ''
+
+    events = data.get('events', []) or []
+    # Filtrar só jogos finalizados, ordenar por data desc
+    finished = []
+    for ev in events:
+        comp = (ev.get('competitions') or [{}])[0]
+        status = comp.get('status', {}).get('type', {}).get('state', '')
+        if status != 'post':
+            continue
+        comps = comp.get('competitors', [])
+        my = next((c for c in comps if (c.get('team') or {}).get('displayName','').lower() == team_name.lower()), None)
+        if not my:
+            # fallback: checar por id
+            my = next((c for c in comps if str((c.get('team') or {}).get('id','')) == str(team_id)), None)
+        if not my:
+            continue
+        opp = next((c for c in comps if c != my), {})
+        try:
+            my_score  = int(my.get('score', 0) or 0)
+            opp_score = int(opp.get('score', 0) or 0)
+        except:
+            continue
+        result = 'W' if my_score > opp_score else ('D' if my_score == opp_score else 'L')
+        finished.append({
+            'date':   comp.get('date',''),
+            'result': result,
+            'score':  f"{my_score}-{opp_score}",
+            'opp':    (opp.get('team') or {}).get('abbreviation','') or (opp.get('team') or {}).get('displayName','')[:3].upper(),
+            'homeAway': my.get('homeAway',''),
+        })
+
+    # Ordenar por data desc e pegar 5
+    finished.sort(key=lambda x: x['date'], reverse=True)
+    recent = finished[:5]
+    # String simplificada ('WWDLW') + detalhes
+    form_str = ''.join(g['result'] for g in recent)
+    result = {'form': form_str, 'games': recent}
+    _cache_set(cache_key, result)
+    return result
+
+
+def get_league_form(league_key):
+    """Retorna forma de todos os times da liga."""
+    slug = SLUG_MAP.get(league_key)
+    if not slug:
+        return {'error': 'invalid league'}
+
+    cache_key = f"league_form_{league_key}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+
+    try:
+        teams_data = espn_fetch(f'{ESPN_BASE}/{slug}/teams')
+    except Exception as e:
+        return {'error': str(e)}
+
+    sports  = (teams_data.get('sports') or [{}])[0]
+    leagues = (sports.get('leagues') or [{}])[0]
+    teams   = leagues.get('teams', [])
+
+    out = {}
+    for t in teams[:30]:
+        team_obj = t.get('team', {}) or {}
+        team_id   = team_obj.get('id')
+        team_name = team_obj.get('displayName', '')
+        team_abbr = team_obj.get('abbreviation', '')
+        if not team_id or not team_name:
+            continue
+        form = get_team_form(slug, team_id, team_name)
+        if form and isinstance(form, dict) and form.get('form'):
+            # Chave: nome + abbr (frontend matcha por nome)
+            out[team_name] = form
+            if team_abbr:
+                out[team_abbr] = form
+
+    _cache_set(cache_key, out)
+    return out
+
+
 class handler(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
 
@@ -264,6 +370,16 @@ class handler(BaseHTTPRequestHandler):
                 get_pregame(game_id, league_key) if game_id
                 else {'error': 'gameId required'}
             ).encode()
+            self._json(body)
+            return
+
+        # ── Form (V/E/D últimos 5) ─────────────────────────────────────────
+        if t == 'form':
+            league_key = params.get('leagueKey', [''])[0]
+            if not league_key:
+                body = json.dumps({'error': 'leagueKey required'}).encode()
+            else:
+                body = json.dumps(get_league_form(league_key)).encode()
             self._json(body)
             return
 
