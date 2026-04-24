@@ -1604,93 +1604,6 @@ async function loadTodayGames() {
   }
 }
 
-// ─── DVP (Defense vs Position) ───────────────────────────────────────────────
-window._dvpCache = window._dvpCache || {};
-window._dvpInflight = window._dvpInflight || {};
-
-async function fetchDVP(oppTeam, position, stat) {
-  if (!oppTeam || !position) return null;
-  // Normalize position to single letter (G/F/C)
-  const pos = String(position).trim().charAt(0).toUpperCase();
-  if (!['G','F','C'].includes(pos)) return null;
-  const key = `${oppTeam}|${pos}|${stat}`;
-  if (window._dvpCache[key]) return window._dvpCache[key];
-  if (window._dvpInflight[key]) return window._dvpInflight[key];
-
-  const p = fetch(`/api/nba?type=defense&teamAbbr=${oppTeam}&position=${pos}&stat=${stat}`)
-    .then(r => r.json())
-    .then(d => {
-      if (d && !d.error && d.pts_allowed != null) {
-        window._dvpCache[key] = d;
-        return d;
-      }
-      window._dvpCache[key] = null;
-      return null;
-    })
-    .catch(() => { window._dvpCache[key] = null; return null; })
-    .finally(() => { delete window._dvpInflight[key]; });
-
-  window._dvpInflight[key] = p;
-  return p;
-}
-
-// ─── Streak visual dots ──────────────────────────────────────────────────────
-function streakDots(playerName, stat, line) {
-  // Busca last5_games no cache de pré-jogo
-  const pgCache = window._todayPregameCache || {};
-  let games = null;
-  for (const players of Object.values(pgCache)) {
-    const found = players?.find(p => p.player_name === playerName);
-    if (found?.last5_games?.length) { games = found.last5_games; break; }
-  }
-  if (!games || !games.length || line == null) return '';
-
-  // Gera bolinhas: últimos 5 (mais recente à direita)
-  // games vem ordenado do mais recente [0] ao mais antigo [4]
-  // Queremos mostrar antigo → recente (esquerda → direita)
-  const ordered = [...games].reverse();
-  const dots = ordered.map(g => {
-    const val = g[stat] ?? g.pts;
-    if (val == null) return '<span style="opacity:.3">○</span>';
-    const hit = val >= line;
-    const col = hit ? 'var(--green)' : 'var(--danger)';
-    return `<span title="${g.opp || ''}: ${val}" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${col};margin:0 1px"></span>`;
-  }).join('');
-  return `<span class="streak-dots" style="display:inline-flex;align-items:center;margin-left:6px;vertical-align:middle">${dots}</span>`;
-}
-
-function dvpChip(dvp) {
-  if (!dvp || !dvp.rank || !dvp.total) return '';
-  const rank = dvp.rank, total = dvp.total;
-  // Top 10 piores defesas (rank alto = defesa ruim = favorável ao ataque)
-  const favorable = rank >= (total - 9); // top 10 piores
-  const tough     = rank <= 10;           // top 10 melhores defesas
-  const icon  = favorable ? '🟢' : tough ? '🔴' : '🟡';
-  const color = favorable ? 'var(--green)' : tough ? 'var(--danger)' : 'var(--gold)';
-  return `<span class="dvp-chip" title="${dvp.category || ''} · ${dvp.pts_allowed} permitidos/jogo"
-    style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:${color};background:${color}18;border:1px solid ${color}33;border-radius:5px;padding:1px 5px;margin-left:4px">
-    ${icon} DVP ${rank}º
-  </span>`;
-}
-
-async function hydrateDVPForRows() {
-  const rows = document.querySelectorAll('[data-dvp-row]');
-  const tasks = [];
-  rows.forEach(row => {
-    const opp  = row.getAttribute('data-dvp-opp');
-    const pos  = row.getAttribute('data-dvp-pos');
-    const stat = row.getAttribute('data-dvp-stat');
-    if (!opp || !pos || !stat) return;
-    tasks.push(
-      fetchDVP(opp, pos, stat).then(dvp => {
-        const slot = row.querySelector('[data-dvp-slot]');
-        if (slot && dvp) slot.innerHTML = dvpChip(dvp);
-      })
-    );
-  });
-  await Promise.allSettled(tasks);
-}
-
 function renderPropsTable() {
   const loading = document.getElementById('today-loading');
   const table   = document.getElementById('props-table');
@@ -1708,7 +1621,7 @@ function renderPropsTable() {
     if (currentSearchQuery && !name.toLowerCase().includes(currentSearchQuery)) continue;
 
     // Encontrar o jogo deste jogador pelos games agendados
-    let gameLabel = '', gameDateLabel = '', gameKey = '', opponent = '';
+    let gameLabel = '', gameDateLabel = '', gameKey = '';
     for (const [key, g] of Object.entries(games)) {
       const isHome = g.homeTeam.abbr === bp.team;
       const isAway = g.awayTeam.abbr === bp.team;
@@ -1716,7 +1629,6 @@ function renderPropsTable() {
         gameLabel     = `${g.awayTeam.abbr} × ${g.homeTeam.abbr}`;
         gameDateLabel = g.gameDateLabel || '';
         gameKey       = key;
-        opponent      = isHome ? g.awayTeam.abbr : g.homeTeam.abbr;
         break;
       }
     }
@@ -1740,7 +1652,6 @@ function renderPropsTable() {
     allPlayers.push({
       player_name: name,
       team:        bp.team,
-      opponent,
       position:    bp.position,
       image:       bp.image,
       player_id:   playerId,
@@ -1830,7 +1741,7 @@ function renderPropsTable() {
         : null;
 
       return `
-        <div class="props-table-row" data-dvp-row data-dvp-opp="${p.opponent||''}" data-dvp-pos="${p.position||''}" data-dvp-stat="${currentPropFilter}" onclick="openPlayerPropsModal('${p.player_name}','${p.gameLabel}','${p.opponent||''}')" style="cursor:pointer">
+        <div class="props-table-row" onclick="openPlayerPropsModal('${p.player_name}','${p.gameLabel}')" style="cursor:pointer">
           <div style="display:flex;align-items:center;gap:10px;min-width:0">
             <img src="${p.player_id ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png` : (p.image || '')}"
                  style="width:48px;height:48px;border-radius:10px;object-fit:cover;object-position:top;flex-shrink:0;background:var(--bg3)"
@@ -1840,9 +1751,7 @@ function renderPropsTable() {
               <div style="font-size:11px;color:var(--text3);margin-top:2px">
                 ${p.gameLabel} &middot; <span style="color:var(--gold);font-weight:700">O ${ensureHalfLine(prop.line)}</span>
                 ${prop.rec_side === 'over' ? '<span style="color:var(--green)"> ↑</span>' : prop.rec_side === 'under' ? '<span style="color:var(--danger)"> ↓</span>' : ''}
-                ${streakDots(p.player_name, currentPropFilter, prop.line)}
                 ${streak ? `<span style="color:var(--text3);margin-left:4px">${streak} streak</span>` : ''}
-                <span data-dvp-slot></span>
               </div>
             </div>
           </div>
@@ -1886,20 +1795,16 @@ function renderPropsTable() {
         </div>
       </div>`;
   }).join('');
-
-  // Hidratar DVP após renderizar (assíncrono)
-  hydrateDVPForRows();
 }
 
 // ─── PLAYER PROPS MODAL ──────────────────────────────────────────────────────
 let _ppModalCurrentStat = 'pts';
 
-function openPlayerPropsModal(playerName, gameLabel, opponent) {
+function openPlayerPropsModal(playerName, gameLabel) {
   const bp = (window._bpData || {})[playerName];
   if (!bp) return;
 
   _ppModalCurrentStat = currentPropFilter;
-  window._ppModalOpponent = opponent || '';
 
   const overlay = document.getElementById('pp-modal-overlay');
 
@@ -2066,54 +1971,11 @@ function _renderPPModalBody(bp) {
     ${availableProps.length > 1 ? `<div class="pp-section-title">Prop</div><div class="pp-prop-tabs">${tabsHtml}</div>` : ''}
     ${statGrid}
     ${hitRatesHtml}
-    <div id="pp-dvp-section" style="margin-top:16px"></div>
     ${streakHtml}
     ${allPropsHtml}
     <div style="margin-top:20px;text-align:center;font-size:11px;color:var(--text3)">
       Dados: BettingPros · Atualizado hoje
     </div>`;
-
-  // Hidratar DVP no modal
-  const opp = window._ppModalOpponent;
-  const pos = bp.position;
-  if (opp && pos && prop) {
-    const dvpBox = document.getElementById('pp-dvp-section');
-    if (dvpBox) {
-      dvpBox.innerHTML = `<div class="pp-section-title">🛡️ Defesa do adversário (${opp})</div>
-        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--text3)">Carregando DVP...</div>`;
-      fetchDVP(opp, pos, stat).then(dvp => {
-        if (!dvp) {
-          dvpBox.innerHTML = `<div class="pp-section-title">🛡️ Defesa do adversário (${opp})</div>
-            <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--text3)">Dados de defesa indisponíveis</div>`;
-          return;
-        }
-        const rank = dvp.rank, total = dvp.total, pts = dvp.pts_allowed;
-        const favorable = rank >= (total - 9);
-        const tough = rank <= 10;
-        const color = favorable ? 'var(--green)' : tough ? 'var(--danger)' : 'var(--gold)';
-        const icon  = favorable ? '🟢' : tough ? '🔴' : '🟡';
-        const label = favorable
-          ? `${icon} Defesa fraca contra ${dvp.category || pos} — cede <strong style="color:${color}">${pts}</strong> ${stat === 'pts' ? 'pts' : stat}/jogo (${rank}º pior de ${total})`
-          : tough
-            ? `${icon} Defesa forte contra ${dvp.category || pos} — cede <strong style="color:${color}">${pts}</strong> ${stat === 'pts' ? 'pts' : stat}/jogo (${rank}º de ${total})`
-            : `${icon} Defesa média contra ${dvp.category || pos} — cede <strong style="color:${color}">${pts}</strong> ${stat === 'pts' ? 'pts' : stat}/jogo (${rank}º de ${total})`;
-        dvpBox.innerHTML = `
-          <div class="pp-section-title">🛡️ Defesa do adversário (${opp})</div>
-          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
-            <div style="display:flex;align-items:center;gap:12px">
-              <div style="flex:1;line-height:1.5;font-size:12px;color:var(--text2)">${label}</div>
-              <div style="text-align:center;min-width:50px">
-                <div style="font-family:var(--display);font-size:26px;font-weight:800;color:${color};line-height:1">${rank}º</div>
-                <div style="font-size:9px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase">de ${total}</div>
-              </div>
-            </div>
-            <div style="margin-top:10px;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
-              <div style="height:100%;width:${Math.round((rank/total)*100)}%;background:${color};border-radius:3px;opacity:.85"></div>
-            </div>
-          </div>`;
-      });
-    }
-  }
 }
 
 // ─── PRICING ─────────────────────────────────────────────────────────────────
@@ -3043,18 +2905,78 @@ function insertDrawer(groupList, order) {
   const g = groupList.find(x => x.key === activeGameKey);
   if (!g) return;
   const sorted = [...g.alerts].sort((a,b) => (order[a.type]??9) - (order[b.type]??9));
+  // Extrair abbrs do game label para buscar forma
+  const parts = g.label.split('·').map(p => p.trim());
+  const awayAbbr = parts[0]?.split(' ')[0] || '';
+  const homeAbbr = parts[1]?.split(' ')[0] || '';
+
   const drawer = document.createElement('div');
   drawer.className = 'players-drawer';
   drawer.id = 'players-drawer';
   drawer.innerHTML = `
     <div class="players-drawer-header">
       <div style="flex:1">Jogadores com alerta — ${g.label}</div>
+      <div id="drawer-team-form" style="display:flex;gap:14px;font-size:10px"></div>
     </div>
     <div class="players-drawer-grid">
       ${sorted.map(renderCard).join('')}
     </div>`;
-  // Inserir como filho do grid (ocupa linha inteira via grid-column: 1/-1)
   grid.appendChild(drawer);
+
+  // Hidratar forma recente dos 2 times (assíncrono)
+  hydrateTeamFormInDrawer(awayAbbr, homeAbbr);
+}
+
+// Cache de forma de time NBA
+window._nbaTeamFormCache = window._nbaTeamFormCache || {};
+window._nbaTeamFormInflight = window._nbaTeamFormInflight || {};
+
+async function fetchNBATeamForm(abbr) {
+  if (!abbr) return null;
+  if (window._nbaTeamFormCache[abbr]) return window._nbaTeamFormCache[abbr];
+  if (window._nbaTeamFormInflight[abbr]) return window._nbaTeamFormInflight[abbr];
+
+  const p = fetch(`/api/nba?type=team_last&abbr=${abbr}`)
+    .then(r => r.json())
+    .then(d => {
+      const result = (d && !d.error && d.form) ? d : null;
+      window._nbaTeamFormCache[abbr] = result;
+      return result;
+    })
+    .catch(() => { window._nbaTeamFormCache[abbr] = null; return null; })
+    .finally(() => { delete window._nbaTeamFormInflight[abbr]; });
+
+  window._nbaTeamFormInflight[abbr] = p;
+  return p;
+}
+
+async function hydrateTeamFormInDrawer(awayAbbr, homeAbbr) {
+  const slot = document.getElementById('drawer-team-form');
+  if (!slot) return;
+
+  const [awayForm, homeForm] = await Promise.all([
+    fetchNBATeamForm(awayAbbr),
+    fetchNBATeamForm(homeAbbr),
+  ]);
+
+  const renderForm = (abbr, f) => {
+    if (!f || !f.form) return '';
+    const chars = f.form.split('').reverse();
+    const dots = chars.map((c, i) => {
+      const g = f.games ? f.games[chars.length - 1 - i] : null;
+      const col = c === 'W' ? 'var(--green)' : 'var(--danger)';
+      const tip = g ? `${g.opp || ''} ${g.homeAway === 'home' ? 'H' : 'A'} ${g.score}` : c;
+      return `<span title="${tip}" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${col};margin:0 1px"></span>`;
+    }).join('');
+    return `<span style="display:inline-flex;align-items:center;gap:5px;color:var(--text3)">
+      <span style="font-weight:700;color:var(--text2)">${abbr}</span>
+      <span style="display:inline-flex">${dots}</span>
+    </span>`;
+  };
+
+  const current = document.getElementById('drawer-team-form');
+  if (!current) return;
+  current.innerHTML = renderForm(awayAbbr, awayForm) + renderForm(homeAbbr, homeForm);
 }
 
 function toggleGameDrawer(key) {
@@ -3302,83 +3224,6 @@ document.addEventListener('keydown', e=>{ if (e.key==='Escape') closeModalDirect
 let _footballData = null;
 let _leagueFilter = 'all';
 
-// Cache de forma recente por liga: { leagueKey: { teamName: { form, games } } }
-window._ftFormCache = window._ftFormCache || {};
-window._ftFormInflight = window._ftFormInflight || {};
-
-async function fetchLeagueForm(leagueKey) {
-  if (!leagueKey) return null;
-  if (window._ftFormCache[leagueKey]) return window._ftFormCache[leagueKey];
-  if (window._ftFormInflight[leagueKey]) return window._ftFormInflight[leagueKey];
-
-  const p = fetch(`/api/football?type=form&leagueKey=${leagueKey}`)
-    .then(r => r.json())
-    .then(d => {
-      if (d && !d.error) {
-        window._ftFormCache[leagueKey] = d;
-        return d;
-      }
-      window._ftFormCache[leagueKey] = {};
-      return {};
-    })
-    .catch(() => { window._ftFormCache[leagueKey] = {}; return {}; })
-    .finally(() => { delete window._ftFormInflight[leagueKey]; });
-
-  window._ftFormInflight[leagueKey] = p;
-  return p;
-}
-
-function _normName(s) {
-  if (!s) return '';
-  return s.toString().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
-}
-
-function formDotsHTML(teamName, leagueKey) {
-  const cache = (window._ftFormCache || {})[leagueKey];
-  if (!cache) return '<span data-form-slot></span>';
-
-  // Tenta match exato, depois normalizado, depois contém
-  let entry = cache[teamName];
-  if (!entry) entry = cache[_normName(teamName)];
-  if (!entry) {
-    const nn = _normName(teamName);
-    const keyMatch = Object.keys(cache).find(k => {
-      const kn = _normName(k);
-      return kn.includes(nn) || nn.includes(kn);
-    });
-    if (keyMatch) entry = cache[keyMatch];
-  }
-
-  if (!entry || !entry.form) return '<span data-form-slot></span>';
-
-  // Gera bolinhas (antigo → recente, esquerda → direita)
-  const chars = entry.form.split('').reverse();
-  const games = entry.games || [];
-  const dots = chars.map((c, i) => {
-    const g = games[chars.length - 1 - i];
-    const col = c === 'W' ? 'var(--green)' : c === 'D' ? 'var(--gold)' : 'var(--danger)';
-    const tip = g ? `${g.opp || '?'} ${g.homeAway === 'home' ? 'H' : 'A'} ${g.score}` : c;
-    return `<span title="${tip}" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${col};margin:0 1px"></span>`;
-  }).join('');
-  return `<span style="display:inline-flex;align-items:center;vertical-align:middle">${dots}</span>`;
-}
-
-async function hydrateFootballForm() {
-  const leagueKeys = new Set();
-  document.querySelectorAll('[data-form-league]').forEach(el => {
-    const k = el.getAttribute('data-form-league');
-    if (k) leagueKeys.add(k);
-  });
-  // Carregar forma de cada liga em paralelo
-  await Promise.allSettled(Array.from(leagueKeys).map(k => fetchLeagueForm(k)));
-  // Preencher slots
-  document.querySelectorAll('[data-form-slot-team]').forEach(slot => {
-    const team = slot.getAttribute('data-form-slot-team');
-    const lk   = slot.getAttribute('data-form-league');
-    slot.outerHTML = formDotsHTML(team, lk);
-  });
-}
-
 function setLeagueFilter(league, btn) {
   _leagueFilter = league;
   document.querySelectorAll('#league-filters .prop-filter-btn').forEach(b => b.classList.remove('active'));
@@ -3472,7 +3317,6 @@ function renderFootballGames() {
 
       return `
         <div style="background:var(--bg2);border:1px solid ${border};border-radius:16px;overflow:hidden;transition:all .2s;opacity:${opacity};cursor:pointer"
-             data-form-league="${f.league_key}"
              onmouseenter="this.style.transform='translateY(-2px)';this.style.opacity='1'"
              onmouseleave="this.style.transform='';this.style.opacity='${opacity}'"
              onclick="openFtModal('${f.id}')">
@@ -3482,7 +3326,6 @@ function renderFootballGames() {
               <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;min-width:0">
                 <img src="${f.home_logo}" style="width:40px;height:40px;object-fit:contain" onerror="this.style.display='none'">
                 <div style="font-family:var(--display);font-size:12px;font-weight:800;text-align:center;color:var(--text);line-height:1.2">${f.home}</div>
-                <span data-form-slot-team="${f.home}" data-form-league="${f.league_key}"></span>
               </div>
               <div style="text-align:center;flex-shrink:0;min-width:80px">
                 ${centerContent}
@@ -3491,7 +3334,6 @@ function renderFootballGames() {
               <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;min-width:0">
                 <img src="${f.away_logo}" style="width:40px;height:40px;object-fit:contain" onerror="this.style.display='none'">
                 <div style="font-family:var(--display);font-size:12px;font-weight:800;text-align:center;color:var(--text);line-height:1.2">${f.away}</div>
-                <span data-form-slot-team="${f.away}" data-form-league="${f.league_key}"></span>
               </div>
             </div>
           </div>
@@ -3523,9 +3365,6 @@ function renderFootballGames() {
         ${section(finished, finished.length && (live.length || scheduled.length) ? '✅ Encerrados' : '')}
       </div>`;
   }).join('');
-
-  // Hidratar forma recente (async)
-  hydrateFootballForm();
 }
 
 // Patch switchView para suportar football
@@ -3696,10 +3535,6 @@ function openFtModal(fixtureId) {
   const isLive = !!f.live, isFinished = !!f.finished;
   const hasScore = f.home_goals != null;
 
-  // Stash para comparação com xG no modal de stats
-  window._ftHomeGoals = (f.home_goals != null) ? parseInt(f.home_goals) : null;
-  window._ftAwayGoals = (f.away_goals != null) ? parseInt(f.away_goals) : null;
-
   document.getElementById('ft-modal-hero-bar').style.background = isLive
     ? 'linear-gradient(90deg,var(--red),#ff6b6b)'
     : isFinished ? 'linear-gradient(90deg,var(--accent),var(--accent2))' : 'var(--border)';
@@ -3769,7 +3604,7 @@ function openFtModal(fixtureId) {
   }
   // Carregar pre-jogo se agendado
   if (!isLive && !isFinished && f.league_key) {
-    loadFtPregame(f.id, f.league_key, f.home, f.away, f);
+    loadFtPregame(f.id, f.league_key, f.home, f.away);
   }
 }
 
@@ -3793,8 +3628,6 @@ function loadFtStats(gameId, leagueKey, homeName, awayName) {
         possessionPct: ['Posse de Bola', '%'],
         totalShots:    ['Chutes',         ''],
         shotsOnTarget: ['No Gol',         ''],
-        shotsInsideBox:['Chutes na área', ''],
-        bigChancesCreated:['Grandes chances',''],
         wonCorners:    ['Escanteios',      ''],
         foulsCommitted:['Faltas',          ''],
         yellowCards:   ['Cartões \u{1F7E8}',''],
@@ -3805,62 +3638,6 @@ function loadFtStats(gameId, leagueKey, homeName, awayName) {
         effectiveTackles:['Desarmes',      ''],
         interceptions: ['Interceptações',  ''],
       };
-
-      // xG (Expected Goals) — procurar nas variações possíveis da ESPN
-      const xGKeys = ['expectedGoals', 'xG', 'xg', 'totalExpectedGoals'];
-      const pickXG = (stats) => {
-        for (const k of xGKeys) {
-          if (stats[k] != null && stats[k] !== '' && stats[k] !== '0') return stats[k];
-        }
-        return null;
-      };
-      const homeXG = pickXG(home.stats || {});
-      const awayXG = pickXG(away.stats || {});
-
-      let xgCardHTML = '';
-      if (homeXG != null || awayXG != null) {
-        const hVal = parseFloat(homeXG || '0');
-        const aVal = parseFloat(awayXG || '0');
-        const total = hVal + aVal || 1;
-        const hPct = Math.round(hVal / total * 100);
-        const aPct = 100 - hPct;
-        // Compara xG com gols reais (do state guardado no openFtModal)
-        const hGoals = window._ftHomeGoals;
-        const aGoals = window._ftAwayGoals;
-        const hDelta = (hGoals != null && !isNaN(hVal)) ? (hGoals - hVal) : null;
-        const aDelta = (aGoals != null && !isNaN(aVal)) ? (aGoals - aVal) : null;
-        const deltaLabel = (d) => {
-          if (d == null) return '';
-          if (d > 0.3)  return `<span style="color:var(--green);font-size:10px;font-weight:700">superou xG +${d.toFixed(1)}</span>`;
-          if (d < -0.3) return `<span style="color:var(--danger);font-size:10px;font-weight:700">abaixo xG ${d.toFixed(1)}</span>`;
-          return `<span style="color:var(--text3);font-size:10px;font-weight:700">no esperado</span>`;
-        };
-        xgCardHTML = `
-          <div style="background:linear-gradient(135deg,rgba(212,175,55,.12),rgba(212,175,55,.03));border:1px solid rgba(212,175,55,.3);border-radius:12px;padding:12px 14px;margin-bottom:12px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-              <span style="font-family:var(--display);font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)">⚡ Expected Goals (xG)</span>
-              <span style="font-size:9px;color:var(--text3)">qualidade das chances</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:12px">
-              <div style="text-align:center;min-width:56px">
-                <div style="font-family:var(--display);font-size:24px;font-weight:800;color:var(--accent);line-height:1">${homeXG ?? '—'}</div>
-                <div style="font-size:9px;color:var(--text3);margin-top:2px">${homeName}</div>
-                ${deltaLabel(hDelta)}
-              </div>
-              <div style="flex:1;display:flex;flex-direction:column;gap:3px">
-                <div style="display:flex;gap:3px">
-                  <div class="ft-stat-bar-bg"><div class="ft-stat-bar-fill" style="width:${hPct}%;background:var(--accent);float:right"></div></div>
-                  <div class="ft-stat-bar-bg"><div class="ft-stat-bar-fill" style="width:${aPct}%;background:var(--red2)"></div></div>
-                </div>
-              </div>
-              <div style="text-align:center;min-width:56px">
-                <div style="font-family:var(--display);font-size:24px;font-weight:800;color:var(--red2);line-height:1">${awayXG ?? '—'}</div>
-                <div style="font-size:9px;color:var(--text3);margin-top:2px">${awayName}</div>
-                ${deltaLabel(aDelta)}
-              </div>
-            </div>
-          </div>`;
-      }
 
       const rows = Object.entries(STATS_LABELS).map(([key, [label, unit]]) => {
         const hVal = parseFloat(home.stats[key] || '0');
@@ -3885,7 +3662,6 @@ function loadFtStats(gameId, leagueKey, homeName, awayName) {
       // Header dos times nas stats
       const statsHTML = `
         <div class="ft-modal-section-title">Estatísticas</div>
-        ${xgCardHTML}
         <div style="display:flex;justify-content:space-between;margin-bottom:8px">
           <span style="font-size:11px;font-weight:700;color:var(--accent)">${homeName}</span>
           <span style="font-size:11px;font-weight:700;color:var(--red2)">${awayName}</span>
@@ -3982,15 +3758,13 @@ function renderFtPlayers(rosters, tab) {
     starters.map(rowHTML).join('') +
     (subs.length ? '<div style="font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:8px">Banco / Entrou</div>' + subs.map(rowHTML).join('') : '');
 }
-function loadFtPregame(gameId, leagueKey, homeName, awayName, fixture) {
+function loadFtPregame(gameId, leagueKey, homeName, awayName) {
   var sec = document.getElementById('ft-modal-pregame-section');
   if (!sec) return;
   sec.style.display = 'flex';
   sec.style.flexDirection = 'column';
   sec.style.gap = '12px';
   sec.innerHTML = '<div class="ft-modal-section-title">Pr\u00e9-Jogo</div><div style="text-align:center;color:var(--text3);font-size:12px;padding:8px">Carregando...</div>';
-
-  window._pregameFixture = fixture || null;
 
   fetch('/api/football?type=pregame&gameId=' + gameId + '&leagueKey=' + leagueKey)
     .then(function(r) { return r.json(); })
@@ -4026,81 +3800,6 @@ function ftPregameTab(tab) {
   if (newBody) body.innerHTML = newBody.innerHTML;
 }
 
-function loadLineup() {
-  var el = document.getElementById('ft-lineup-content');
-  var f  = window._pregameFixture;
-  if (!el || !f) return;
-
-  // Cache
-  window._lineupCache = window._lineupCache || {};
-  var key = f.id;
-  if (window._lineupCache[key]) {
-    el.outerHTML = renderLineup(window._lineupCache[key]);
-    return;
-  }
-
-  var url = '/api/football?type=lineup'
-    + '&home=' + encodeURIComponent(f.home)
-    + '&away=' + encodeURIComponent(f.away)
-    + '&date=' + encodeURIComponent(f.date)
-    + '&leagueKey=' + f.league_key;
-
-  fetch(url)
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      window._lineupCache[key] = data;
-      var target = document.getElementById('ft-lineup-content');
-      if (target) target.outerHTML = renderLineup(data);
-    })
-    .catch(function() {
-      var target = document.getElementById('ft-lineup-content');
-      if (target) target.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:16px">Erro ao carregar escala\u00e7\u00e3o</div>';
-    });
-}
-
-function renderLineup(data) {
-  if (!data || data.error || !data.confirmed) {
-    var msg = data && data.error === 'match not found'
-      ? 'Jogo n\u00e3o encontrado na TheSportsDB'
-      : 'Escala\u00e7\u00e3o ainda n\u00e3o confirmada';
-    return '<div id="ft-lineup-content" style="color:var(--text3);font-size:12px;text-align:center;padding:16px">\u23F3 ' + msg + '</div>';
-  }
-
-  function playerRow(p) {
-    var num  = p.number ? '<span style="display:inline-block;width:22px;height:22px;background:var(--bg4);border-radius:50%;text-align:center;line-height:22px;font-size:10px;font-weight:800;color:var(--accent);margin-right:8px">' + p.number + '</span>' : '';
-    var pos  = p.position ? '<span style="font-size:9px;color:var(--text3);background:var(--bg4);padding:1px 5px;border-radius:4px;margin-left:auto">' + p.position + '</span>' : '';
-    return '<div style="display:flex;align-items:center;padding:5px 8px;background:var(--bg3);border-radius:6px;margin-bottom:3px">' +
-      num +
-      '<span style="font-size:12px;font-weight:600;color:var(--text)">' + p.name + '</span>' +
-      pos + '</div>';
-  }
-
-  function teamBlock(team, side, formation) {
-    var color = side === 'home' ? 'var(--accent)' : 'var(--red2)';
-    var starting = (team.starting || []).map(playerRow).join('');
-    var subs     = (team.substitutes || []).map(playerRow).join('');
-    return '<div style="flex:1;min-width:0">' +
-      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">' +
-        '<span style="font-size:12px;font-weight:800;color:' + color + '">' + (side === 'home' ? data.home_team : data.away_team) + '</span>' +
-        (formation ? '<span style="font-size:10px;color:var(--text3);background:var(--bg4);padding:2px 6px;border-radius:4px">' + formation + '</span>' : '') +
-      '</div>' +
-      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin:8px 0 4px">\u26BD Titulares</div>' +
-      (starting || '<div style="font-size:11px;color:var(--text3);padding:4px">\u2014</div>') +
-      (subs ? '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin:10px 0 4px">\u{1F504} Reservas</div>' + subs : '') +
-    '</div>';
-  }
-
-  return '<div id="ft-lineup-content">' +
-    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 12px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);border-radius:8px">' +
-      '<span style="color:var(--green);font-size:14px">\u2705</span>' +
-      '<span style="font-size:11px;font-weight:700;color:var(--green)">Escala\u00e7\u00e3o confirmada</span>' +
-    '</div>' +
-    '<div style="display:flex;gap:12px">' +
-      teamBlock(data.home, 'home', data.home_formation) +
-      teamBlock(data.away, 'away', data.away_formation) +
-    '</div></div>';
-}
-
 function ftPregameRender(data, tab, homeName, awayName) {
   var odds      = data.odds || {};
   var standings = data.standings || [];
@@ -4110,8 +3809,7 @@ function ftPregameRender(data, tab, homeName, awayName) {
   var tabDefs = [
     ['standings', 'Classifica\u00e7\u00e3o'],
     ['odds',      'Odds'],
-    ['leaders',   'Destaques'],
-    ['lineup',    'Escala\u00e7\u00e3o']
+    ['leaders',   'Destaques']
   ];
   if (h2h.length) tabDefs.push(['h2h', 'H2H']);
 
@@ -4209,9 +3907,6 @@ function ftPregameRender(data, tab, homeName, awayName) {
           '<span class="ft-h2h-team">' + (g.away || '-') + '</span></div>';
       }).join('');
     }
-  } else if (tab === 'lineup') {
-    bodyHTML = '<div id="ft-lineup-content" style="color:var(--text3);font-size:12px;text-align:center;padding:16px">Carregando escala\u00e7\u00e3o...</div>';
-    setTimeout(loadLineup, 10);
   }
 
   return '<div class="ft-modal-section-title">Pr\u00e9-Jogo</div>' +
