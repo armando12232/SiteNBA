@@ -3302,6 +3302,64 @@ document.addEventListener('keydown', e=>{ if (e.key==='Escape') closeModalDirect
 let _footballData = null;
 let _leagueFilter = 'all';
 
+// Cache de forma recente por liga: { leagueKey: { teamName: { form, games } } }
+window._ftFormCache = window._ftFormCache || {};
+window._ftFormInflight = window._ftFormInflight || {};
+
+async function fetchLeagueForm(leagueKey) {
+  if (!leagueKey) return null;
+  if (window._ftFormCache[leagueKey]) return window._ftFormCache[leagueKey];
+  if (window._ftFormInflight[leagueKey]) return window._ftFormInflight[leagueKey];
+
+  const p = fetch(`/api/football?type=form&leagueKey=${leagueKey}`)
+    .then(r => r.json())
+    .then(d => {
+      if (d && !d.error) {
+        window._ftFormCache[leagueKey] = d;
+        return d;
+      }
+      window._ftFormCache[leagueKey] = {};
+      return {};
+    })
+    .catch(() => { window._ftFormCache[leagueKey] = {}; return {}; })
+    .finally(() => { delete window._ftFormInflight[leagueKey]; });
+
+  window._ftFormInflight[leagueKey] = p;
+  return p;
+}
+
+function formDotsHTML(teamName, leagueKey) {
+  const cache = (window._ftFormCache || {})[leagueKey];
+  if (!cache) return '<span data-form-slot></span>';
+  const entry = cache[teamName];
+  if (!entry || !entry.form) return '<span data-form-slot></span>';
+  // Gera 5 bolinhas (antigo → recente, esquerda → direita)
+  const chars = entry.form.split('').reverse(); // API retorna mais recente primeiro
+  const dots = chars.map((c, i) => {
+    const g = entry.games ? entry.games[chars.length - 1 - i] : null;
+    const col = c === 'W' ? 'var(--green)' : c === 'D' ? 'var(--gold)' : 'var(--danger)';
+    const tip = g ? `${g.opp || '?'} ${g.homeAway === 'home' ? 'H' : 'A'} ${g.score}` : c;
+    return `<span title="${tip}" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${col};margin:0 1px"></span>`;
+  }).join('');
+  return `<span style="display:inline-flex;align-items:center;vertical-align:middle">${dots}</span>`;
+}
+
+async function hydrateFootballForm() {
+  const leagueKeys = new Set();
+  document.querySelectorAll('[data-form-league]').forEach(el => {
+    const k = el.getAttribute('data-form-league');
+    if (k) leagueKeys.add(k);
+  });
+  // Carregar forma de cada liga em paralelo
+  await Promise.allSettled(Array.from(leagueKeys).map(k => fetchLeagueForm(k)));
+  // Preencher slots
+  document.querySelectorAll('[data-form-slot-team]').forEach(slot => {
+    const team = slot.getAttribute('data-form-slot-team');
+    const lk   = slot.getAttribute('data-form-league');
+    slot.outerHTML = formDotsHTML(team, lk);
+  });
+}
+
 function setLeagueFilter(league, btn) {
   _leagueFilter = league;
   document.querySelectorAll('#league-filters .prop-filter-btn').forEach(b => b.classList.remove('active'));
@@ -3395,6 +3453,7 @@ function renderFootballGames() {
 
       return `
         <div style="background:var(--bg2);border:1px solid ${border};border-radius:16px;overflow:hidden;transition:all .2s;opacity:${opacity};cursor:pointer"
+             data-form-league="${f.league_key}"
              onmouseenter="this.style.transform='translateY(-2px)';this.style.opacity='1'"
              onmouseleave="this.style.transform='';this.style.opacity='${opacity}'"
              onclick="openFtModal('${f.id}')">
@@ -3404,6 +3463,7 @@ function renderFootballGames() {
               <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;min-width:0">
                 <img src="${f.home_logo}" style="width:40px;height:40px;object-fit:contain" onerror="this.style.display='none'">
                 <div style="font-family:var(--display);font-size:12px;font-weight:800;text-align:center;color:var(--text);line-height:1.2">${f.home}</div>
+                <span data-form-slot-team="${f.home}" data-form-league="${f.league_key}"></span>
               </div>
               <div style="text-align:center;flex-shrink:0;min-width:80px">
                 ${centerContent}
@@ -3412,6 +3472,7 @@ function renderFootballGames() {
               <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;min-width:0">
                 <img src="${f.away_logo}" style="width:40px;height:40px;object-fit:contain" onerror="this.style.display='none'">
                 <div style="font-family:var(--display);font-size:12px;font-weight:800;text-align:center;color:var(--text);line-height:1.2">${f.away}</div>
+                <span data-form-slot-team="${f.away}" data-form-league="${f.league_key}"></span>
               </div>
             </div>
           </div>
@@ -3443,6 +3504,9 @@ function renderFootballGames() {
         ${section(finished, finished.length && (live.length || scheduled.length) ? '✅ Encerrados' : '')}
       </div>`;
   }).join('');
+
+  // Hidratar forma recente (async)
+  hydrateFootballForm();
 }
 
 // Patch switchView para suportar football
@@ -3613,6 +3677,10 @@ function openFtModal(fixtureId) {
   const isLive = !!f.live, isFinished = !!f.finished;
   const hasScore = f.home_goals != null;
 
+  // Stash para comparação com xG no modal de stats
+  window._ftHomeGoals = (f.home_goals != null) ? parseInt(f.home_goals) : null;
+  window._ftAwayGoals = (f.away_goals != null) ? parseInt(f.away_goals) : null;
+
   document.getElementById('ft-modal-hero-bar').style.background = isLive
     ? 'linear-gradient(90deg,var(--red),#ff6b6b)'
     : isFinished ? 'linear-gradient(90deg,var(--accent),var(--accent2))' : 'var(--border)';
@@ -3706,6 +3774,8 @@ function loadFtStats(gameId, leagueKey, homeName, awayName) {
         possessionPct: ['Posse de Bola', '%'],
         totalShots:    ['Chutes',         ''],
         shotsOnTarget: ['No Gol',         ''],
+        shotsInsideBox:['Chutes na área', ''],
+        bigChancesCreated:['Grandes chances',''],
         wonCorners:    ['Escanteios',      ''],
         foulsCommitted:['Faltas',          ''],
         yellowCards:   ['Cartões \u{1F7E8}',''],
@@ -3716,6 +3786,62 @@ function loadFtStats(gameId, leagueKey, homeName, awayName) {
         effectiveTackles:['Desarmes',      ''],
         interceptions: ['Interceptações',  ''],
       };
+
+      // xG (Expected Goals) — procurar nas variações possíveis da ESPN
+      const xGKeys = ['expectedGoals', 'xG', 'xg', 'totalExpectedGoals'];
+      const pickXG = (stats) => {
+        for (const k of xGKeys) {
+          if (stats[k] != null && stats[k] !== '' && stats[k] !== '0') return stats[k];
+        }
+        return null;
+      };
+      const homeXG = pickXG(home.stats || {});
+      const awayXG = pickXG(away.stats || {});
+
+      let xgCardHTML = '';
+      if (homeXG != null || awayXG != null) {
+        const hVal = parseFloat(homeXG || '0');
+        const aVal = parseFloat(awayXG || '0');
+        const total = hVal + aVal || 1;
+        const hPct = Math.round(hVal / total * 100);
+        const aPct = 100 - hPct;
+        // Compara xG com gols reais (do state guardado no openFtModal)
+        const hGoals = window._ftHomeGoals;
+        const aGoals = window._ftAwayGoals;
+        const hDelta = (hGoals != null && !isNaN(hVal)) ? (hGoals - hVal) : null;
+        const aDelta = (aGoals != null && !isNaN(aVal)) ? (aGoals - aVal) : null;
+        const deltaLabel = (d) => {
+          if (d == null) return '';
+          if (d > 0.3)  return `<span style="color:var(--green);font-size:10px;font-weight:700">superou xG +${d.toFixed(1)}</span>`;
+          if (d < -0.3) return `<span style="color:var(--danger);font-size:10px;font-weight:700">abaixo xG ${d.toFixed(1)}</span>`;
+          return `<span style="color:var(--text3);font-size:10px;font-weight:700">no esperado</span>`;
+        };
+        xgCardHTML = `
+          <div style="background:linear-gradient(135deg,rgba(212,175,55,.12),rgba(212,175,55,.03));border:1px solid rgba(212,175,55,.3);border-radius:12px;padding:12px 14px;margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-family:var(--display);font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)">⚡ Expected Goals (xG)</span>
+              <span style="font-size:9px;color:var(--text3)">qualidade das chances</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="text-align:center;min-width:56px">
+                <div style="font-family:var(--display);font-size:24px;font-weight:800;color:var(--accent);line-height:1">${homeXG ?? '—'}</div>
+                <div style="font-size:9px;color:var(--text3);margin-top:2px">${homeName}</div>
+                ${deltaLabel(hDelta)}
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:3px">
+                <div style="display:flex;gap:3px">
+                  <div class="ft-stat-bar-bg"><div class="ft-stat-bar-fill" style="width:${hPct}%;background:var(--accent);float:right"></div></div>
+                  <div class="ft-stat-bar-bg"><div class="ft-stat-bar-fill" style="width:${aPct}%;background:var(--red2)"></div></div>
+                </div>
+              </div>
+              <div style="text-align:center;min-width:56px">
+                <div style="font-family:var(--display);font-size:24px;font-weight:800;color:var(--red2);line-height:1">${awayXG ?? '—'}</div>
+                <div style="font-size:9px;color:var(--text3);margin-top:2px">${awayName}</div>
+                ${deltaLabel(aDelta)}
+              </div>
+            </div>
+          </div>`;
+      }
 
       const rows = Object.entries(STATS_LABELS).map(([key, [label, unit]]) => {
         const hVal = parseFloat(home.stats[key] || '0');
@@ -3740,6 +3866,7 @@ function loadFtStats(gameId, leagueKey, homeName, awayName) {
       // Header dos times nas stats
       const statsHTML = `
         <div class="ft-modal-section-title">Estatísticas</div>
+        ${xgCardHTML}
         <div style="display:flex;justify-content:space-between;margin-bottom:8px">
           <span style="font-size:11px;font-weight:700;color:var(--accent)">${homeName}</span>
           <span style="font-size:11px;font-weight:700;color:var(--red2)">${awayName}</span>
