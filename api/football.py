@@ -423,6 +423,103 @@ def get_team_form(league_slug, team_id, team_name):
     return {'form': '', 'games': []}
 
 
+def get_lineup_tsdb(home_name, away_name, game_date, league_key):
+    """Busca lineup confirmada via TheSportsDB matchando por times + data."""
+    cache_key = f"tsdb_lineup_{league_key}_{_norm_name(home_name)}_{_norm_name(away_name)}_{game_date[:10]}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+
+    league_id = TSDB_LEAGUE_IDS.get(league_key)
+    if not league_id or not game_date:
+        return {'error': 'missing data'}
+
+    date_part = game_date[:10]  # YYYY-MM-DD
+
+    # Passo 1: buscar eventos do dia na liga
+    data = tsdb_fetch(f"eventsday.php?d={date_part}&l={league_id}")
+    if not data or not data.get('events'):
+        return {'error': 'no events found'}
+
+    # Passo 2: matchar pelo nome dos times
+    home_norm = _norm_name(home_name)
+    away_norm = _norm_name(away_name)
+    matched = None
+    for ev in data['events']:
+        h = _norm_name(ev.get('strHomeTeam', ''))
+        a = _norm_name(ev.get('strAwayTeam', ''))
+        if (home_norm == h or home_norm in h or h in home_norm) and \
+           (away_norm == a or away_norm in a or a in away_norm):
+            matched = ev
+            break
+    if not matched:
+        return {'error': 'match not found'}
+
+    event_id = matched.get('idEvent')
+    if not event_id:
+        return {'error': 'no event id'}
+
+    # Passo 3: buscar lineup detalhada
+    lineup_data = tsdb_fetch(f"lookuplineup.php?id={event_id}")
+
+    def parse_lineup(raw_lineup):
+        """Parse 'strLineup' ou 'lineup' array da TSDB."""
+        home_players = {'starting': [], 'substitutes': []}
+        away_players = {'starting': [], 'substitutes': []}
+        if not raw_lineup:
+            return home_players, away_players
+        for p in raw_lineup:
+            side    = (p.get('strHome') or '').lower()  # 'yes'/'no'
+            position = p.get('strPositionShort') or p.get('strPosition') or ''
+            player   = {
+                'name':     p.get('strPlayer', ''),
+                'number':   p.get('intSquadNumber', ''),
+                'position': position,
+                'formation_pos': p.get('intFormation') or p.get('strFormation', ''),
+            }
+            is_starting = (p.get('strSubstitute') or '').lower() == 'no'
+            bucket_key = 'starting' if is_starting else 'substitutes'
+            if side == 'yes':
+                home_players[bucket_key].append(player)
+            else:
+                away_players[bucket_key].append(player)
+        return home_players, away_players
+
+    lineup = (lineup_data or {}).get('lineup') if lineup_data else None
+    home_players, away_players = parse_lineup(lineup)
+
+    # Fallback: campos strHomeLineupStarting / strAwayLineupStarting (string separada)
+    if not home_players['starting'] and matched.get('strHomeLineupStarting'):
+        for name in matched['strHomeLineupStarting'].split(';'):
+            n = name.strip()
+            if n: home_players['starting'].append({'name': n, 'number': '', 'position': ''})
+    if not away_players['starting'] and matched.get('strAwayLineupStarting'):
+        for name in matched['strAwayLineupStarting'].split(';'):
+            n = name.strip()
+            if n: away_players['starting'].append({'name': n, 'number': '', 'position': ''})
+    if not home_players['substitutes'] and matched.get('strHomeLineupSubstitutes'):
+        for name in matched['strHomeLineupSubstitutes'].split(';'):
+            n = name.strip()
+            if n: home_players['substitutes'].append({'name': n, 'number': '', 'position': ''})
+    if not away_players['substitutes'] and matched.get('strAwayLineupSubstitutes'):
+        for name in matched['strAwayLineupSubstitutes'].split(';'):
+            n = name.strip()
+            if n: away_players['substitutes'].append({'name': n, 'number': '', 'position': ''})
+
+    result = {
+        'event_id':   event_id,
+        'home_team':  matched.get('strHomeTeam', home_name),
+        'away_team':  matched.get('strAwayTeam', away_name),
+        'home_formation': matched.get('strHomeFormation', ''),
+        'away_formation': matched.get('strAwayFormation', ''),
+        'home':       home_players,
+        'away':       away_players,
+        'confirmed':  bool(home_players['starting'] and away_players['starting']),
+    }
+    _cache_set(cache_key, result)
+    return result
+
+
 class handler(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
 
@@ -449,6 +546,19 @@ class handler(BaseHTTPRequestHandler):
                 body = json.dumps({'error': 'leagueKey required'}).encode()
             else:
                 body = json.dumps(get_league_form(league_key)).encode()
+            self._json(body)
+            return
+
+        # ── Lineup confirmada (TheSportsDB) ────────────────────────────────
+        if t == 'lineup':
+            home_name  = params.get('home',      [''])[0]
+            away_name  = params.get('away',      [''])[0]
+            game_date  = params.get('date',      [''])[0]
+            league_key = params.get('leagueKey', [''])[0]
+            if not (home_name and away_name and game_date and league_key):
+                body = json.dumps({'error': 'home, away, date, leagueKey required'}).encode()
+            else:
+                body = json.dumps(get_lineup_tsdb(home_name, away_name, game_date, league_key)).encode()
             self._json(body)
             return
 
