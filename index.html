@@ -3769,7 +3769,7 @@ function openFtModal(fixtureId) {
   }
   // Carregar pre-jogo se agendado
   if (!isLive && !isFinished && f.league_key) {
-    loadFtPregame(f.id, f.league_key, f.home, f.away);
+    loadFtPregame(f.id, f.league_key, f.home, f.away, f);
   }
 }
 
@@ -3982,13 +3982,15 @@ function renderFtPlayers(rosters, tab) {
     starters.map(rowHTML).join('') +
     (subs.length ? '<div style="font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:8px">Banco / Entrou</div>' + subs.map(rowHTML).join('') : '');
 }
-function loadFtPregame(gameId, leagueKey, homeName, awayName) {
+function loadFtPregame(gameId, leagueKey, homeName, awayName, fixture) {
   var sec = document.getElementById('ft-modal-pregame-section');
   if (!sec) return;
   sec.style.display = 'flex';
   sec.style.flexDirection = 'column';
   sec.style.gap = '12px';
   sec.innerHTML = '<div class="ft-modal-section-title">Pr\u00e9-Jogo</div><div style="text-align:center;color:var(--text3);font-size:12px;padding:8px">Carregando...</div>';
+
+  window._pregameFixture = fixture || null;
 
   fetch('/api/football?type=pregame&gameId=' + gameId + '&leagueKey=' + leagueKey)
     .then(function(r) { return r.json(); })
@@ -4024,6 +4026,81 @@ function ftPregameTab(tab) {
   if (newBody) body.innerHTML = newBody.innerHTML;
 }
 
+function loadLineup() {
+  var el = document.getElementById('ft-lineup-content');
+  var f  = window._pregameFixture;
+  if (!el || !f) return;
+
+  // Cache
+  window._lineupCache = window._lineupCache || {};
+  var key = f.id;
+  if (window._lineupCache[key]) {
+    el.outerHTML = renderLineup(window._lineupCache[key]);
+    return;
+  }
+
+  var url = '/api/football?type=lineup'
+    + '&home=' + encodeURIComponent(f.home)
+    + '&away=' + encodeURIComponent(f.away)
+    + '&date=' + encodeURIComponent(f.date)
+    + '&leagueKey=' + f.league_key;
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      window._lineupCache[key] = data;
+      var target = document.getElementById('ft-lineup-content');
+      if (target) target.outerHTML = renderLineup(data);
+    })
+    .catch(function() {
+      var target = document.getElementById('ft-lineup-content');
+      if (target) target.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:16px">Erro ao carregar escala\u00e7\u00e3o</div>';
+    });
+}
+
+function renderLineup(data) {
+  if (!data || data.error || !data.confirmed) {
+    var msg = data && data.error === 'match not found'
+      ? 'Jogo n\u00e3o encontrado na TheSportsDB'
+      : 'Escala\u00e7\u00e3o ainda n\u00e3o confirmada';
+    return '<div id="ft-lineup-content" style="color:var(--text3);font-size:12px;text-align:center;padding:16px">\u23F3 ' + msg + '</div>';
+  }
+
+  function playerRow(p) {
+    var num  = p.number ? '<span style="display:inline-block;width:22px;height:22px;background:var(--bg4);border-radius:50%;text-align:center;line-height:22px;font-size:10px;font-weight:800;color:var(--accent);margin-right:8px">' + p.number + '</span>' : '';
+    var pos  = p.position ? '<span style="font-size:9px;color:var(--text3);background:var(--bg4);padding:1px 5px;border-radius:4px;margin-left:auto">' + p.position + '</span>' : '';
+    return '<div style="display:flex;align-items:center;padding:5px 8px;background:var(--bg3);border-radius:6px;margin-bottom:3px">' +
+      num +
+      '<span style="font-size:12px;font-weight:600;color:var(--text)">' + p.name + '</span>' +
+      pos + '</div>';
+  }
+
+  function teamBlock(team, side, formation) {
+    var color = side === 'home' ? 'var(--accent)' : 'var(--red2)';
+    var starting = (team.starting || []).map(playerRow).join('');
+    var subs     = (team.substitutes || []).map(playerRow).join('');
+    return '<div style="flex:1;min-width:0">' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">' +
+        '<span style="font-size:12px;font-weight:800;color:' + color + '">' + (side === 'home' ? data.home_team : data.away_team) + '</span>' +
+        (formation ? '<span style="font-size:10px;color:var(--text3);background:var(--bg4);padding:2px 6px;border-radius:4px">' + formation + '</span>' : '') +
+      '</div>' +
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin:8px 0 4px">\u26BD Titulares</div>' +
+      (starting || '<div style="font-size:11px;color:var(--text3);padding:4px">\u2014</div>') +
+      (subs ? '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin:10px 0 4px">\u{1F504} Reservas</div>' + subs : '') +
+    '</div>';
+  }
+
+  return '<div id="ft-lineup-content">' +
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px 12px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.3);border-radius:8px">' +
+      '<span style="color:var(--green);font-size:14px">\u2705</span>' +
+      '<span style="font-size:11px;font-weight:700;color:var(--green)">Escala\u00e7\u00e3o confirmada</span>' +
+    '</div>' +
+    '<div style="display:flex;gap:12px">' +
+      teamBlock(data.home, 'home', data.home_formation) +
+      teamBlock(data.away, 'away', data.away_formation) +
+    '</div></div>';
+}
+
 function ftPregameRender(data, tab, homeName, awayName) {
   var odds      = data.odds || {};
   var standings = data.standings || [];
@@ -4033,7 +4110,8 @@ function ftPregameRender(data, tab, homeName, awayName) {
   var tabDefs = [
     ['standings', 'Classifica\u00e7\u00e3o'],
     ['odds',      'Odds'],
-    ['leaders',   'Destaques']
+    ['leaders',   'Destaques'],
+    ['lineup',    'Escala\u00e7\u00e3o']
   ];
   if (h2h.length) tabDefs.push(['h2h', 'H2H']);
 
@@ -4131,6 +4209,9 @@ function ftPregameRender(data, tab, homeName, awayName) {
           '<span class="ft-h2h-team">' + (g.away || '-') + '</span></div>';
       }).join('');
     }
+  } else if (tab === 'lineup') {
+    bodyHTML = '<div id="ft-lineup-content" style="color:var(--text3);font-size:12px;text-align:center;padding:16px">Carregando escala\u00e7\u00e3o...</div>';
+    setTimeout(loadLineup, 10);
   }
 
   return '<div class="ft-modal-section-title">Pr\u00e9-Jogo</div>' +
