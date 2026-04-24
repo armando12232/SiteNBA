@@ -1,24 +1,22 @@
-import json, urllib.request
+import json, urllib.request, sys, os
 from http.server import BaseHTTPRequestHandler
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    from _security import (
+        rate_limit_check, get_client_ip,
+        is_valid_id, is_valid_date, is_valid_league, sanitize_team_name,
+    )
+except ImportError:
+    def rate_limit_check(ip): return True
+    def get_client_ip(h): return '0.0.0.0'
+    def is_valid_id(s): return bool(s) and len(s) <= 40 and s.replace('-','').replace('_','').isalnum()
+    def is_valid_date(s): return bool(s) and len(s) <= 30
+    def is_valid_league(s): return bool(s) and s.isalpha() and len(s) <= 20
+    def sanitize_team_name(s): return str(s or '')[:60]
 
 ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer'
 
-# TheSportsDB (free tier, key=123) — usada pra forma recente e lineups
-TSDB_BASE = 'https://www.thesportsdb.com/api/v1/json/123'
-
-# Mapeamento league_key → league_id da TheSportsDB
-TSDB_LEAGUE_IDS = {
-    'brasileirao':  '4351',
-    'premier':      '4328',
-    'laliga':       '4335',
-    'bundesliga':   '4331',
-    'seriea':       '4332',
-    'ligue1':       '4334',
-    'champions':    '4480',
-    'libertadores': '4483',
-}
-
-# Cache simples em memória (por processo serverless)
 import time
 _CACHE = {}
 _CACHE_TTL = 600  # 10 min
@@ -48,67 +46,6 @@ def espn_fetch(url):
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
     with urllib.request.urlopen(req, timeout=8) as r:
         return json.loads(r.read())
-
-
-def tsdb_fetch(path):
-    """GET em TheSportsDB com cache interno."""
-    cache_key = f"tsdb_{path}"
-    cached = _cache_get(cache_key)
-    if cached is not None:
-        return cached
-    url = f"{TSDB_BASE}/{path}"
-    try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=8) as r:
-            data = json.loads(r.read())
-        _cache_set(cache_key, data)
-        return data
-    except Exception:
-        return None
-
-
-def tsdb_teams_by_league(league_key):
-    """Retorna mapa { nome_normalizado: team_id } para uma liga."""
-    cache_key = f"tsdb_teams_{league_key}"
-    cached = _cache_get(cache_key)
-    if cached:
-        return cached
-    league_id = TSDB_LEAGUE_IDS.get(league_key)
-    if not league_id:
-        return {}
-    data = tsdb_fetch(f"lookup_all_teams.php?id={league_id}")
-    if not data or not data.get('teams'):
-        return {}
-    teams_map = {}
-    for t in data['teams']:
-        tid = t.get('idTeam')
-        if not tid:
-            continue
-        # Indexar por várias variações de nome pra maximar match
-        names = [t.get('strTeam'), t.get('strTeamShort'), t.get('strAlternate')]
-        for n in names:
-            if not n:
-                continue
-            for part in str(n).split(','):
-                key = _norm_name(part.strip())
-                if key:
-                    teams_map[key] = {
-                        'id':       tid,
-                        'name':     t.get('strTeam'),
-                        'badge':    t.get('strBadge') or t.get('strTeamBadge'),
-                        'stadium':  t.get('strStadium'),
-                    }
-    _cache_set(cache_key, teams_map)
-    return teams_map
-
-
-def _norm_name(s):
-    """Normaliza nome: minúsculas, sem acentos, sem espaços extras."""
-    if not s:
-        return ''
-    import unicodedata
-    s = unicodedata.normalize('NFKD', s).encode('ASCII', 'ignore').decode('ASCII')
-    return s.lower().strip()
 
 def parse_fixture(ev, league, state=None):
     comp  = ev.get('competitions', [{}])[0]
@@ -338,47 +275,53 @@ def get_pregame(game_id, league_key):
     return result
 
 
-def get_team_form_tsdb(team_id, team_name):
-    """Últimos 5 jogos via TheSportsDB. Muito mais rápido que ESPN schedule."""
-    cache_key = f"tsdb_form_{team_id}"
+def get_team_form(league_slug, team_id, team_name):
+    """Busca últimos 5 jogos finalizados de um time. Retorna string W/D/L."""
+    cache_key = f"form_{league_slug}_{team_id}"
     cached = _cache_get(cache_key)
     if cached:
         return cached
 
-    data = tsdb_fetch(f"eventslast.php?id={team_id}")
-    if not data or not data.get('results'):
-        return None
+    try:
+        url = f'{ESPN_BASE}/{league_slug}/teams/{team_id}/schedule'
+        data = espn_fetch(url)
+    except Exception:
+        return ''
 
-    team_norm = _norm_name(team_name)
-    games = []
-    for ev in data['results'][:10]:
-        home_name = ev.get('strHomeTeam', '')
-        away_name = ev.get('strAwayTeam', '')
-        home_score = ev.get('intHomeScore')
-        away_score = ev.get('intAwayScore')
-        if home_score is None or away_score is None:
+    events = data.get('events', []) or []
+    # Filtrar só jogos finalizados, ordenar por data desc
+    finished = []
+    for ev in events:
+        comp = (ev.get('competitions') or [{}])[0]
+        status = comp.get('status', {}).get('type', {}).get('state', '')
+        if status != 'post':
             continue
+        comps = comp.get('competitors', [])
+        my = next((c for c in comps if (c.get('team') or {}).get('displayName','').lower() == team_name.lower()), None)
+        if not my:
+            # fallback: checar por id
+            my = next((c for c in comps if str((c.get('team') or {}).get('id','')) == str(team_id)), None)
+        if not my:
+            continue
+        opp = next((c for c in comps if c != my), {})
         try:
-            hs = int(home_score); as_ = int(away_score)
+            my_score  = int(my.get('score', 0) or 0)
+            opp_score = int(opp.get('score', 0) or 0)
         except:
             continue
-
-        is_home = _norm_name(home_name) == team_norm
-        my_score  = hs if is_home else as_
-        opp_score = as_ if is_home else hs
-        opp_name  = away_name if is_home else home_name
-
         result = 'W' if my_score > opp_score else ('D' if my_score == opp_score else 'L')
-        games.append({
-            'date':     ev.get('dateEvent', ''),
-            'result':   result,
-            'score':    f"{my_score}-{opp_score}",
-            'opp':      opp_name[:10],
-            'homeAway': 'home' if is_home else 'away',
+        finished.append({
+            'date':   comp.get('date',''),
+            'result': result,
+            'score':  f"{my_score}-{opp_score}",
+            'opp':    (opp.get('team') or {}).get('abbreviation','') or (opp.get('team') or {}).get('displayName','')[:3].upper(),
+            'homeAway': my.get('homeAway',''),
         })
 
-    games.sort(key=lambda x: x['date'], reverse=True)
-    recent = games[:5]
+    # Ordenar por data desc e pegar 5
+    finished.sort(key=lambda x: x['date'], reverse=True)
+    recent = finished[:5]
+    # String simplificada ('WWDLW') + detalhes
     form_str = ''.join(g['result'] for g in recent)
     result = {'form': form_str, 'games': recent}
     _cache_set(cache_key, result)
@@ -386,7 +329,7 @@ def get_team_form_tsdb(team_id, team_name):
 
 
 def get_league_form(league_key):
-    """Forma recente de todos os times da liga via TheSportsDB."""
+    """Retorna forma de todos os times da liga."""
     slug = SLUG_MAP.get(league_key)
     if not slug:
         return {'error': 'invalid league'}
@@ -396,128 +339,32 @@ def get_league_form(league_key):
     if cached:
         return cached
 
-    teams_map = tsdb_teams_by_league(league_key)
-    if not teams_map:
-        return {}
+    try:
+        teams_data = espn_fetch(f'{ESPN_BASE}/{slug}/teams')
+    except Exception as e:
+        return {'error': str(e)}
 
-    # Deduplica por team_id (pois indexamos por múltiplos nomes)
-    unique_teams = {}
-    for info in teams_map.values():
-        unique_teams[info['id']] = info
+    sports  = (teams_data.get('sports') or [{}])[0]
+    leagues = (sports.get('leagues') or [{}])[0]
+    teams   = leagues.get('teams', [])
 
     out = {}
-    for team_id, info in list(unique_teams.items())[:30]:
-        form = get_team_form_tsdb(team_id, info['name'])
-        if form and form.get('form'):
-            # Indexar por nome principal
-            out[info['name']] = form
-            # Indexar também pela versão normalizada pra facilitar match
-            out[_norm_name(info['name'])] = form
+    for t in teams[:30]:
+        team_obj = t.get('team', {}) or {}
+        team_id   = team_obj.get('id')
+        team_name = team_obj.get('displayName', '')
+        team_abbr = team_obj.get('abbreviation', '')
+        if not team_id or not team_name:
+            continue
+        form = get_team_form(slug, team_id, team_name)
+        if form and isinstance(form, dict) and form.get('form'):
+            # Chave: nome + abbr (frontend matcha por nome)
+            out[team_name] = form
+            if team_abbr:
+                out[team_abbr] = form
 
     _cache_set(cache_key, out)
     return out
-
-
-# Mantida por compat — não usada mais
-def get_team_form(league_slug, team_id, team_name):
-    return {'form': '', 'games': []}
-
-
-def get_lineup_tsdb(home_name, away_name, game_date, league_key):
-    """Busca lineup confirmada via TheSportsDB matchando por times + data."""
-    cache_key = f"tsdb_lineup_{league_key}_{_norm_name(home_name)}_{_norm_name(away_name)}_{game_date[:10]}"
-    cached = _cache_get(cache_key)
-    if cached:
-        return cached
-
-    league_id = TSDB_LEAGUE_IDS.get(league_key)
-    if not league_id or not game_date:
-        return {'error': 'missing data'}
-
-    date_part = game_date[:10]  # YYYY-MM-DD
-
-    # Passo 1: buscar eventos do dia na liga
-    data = tsdb_fetch(f"eventsday.php?d={date_part}&l={league_id}")
-    if not data or not data.get('events'):
-        return {'error': 'no events found'}
-
-    # Passo 2: matchar pelo nome dos times
-    home_norm = _norm_name(home_name)
-    away_norm = _norm_name(away_name)
-    matched = None
-    for ev in data['events']:
-        h = _norm_name(ev.get('strHomeTeam', ''))
-        a = _norm_name(ev.get('strAwayTeam', ''))
-        if (home_norm == h or home_norm in h or h in home_norm) and \
-           (away_norm == a or away_norm in a or a in away_norm):
-            matched = ev
-            break
-    if not matched:
-        return {'error': 'match not found'}
-
-    event_id = matched.get('idEvent')
-    if not event_id:
-        return {'error': 'no event id'}
-
-    # Passo 3: buscar lineup detalhada
-    lineup_data = tsdb_fetch(f"lookuplineup.php?id={event_id}")
-
-    def parse_lineup(raw_lineup):
-        """Parse 'strLineup' ou 'lineup' array da TSDB."""
-        home_players = {'starting': [], 'substitutes': []}
-        away_players = {'starting': [], 'substitutes': []}
-        if not raw_lineup:
-            return home_players, away_players
-        for p in raw_lineup:
-            side    = (p.get('strHome') or '').lower()  # 'yes'/'no'
-            position = p.get('strPositionShort') or p.get('strPosition') or ''
-            player   = {
-                'name':     p.get('strPlayer', ''),
-                'number':   p.get('intSquadNumber', ''),
-                'position': position,
-                'formation_pos': p.get('intFormation') or p.get('strFormation', ''),
-            }
-            is_starting = (p.get('strSubstitute') or '').lower() == 'no'
-            bucket_key = 'starting' if is_starting else 'substitutes'
-            if side == 'yes':
-                home_players[bucket_key].append(player)
-            else:
-                away_players[bucket_key].append(player)
-        return home_players, away_players
-
-    lineup = (lineup_data or {}).get('lineup') if lineup_data else None
-    home_players, away_players = parse_lineup(lineup)
-
-    # Fallback: campos strHomeLineupStarting / strAwayLineupStarting (string separada)
-    if not home_players['starting'] and matched.get('strHomeLineupStarting'):
-        for name in matched['strHomeLineupStarting'].split(';'):
-            n = name.strip()
-            if n: home_players['starting'].append({'name': n, 'number': '', 'position': ''})
-    if not away_players['starting'] and matched.get('strAwayLineupStarting'):
-        for name in matched['strAwayLineupStarting'].split(';'):
-            n = name.strip()
-            if n: away_players['starting'].append({'name': n, 'number': '', 'position': ''})
-    if not home_players['substitutes'] and matched.get('strHomeLineupSubstitutes'):
-        for name in matched['strHomeLineupSubstitutes'].split(';'):
-            n = name.strip()
-            if n: home_players['substitutes'].append({'name': n, 'number': '', 'position': ''})
-    if not away_players['substitutes'] and matched.get('strAwayLineupSubstitutes'):
-        for name in matched['strAwayLineupSubstitutes'].split(';'):
-            n = name.strip()
-            if n: away_players['substitutes'].append({'name': n, 'number': '', 'position': ''})
-
-    result = {
-        'event_id':   event_id,
-        'home_team':  matched.get('strHomeTeam', home_name),
-        'away_team':  matched.get('strAwayTeam', away_name),
-        'home_formation': matched.get('strHomeFormation', ''),
-        'away_formation': matched.get('strAwayFormation', ''),
-        'home':       home_players,
-        'away':       away_players,
-        'confirmed':  bool(home_players['starting'] and away_players['starting']),
-    }
-    _cache_set(cache_key, result)
-    return result
 
 
 class handler(BaseHTTPRequestHandler):
@@ -525,40 +372,40 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         from urllib.parse import urlparse, parse_qs
+
+        # Rate limit
+        ip = get_client_ip(self)
+        if not rate_limit_check(ip):
+            self._json(json.dumps({'error': 'rate limit exceeded'}).encode(), 429)
+            return
+
         params = parse_qs(urlparse(self.path).query)
         t = params.get('type', ['fixtures'])[0]
+
+        # Whitelist de tipos
+        VALID_TYPES = {'fixtures','live','stats','pregame','form','lineup'}
+        if t not in VALID_TYPES:
+            self._json(json.dumps({'error': 'invalid type'}).encode(), 400)
+            return
 
         # ── Pregame ────────────────────────────────────────────────────────
         if t == 'pregame':
             game_id    = params.get('gameId',    [''])[0]
             league_key = params.get('leagueKey', ['premier'])[0]
-            body = json.dumps(
-                get_pregame(game_id, league_key) if game_id
-                else {'error': 'gameId required'}
-            ).encode()
+            if not is_valid_id(game_id):
+                self._json(json.dumps({'error': 'invalid gameId'}).encode(), 400); return
+            if not is_valid_league(league_key):
+                self._json(json.dumps({'error': 'invalid leagueKey'}).encode(), 400); return
+            body = json.dumps(get_pregame(game_id, league_key)).encode()
             self._json(body)
             return
 
         # ── Form (V/E/D últimos 5) ─────────────────────────────────────────
         if t == 'form':
             league_key = params.get('leagueKey', [''])[0]
-            if not league_key:
-                body = json.dumps({'error': 'leagueKey required'}).encode()
-            else:
-                body = json.dumps(get_league_form(league_key)).encode()
-            self._json(body)
-            return
-
-        # ── Lineup confirmada (TheSportsDB) ────────────────────────────────
-        if t == 'lineup':
-            home_name  = params.get('home',      [''])[0]
-            away_name  = params.get('away',      [''])[0]
-            game_date  = params.get('date',      [''])[0]
-            league_key = params.get('leagueKey', [''])[0]
-            if not (home_name and away_name and game_date and league_key):
-                body = json.dumps({'error': 'home, away, date, leagueKey required'}).encode()
-            else:
-                body = json.dumps(get_lineup_tsdb(home_name, away_name, game_date, league_key)).encode()
+            if not is_valid_league(league_key):
+                self._json(json.dumps({'error': 'invalid leagueKey'}).encode(), 400); return
+            body = json.dumps(get_league_form(league_key)).encode()
             self._json(body)
             return
 
@@ -566,10 +413,11 @@ class handler(BaseHTTPRequestHandler):
         if t == 'stats':
             game_id    = params.get('gameId',    [''])[0]
             league_key = params.get('leagueKey', ['premier'])[0]
-            body = json.dumps(
-                get_stats(game_id, league_key) if game_id
-                else {'error': 'gameId required'}
-            ).encode()
+            if not is_valid_id(game_id):
+                self._json(json.dumps({'error': 'invalid gameId'}).encode(), 400); return
+            if not is_valid_league(league_key):
+                self._json(json.dumps({'error': 'invalid leagueKey'}).encode(), 400); return
+            body = json.dumps(get_stats(game_id, league_key)).encode()
             self._json(body)
             return
 
@@ -601,9 +449,9 @@ class handler(BaseHTTPRequestHandler):
                 pass
         self._json(json.dumps({'fixtures': fixtures, 'count': len(fixtures)}).encode())
 
-    def _json(self, body):
-        self.send_response(200)
+    def _json(self, body, status=200):
+        self.send_response(status)
         self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('X-Content-Type-Options', 'nosniff')
         self.end_headers()
         self.wfile.write(body)
