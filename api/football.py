@@ -1,4 +1,4 @@
-import json, urllib.request, sys, os
+import json, urllib.request, urllib.parse, sys, os
 from http.server import BaseHTTPRequestHandler
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -367,6 +367,187 @@ def get_league_form(league_key):
     return out
 
 
+# ─── API-Football (árbitro + cartões + faltas) ────────────────────────────────
+APIFOOTBALL_KEY  = '225f99518f22050258f44c558fab250b'
+APIFOOTBALL_BASE = 'https://v3.football.api-sports.io'
+
+APIFOOTBALL_LEAGUE_IDS = {
+    'brasileirao':  71,
+    'premier':      39,
+    'laliga':       140,
+    'bundesliga':   78,
+    'seriea':       135,
+    'ligue1':       61,
+    'champions':    2,
+    'libertadores': 13,
+}
+
+def apifootball_fetch(path):
+    cache_key = f"apifb_{path}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    url = f"{APIFOOTBALL_BASE}/{path}"
+    req = urllib.request.Request(url, headers={
+        'x-apisports-key': APIFOOTBALL_KEY,
+        'User-Agent': 'Mozilla/5.0',
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=8) as r:
+            data = json.loads(r.read())
+        _cache_set(cache_key, data)
+        return data
+    except Exception:
+        return None
+
+
+def _norm(s):
+    if not s: return ''
+    import unicodedata
+    return unicodedata.normalize('NFKD', s).encode('ASCII','ignore').decode('ASCII').lower().strip()
+
+
+def get_fixture_referee(home_name, away_name, league_key, game_date):
+    """Árbitro + stats de cartões/faltas via API-Football."""
+    league_id = APIFOOTBALL_LEAGUE_IDS.get(league_key)
+    if not league_id or not game_date:
+        return None
+
+    cache_key = f"referee_{league_key}_{game_date[:10]}_{_norm(home_name)}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+
+    date_str = game_date[:10]
+    matched = None
+    for season in ['2025', '2024']:
+        data = apifootball_fetch(f"fixtures?date={date_str}&league={league_id}&season={season}")
+        if not data or not data.get('response'):
+            continue
+        home_n = _norm(home_name)
+        away_n = _norm(away_name)
+        for fix in data['response']:
+            h = _norm(fix.get('teams',{}).get('home',{}).get('name',''))
+            a = _norm(fix.get('teams',{}).get('away',{}).get('name',''))
+            if (home_n in h or h in home_n) and (away_n in a or a in away_n):
+                matched = fix
+                break
+        if matched:
+            break
+
+    if not matched:
+        _cache_set(cache_key, None)
+        return None
+
+    referee_raw = matched.get('fixture', {}).get('referee') or ''
+    referee_name = referee_raw.split(',')[0].strip()
+    home_id = matched.get('teams', {}).get('home', {}).get('id')
+    away_id = matched.get('teams', {}).get('away', {}).get('id')
+
+    result = {'referee': referee_name}
+
+    # Stats do árbitro (últimos jogos)
+    if referee_name:
+        ref_stats = get_referee_avg(referee_name, league_id)
+        if ref_stats:
+            result['referee_stats'] = ref_stats
+
+    # Stats dos times na temporada
+    season_str = '2025' if '2025' in str(matched.get('fixture',{}).get('date','')) else '2024'
+    for side, tid in [('home', home_id), ('away', away_id)]:
+        if tid:
+            ts = get_team_season_stats(tid, league_id, season_str)
+            if ts:
+                result[f'{side}_stats'] = ts
+
+    _cache_set(cache_key, result)
+    return result
+
+
+def get_referee_avg(referee_name, league_id):
+    """Média de cartões/faltas do árbitro nos últimos 15 jogos."""
+    cache_key = f"ref_{_norm(referee_name)}_{league_id}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+
+    yellows, reds, fouls, count = 0, 0, 0, 0
+    for season in ['2025', '2024']:
+        data = apifootball_fetch(
+            f"fixtures?referee={urllib.parse.quote(referee_name)}&league={league_id}&season={season}&last=15"
+        )
+        if not data or not data.get('response'):
+            continue
+        for fix in data['response'][:15]:
+            fid = fix.get('fixture', {}).get('id')
+            if not fid:
+                continue
+            stats = apifootball_fetch(f"fixtures/statistics?fixture={fid}")
+            if not stats or not stats.get('response'):
+                continue
+            for team_stat in stats['response']:
+                for s in team_stat.get('statistics', []):
+                    t = s.get('type', '').lower()
+                    try: v = int(s.get('value') or 0)
+                    except: v = 0
+                    if 'yellow' in t: yellows += v
+                    elif 'red' in t: reds += v
+                    elif 'foul' in t: fouls += v
+            count += 1
+        if count >= 5:
+            break
+
+    if count == 0:
+        return None
+
+    result = {
+        'games':      count,
+        'avg_cards':  round((yellows + reds) / count, 1),
+        'avg_yellow': round(yellows / count, 1),
+        'avg_red':    round(reds / count, 1),
+        'avg_fouls':  round(fouls / count, 1),
+    }
+    _cache_set(cache_key, result)
+    return result
+
+
+def get_team_season_stats(team_id, league_id, season='2024'):
+    """Médias de cartões e faltas do time na temporada."""
+    cache_key = f"tmstats_{team_id}_{league_id}_{season}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+
+    data = apifootball_fetch(f"teams/statistics?team={team_id}&league={league_id}&season={season}")
+    if not data or not data.get('response'):
+        return None
+
+    stats = data['response']
+    cards  = stats.get('cards', {})
+    fouls  = stats.get('fouls', {})
+    games_played = stats.get('fixtures', {}).get('played', {}).get('total', 0) or 0
+    if games_played == 0:
+        return None
+
+    yellow_total = sum(
+        (v.get('total') or 0) for v in cards.get('yellow', {}).values() if isinstance(v, dict)
+    )
+    red_total = sum(
+        (v.get('total') or 0) for v in cards.get('red', {}).values() if isinstance(v, dict)
+    )
+    fouls_committed = fouls.get('committed') or 0
+
+    result = {
+        'games':      games_played,
+        'avg_yellow': round(yellow_total / games_played, 1),
+        'avg_red':    round(red_total / games_played, 1),
+        'avg_cards':  round((yellow_total + red_total) / games_played, 1),
+        'avg_fouls':  round(fouls_committed / games_played, 1),
+    }
+    _cache_set(cache_key, result)
+    return result
+
+
 class handler(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
 
@@ -386,6 +567,19 @@ class handler(BaseHTTPRequestHandler):
         VALID_TYPES = {'fixtures','live','stats','pregame','form','lineup'}
         if t not in VALID_TYPES:
             self._json(json.dumps({'error': 'invalid type'}).encode(), 400)
+            return
+
+        # ── Referee + stats (API-Football) ────────────────────────────────
+        if t == 'referee':
+            home       = params.get('home',      [''])[0]
+            away       = params.get('away',      [''])[0]
+            game_date  = params.get('date',      [''])[0]
+            league_key = params.get('leagueKey', [''])[0]
+            if not (home and away and game_date and league_key):
+                self._json(json.dumps({'error': 'home, away, date, leagueKey required'}).encode(), 400)
+                return
+            result = get_fixture_referee(home, away, league_key, game_date)
+            self._json(json.dumps(result or {'error': 'not found'}).encode())
             return
 
         # ── Pregame ────────────────────────────────────────────────────────
