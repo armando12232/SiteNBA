@@ -420,24 +420,44 @@ def get_fixture_referee(home_name, away_name, league_key, game_date):
 
     date_str = game_date[:10]
     matched = None
+
+    def name_match(api_name, espn_name):
+        a = _norm(api_name)
+        e = _norm(espn_name)
+        if not a or not e: return False
+        if a == e or a in e or e in a: return True
+        # Compara palavras significativas (ignora FC, United, etc)
+        STOP = {'fc','af','sc','cf','ac','us','as','de','do','da','dos','the','city','united'}
+        a_words = set(w for w in a.split() if w not in STOP and len(w) > 2)
+        e_words = set(w for w in e.split() if w not in STOP and len(w) > 2)
+        return bool(a_words & e_words)
+
     for season in ['2025', '2024']:
         data = apifootball_fetch(f"fixtures?date={date_str}&league={league_id}&season={season}")
         if not data or not data.get('response'):
             continue
-        home_n = _norm(home_name)
-        away_n = _norm(away_name)
         for fix in data['response']:
-            h = _norm(fix.get('teams',{}).get('home',{}).get('name',''))
-            a = _norm(fix.get('teams',{}).get('away',{}).get('name',''))
-            if (home_n in h or h in home_n) and (away_n in a or a in away_n):
+            h = fix.get('teams',{}).get('home',{}).get('name','')
+            a = fix.get('teams',{}).get('away',{}).get('name','')
+            if name_match(h, home_name) and name_match(a, away_name):
                 matched = fix
                 break
         if matched:
             break
 
     if not matched:
-        _cache_set(cache_key, None)
-        return None
+        # Debug: retornar times disponíveis pra diagnóstico
+        available = []
+        for season in ['2025', '2024']:
+            data = apifootball_fetch(f"fixtures?date={date_str}&league={league_id}&season={season}")
+            if data and data.get('response'):
+                for fix in data['response']:
+                    h = fix.get('teams',{}).get('home',{}).get('name','')
+                    a = fix.get('teams',{}).get('away',{}).get('name','')
+                    available.append(f"{h} x {a}")
+                break
+        _cache_set(cache_key, {'error': 'match not found', 'debug_available': available, 'searched': f"{home_name} x {away_name}"})
+        return {'error': 'match not found', 'debug_available': available, 'searched': f"{home_name} x {away_name}"}
 
     referee_raw = matched.get('fixture', {}).get('referee') or ''
     referee_name = referee_raw.split(',')[0].strip()
