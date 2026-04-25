@@ -623,45 +623,53 @@ def get_bet365_odds(fixture_id):
     if cached is not None:
         return cached
 
-    data = bet365_fetch(f"odds?fixtureId={fixture_id}")
+    # Endpoint correto: fixtures com fixtureId específico retorna bookmakerOdds
+    data = bet365_fetch(f"fixtures?fixtureId={fixture_id}")
     if not data:
         return None
 
+    # Pode retornar lista ou objeto único
+    fix = data[0] if isinstance(data, list) and data else (data if isinstance(data, dict) else None)
+    if not fix:
+        return None
+
+    markets = (fix.get('bookmakerOdds') or {}).get('bet365', {}).get('markets') or {}
+    if not markets:
+        return None
+
     result = {}
-    markets = data if isinstance(data, list) else (data.get('markets') or [])
 
-    for market in markets:
-        name = (market.get('marketName') or market.get('name') or '').lower()
-        selections = market.get('selections') or market.get('outcomes') or []
+    def get_price(market_id, outcome_id):
+        """Pega o preço decimal de um market/outcome."""
+        m = markets.get(str(market_id)) or markets.get(market_id)
+        if not m: return None
+        o = (m.get('outcomes') or {}).get(str(outcome_id)) or (m.get('outcomes') or {}).get(outcome_id)
+        if not o: return None
+        players = o.get('players') or {}
+        p = players.get('0') or (next(iter(players.values()), None) if players else None)
+        if not p or not p.get('active'): return None
+        price = p.get('price')
+        return price if price else None
 
-        if any(x in name for x in ['1x2', 'match winner', 'result', 'match result']):
-            for s in selections:
-                sname = (s.get('name') or s.get('selectionName') or '').lower()
-                val = s.get('odds') or s.get('price')
-                if 'home' in sname or sname == '1':
-                    result['homeML'] = val
-                elif 'draw' in sname or sname == 'x':
-                    result['drawOdds'] = val
-                elif 'away' in sname or sname == '2':
-                    result['awayML'] = val
+    # Market 101 = 1X2
+    h = get_price(101, 101)
+    d = get_price(101, 102)
+    a = get_price(101, 103)
+    if h: result['homeML']   = h
+    if d: result['drawOdds'] = d
+    if a: result['awayML']   = a
 
-        elif 'over/under' in name or ('goals' in name and ('over' in name or 'under' in name)):
-            for s in selections:
-                sname = (s.get('name') or s.get('selectionName') or '').lower()
-                val = s.get('odds') or s.get('price')
-                if 'over' in sname and '2.5' in sname:
-                    result['over25'] = val
-                elif 'under' in sname and '2.5' in sname:
-                    result['under25'] = val
+    # Market 104 = BTTS (Both Teams to Score)
+    y = get_price(104, 104)
+    n = get_price(104, 105)
+    if y: result['bttsYes'] = y
+    if n: result['bttsNo']  = n
 
-        elif any(x in name for x in ['both', 'btts', 'gg/ng', 'goal/no']):
-            for s in selections:
-                sname = (s.get('name') or s.get('selectionName') or '').lower()
-                val = s.get('odds') or s.get('price')
-                if 'yes' in sname or sname == 'gg':
-                    result['bttsYes'] = val
-                elif 'no' in sname or sname == 'ng':
-                    result['bttsNo'] = val
+    # Market 10208 = Over/Under — outcome 10208=Over, 10210=Under (2.5 goals)
+    ov = get_price(10208, 10208)
+    un = get_price(10208, 10210)
+    if ov: result['over25']  = ov
+    if un: result['under25'] = un
 
     _cache_set(cache_key, result or None)
     return result or None
