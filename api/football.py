@@ -432,7 +432,7 @@ def get_fixture_referee(home_name, away_name, league_key, game_date):
         e_words = set(w for w in e.split() if w not in STOP and len(w) > 2)
         return bool(a_words & e_words)
 
-    for season in ['2025', '2024']:
+    for season in ['2025', '2026', '2024']:
         data = apifootball_fetch(f"fixtures?date={date_str}&league={league_id}&season={season}")
         if not data or not data.get('response'):
             continue
@@ -446,18 +446,19 @@ def get_fixture_referee(home_name, away_name, league_key, game_date):
             break
 
     if not matched:
-        # Debug: retornar times disponíveis pra diagnóstico
         available = []
-        for season in ['2025', '2024']:
+        debug_seasons = {}
+        for season in ['2025', '2026', '2024']:
             data = apifootball_fetch(f"fixtures?date={date_str}&league={league_id}&season={season}")
             if data and data.get('response'):
-                for fix in data['response']:
-                    h = fix.get('teams',{}).get('home',{}).get('name','')
-                    a = fix.get('teams',{}).get('away',{}).get('name','')
-                    available.append(f"{h} x {a}")
-                break
-        _cache_set(cache_key, {'error': 'match not found', 'debug_available': available, 'searched': f"{home_name} x {away_name}"})
-        return {'error': 'match not found', 'debug_available': available, 'searched': f"{home_name} x {away_name}"}
+                teams = [f"{f.get('teams',{}).get('home',{}).get('name','')} x {f.get('teams',{}).get('away',{}).get('name','')}" for f in data['response']]
+                debug_seasons[season] = teams
+                available.extend(teams)
+            else:
+                debug_seasons[season] = data.get('errors') if data else 'no response'
+        result = {'error': 'match not found', 'debug_available': available, 'debug_seasons': debug_seasons, 'searched': f"{home_name} x {away_name}", 'league_id': league_id, 'date': date_str}
+        _cache_set(cache_key, result)
+        return result
 
     referee_raw = matched.get('fixture', {}).get('referee') or ''
     referee_name = referee_raw.split(',')[0].strip()
