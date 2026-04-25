@@ -584,7 +584,7 @@ class handler(BaseHTTPRequestHandler):
         t = params.get('type', ['fixtures'])[0]
 
         # Whitelist de tipos
-        VALID_TYPES = {'fixtures','live','stats','pregame','form','lineup'}
+        VALID_TYPES = {'fixtures','live','stats','pregame','form','lineup','referee'}
         if t not in VALID_TYPES:
             self._json(json.dumps({'error': 'invalid type'}).encode(), 400)
             return
