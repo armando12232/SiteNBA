@@ -3627,8 +3627,17 @@ function openFtModal(fixtureId) {
   document.getElementById('ft-modal-flag').textContent = f.league_flag || '';
   document.getElementById('ft-modal-league').textContent = f.league_name || '';
   document.getElementById('ft-modal-live-badge').style.display = isLive ? 'inline-flex' : 'none';
-  document.getElementById('ft-modal-home-logo').src = f.home_logo || '';
-  document.getElementById('ft-modal-away-logo').src = f.away_logo || '';
+  // Resetar logos e iniciais
+  const homeLogo = document.getElementById('ft-modal-home-logo');
+  const awayLogo = document.getElementById('ft-modal-away-logo');
+  const homeInit = document.getElementById('ft-modal-home-initials');
+  const awayInit = document.getElementById('ft-modal-away-initials');
+  homeLogo.style.display = 'block'; homeInit.style.display = 'none';
+  awayLogo.style.display = 'block'; awayInit.style.display = 'none';
+  homeLogo.src = safeUrl(f.home_logo || '');
+  awayLogo.src = safeUrl(f.away_logo || '');
+  homeInit.textContent = (f.home || '?').slice(0, 3).toUpperCase();
+  awayInit.textContent = (f.away || '?').slice(0, 3).toUpperCase();
   document.getElementById('ft-modal-home-name').textContent = f.home || '';
   document.getElementById('ft-modal-away-name').textContent = f.away || '';
 
@@ -4019,7 +4028,9 @@ init();
       </div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px">
-          <img id="ft-modal-home-logo" src="" style="width:64px;height:64px;object-fit:contain" onerror="this.style.display='none'">
+          <img id="ft-modal-home-logo" src="" style="width:64px;height:64px;object-fit:contain"
+               onerror="this.style.display='none';document.getElementById('ft-modal-home-initials').style.display='flex'">
+          <div id="ft-modal-home-initials" style="display:none;width:64px;height:64px;border-radius:12px;background:var(--bg4);align-items:center;justify-content:center;font-family:var(--display);font-size:22px;font-weight:800;color:var(--gold)"></div>
           <div id="ft-modal-home-name" style="font-family:var(--display);font-size:14px;font-weight:800;text-align:center;color:var(--text);line-height:1.2"></div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:90px">
@@ -4027,7 +4038,9 @@ init();
           <div id="ft-modal-status" style="font-size:12px;font-weight:700"></div>
         </div>
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px">
-          <img id="ft-modal-away-logo" src="" style="width:64px;height:64px;object-fit:contain" onerror="this.style.display='none'">
+          <img id="ft-modal-away-logo" src="" style="width:64px;height:64px;object-fit:contain"
+               onerror="this.style.display='none';document.getElementById('ft-modal-away-initials').style.display='flex'">
+          <div id="ft-modal-away-initials" style="display:none;width:64px;height:64px;border-radius:12px;background:var(--bg4);align-items:center;justify-content:center;font-family:var(--display);font-size:22px;font-weight:800;color:var(--gold)"></div>
           <div id="ft-modal-away-name" style="font-family:var(--display);font-size:14px;font-weight:800;text-align:center;color:var(--text);line-height:1.2"></div>
         </div>
       </div>
