@@ -677,9 +677,9 @@ def match_bet365_fixture(home_name, away_name, league_key):
     STOP = {'fc','af','sc','cf','ac','de','do','da','dos','city','united','the'}
 
     for fix in fixtures:
-        h = _norm(fix.get('homeName') or fix.get('home') or fix.get('homeTeam') or '')
-        a = _norm(fix.get('awayName') or fix.get('away') or fix.get('awayTeam') or '')
-        fid = fix.get('id') or fix.get('fixtureId') or fix.get('fixture_id')
+        h = _norm(fix.get('participant1Name') or fix.get('homeName') or fix.get('home') or '')
+        a = _norm(fix.get('participant2Name') or fix.get('awayName') or fix.get('away') or '')
+        fid = fix.get('fixtureId') or fix.get('id') or fix.get('fixture_id')
         if not h or not a or not fid:
             continue
 
