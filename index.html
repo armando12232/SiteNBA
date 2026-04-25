@@ -33,6 +33,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://js.stripe.com/v3/"></script>
+<script defer src="/_vercel/insights/script.js"></script>
 <style>
 :root {
   --bg: #080808;
@@ -828,7 +829,8 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 .game-period { font-size: 11px; color: var(--text3); }
 
 /* LOADING */
-.loading-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; }
+.loading-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: var(--display); font-size: 18px; font-weight: 700; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; position: fixed; inset: 0; background: var(--bg); z-index: 9999; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 600px) {
   .stats-row { grid-template-columns: repeat(2, minmax(0,1fr)); }
@@ -951,7 +953,12 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 <div class="app-layer">
 
   <!-- Loading -->
-  <div class="loading-screen" id="loading-screen">Carregando...</div>
+  <div class="loading-screen" id="loading-screen">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:16px">
+      <div style="width:40px;height:40px;border:3px solid rgba(253,185,39,.2);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite"></div>
+      <div style="font-family:var(--display);font-size:18px;font-weight:700;color:var(--gold);letter-spacing:.1em">STATCAST BR</div>
+    </div>
+  </div>
 
   <!-- Auth screen -->
   <div class="auth-screen" id="auth-screen" style="display:none">
@@ -1302,6 +1309,21 @@ function safeUrl(u) {
 // Aliases curtos
 const _h = escapeHtml;
 const _a = escapeAttr;
+
+// ─── FETCH COM TIMEOUT ───────────────────────────────────────────────────────
+async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timer);
+    return res;
+  } catch (e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') throw new Error(`Timeout: ${url}`);
+    throw e;
+  }
+}
 
 // ─── PLANOS ──────────────────────────────────────────────────────────────────
 const PLANS = {
@@ -2510,7 +2532,7 @@ async function fetchNBA(type, gameId, playerId) {
   let params = `?type=${type}`;
   if (gameId) params += `&gameId=${gameId}`;
   if (playerId) params += `&playerId=${playerId}`;
-  const res = await fetch(`/api/nba${params}`);
+  const res = await fetchWithTimeout(`/api/nba${params}`, {}, 10000);
   if (!res.ok) throw new Error(res.status);
   return res.json();
 }
@@ -3299,7 +3321,7 @@ async function loadFootballGames() {
   if (!el) return;
   el.innerHTML = '<div class="state-box"><div class="state-title">Buscando jogos de futebol...</div></div>';
   try {
-    const res = await fetch('/api/football?type=fixtures');
+    const res = await fetchWithTimeout('/api/football?type=fixtures', {}, 12000);
     const data = await res.json();
     // Aba Jogos: exclui jogos ao vivo (eles ficam só na aba Ao Vivo)
     _footballData = (data.fixtures || []).filter(f => !f.live);
@@ -3499,7 +3521,7 @@ async function loadFootballLive() {
   if (!el) return;
   el.innerHTML = '<div class="state-box"><div class="state-title">Buscando jogos ao vivo...</div></div>';
   try {
-    const res = await fetch('/api/football?type=live');
+    const res = await fetchWithTimeout('/api/football?type=live', {}, 10000);
     const data = await res.json();
     window._footballLiveData = data.fixtures || [];
     renderFootballLive();
