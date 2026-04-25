@@ -14,6 +14,9 @@ _RATE_WINDOW  = 60  # por 60 segundos
 
 def rate_limit_check(ip):
     """Retorna True se dentro do limite, False se estourou."""
+    # Não limitar localhost (Vercel internal)
+    if ip in ('127.0.0.1', '::1', '0.0.0.0'):
+        return True
     now = time.time()
     bucket = _RATE_BUCKETS.get(ip, [])
     # Remove timestamps fora da janela
