@@ -595,8 +595,10 @@ class handler(BaseHTTPRequestHandler):
             away       = params.get('away',      [''])[0]
             game_date  = params.get('date',      [''])[0]
             league_key = params.get('leagueKey', [''])[0]
-            if not (home and away and game_date and league_key):
-                self._json(json.dumps({'error': 'home, away, date, leagueKey required'}).encode(), 400)
+            import sys
+            print(f"[referee] home={repr(home)} away={repr(away)} date={repr(game_date)} league={repr(league_key)}", file=sys.stderr)
+            if not home or not away or not game_date or not league_key:
+                self._json(json.dumps({'error': 'missing params', 'home': bool(home), 'away': bool(away), 'date': bool(game_date), 'league': bool(league_key)}).encode(), 400)
                 return
             result = get_fixture_referee(home, away, league_key, game_date)
             self._json(json.dumps(result or {'error': 'not found'}).encode())
