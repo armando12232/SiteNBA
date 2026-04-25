@@ -1060,6 +1060,92 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
         <button id="page-football-btn" onclick="switchPage('football')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">⚽ Futebol</button>
       </div>
 
+      <div style="display:flex;gap:8px;margin-bottom:18px">
+        <button id="page-home-btn" onclick="switchPage('home')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">🏠 Home</button>
+        <button id="page-nba-btn" onclick="switchPage('nba')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">🏀 NBA</button>
+        <button id="page-football-btn" onclick="switchPage('football')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">⚽ Futebol</button>
+      </div>
+
+      <!-- ══ PÁGINA HOME ══ -->
+      <div id="page-home" style="display:none">
+
+        <div style="margin-bottom:24px">
+          <div style="font-family:var(--display);font-size:26px;font-weight:900;letter-spacing:.02em;margin-bottom:4px">
+            Bem-vindo ao <span style="color:var(--gold)">StatCast BR</span> ⚡
+          </div>
+          <div style="font-size:13px;color:var(--text3)">Selecione um módulo para começar</div>
+        </div>
+
+        <!-- Cards de módulo -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:28px">
+
+          <div onclick="switchPage('nba');switchNBATab('props')" style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden"
+            onmouseover="this.style.borderColor='rgba(253,185,39,.4)';this.style.transform='translateY(-2px)'"
+            onmouseout="this.style.borderColor='var(--border2)';this.style.transform=''">
+            <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(253,185,39,.1),transparent 70%);pointer-events:none"></div>
+            <div style="font-size:32px;margin-bottom:12px">📊</div>
+            <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:6px">Player Props</div>
+            <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:14px">Hit rates L5→L20, DVP, PropScore e streak dos jogadores NBA.</div>
+            <div style="font-family:var(--display);font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.06em;text-transform:uppercase">🏀 Abrir →</div>
+          </div>
+
+          <div onclick="switchPage('nba');switchNBATab('live')" style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden"
+            onmouseover="this.style.borderColor='rgba(255,23,68,.3)';this.style.transform='translateY(-2px)'"
+            onmouseout="this.style.borderColor='var(--border2)';this.style.transform=''">
+            <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(255,23,68,.08),transparent 70%);pointer-events:none"></div>
+            <div style="font-size:32px;margin-bottom:12px">🔴</div>
+            <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:6px">NBA Ao Vivo</div>
+            <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:14px">Monitor de jogos em tempo real com alertas de performance e box score.</div>
+            <div style="font-family:var(--display);font-size:12px;font-weight:700;color:var(--danger);letter-spacing:.06em;text-transform:uppercase">🔴 Abrir →</div>
+          </div>
+
+          <div onclick="switchPage('football');switchFootballTab('today')" style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden"
+            onmouseover="this.style.borderColor='rgba(0,230,118,.3)';this.style.transform='translateY(-2px)'"
+            onmouseout="this.style.borderColor='var(--border2)';this.style.transform=''">
+            <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(0,230,118,.08),transparent 70%);pointer-events:none"></div>
+            <div style="font-size:32px;margin-bottom:12px">⚽</div>
+            <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:6px">Jogos do Dia</div>
+            <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:14px">Todos os jogos de futebol com odds, H2H, escalação e árbitro.</div>
+            <div style="font-family:var(--display);font-size:12px;font-weight:700;color:var(--green);letter-spacing:.06em;text-transform:uppercase">⚽ Abrir →</div>
+          </div>
+
+          <div onclick="switchPage('football');switchFootballTab('live')" style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden"
+            onmouseover="this.style.borderColor='rgba(255,23,68,.3)';this.style.transform='translateY(-2px)'"
+            onmouseout="this.style.borderColor='var(--border2)';this.style.transform=''">
+            <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(255,23,68,.08),transparent 70%);pointer-events:none"></div>
+            <div style="font-size:32px;margin-bottom:12px">🟢</div>
+            <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:6px">Futebol Ao Vivo</div>
+            <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:14px">Jogos em andamento com xG, stats e eventos atualizando a cada 60s.</div>
+            <div style="font-family:var(--display);font-size:12px;font-weight:700;color:var(--danger);letter-spacing:.06em;text-transform:uppercase">🔴 Abrir →</div>
+          </div>
+
+        </div>
+
+        <!-- Status do dia -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px 24px">
+          <div style="font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:16px">📡 Status do dia</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:16px">
+            <div style="text-align:center">
+              <div style="font-family:var(--display);font-size:30px;font-weight:900;color:var(--gold)" id="home-stat-props">—</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.06em">Props disponíveis</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-family:var(--display);font-size:30px;font-weight:900;color:var(--danger)" id="home-stat-live-nba">—</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.06em">NBA ao vivo</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-family:var(--display);font-size:30px;font-weight:900;color:var(--green)" id="home-stat-ft-games">—</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.06em">Jogos futebol</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-family:var(--display);font-size:30px;font-weight:900;color:var(--gold)" id="home-stat-alerts">—</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px;text-transform:uppercase;letter-spacing:.06em">Alertas ativos</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
             <!-- ══ PÁGINA NBA ══ -->
       <div id="page-nba" style="display:block">
         <!-- Sub-tabs NBA -->
@@ -2391,7 +2477,7 @@ function showDashboard(user) {
   document.getElementById('header-date').textContent = new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'});
   loadUserPlan();
   checkPaymentReturn();
-  switchPage('nba');
+  switchPage('home');
   startMonitor();
 }
 
@@ -3483,20 +3569,51 @@ let _currentFootballTab = 'jogos';
 
 function switchPage(page) {
   _currentPage = page;
-  ['nba', 'football'].forEach(p => {
+  ['home', 'nba', 'football'].forEach(p => {
     var btn = document.getElementById('page-' + p + '-btn');
     var el  = document.getElementById('page-' + p);
     var statsRow = document.getElementById('stats-row-' + p);
     if (btn) {
-      btn.style.background    = p === page ? 'var(--bg3)' : 'var(--bg2)';
-      btn.style.borderColor   = p === page ? 'var(--border2)' : 'var(--border)';
-      btn.style.color         = p === page ? 'var(--text)' : 'var(--text3)';
+      btn.style.background  = p === page ? 'var(--bg3)' : 'var(--bg2)';
+      btn.style.borderColor = p === page ? 'var(--border2)' : 'var(--border)';
+      btn.style.color       = p === page ? 'var(--text)' : 'var(--text3)';
     }
     if (el) el.style.display = p === page ? 'block' : 'none';
     if (statsRow) statsRow.style.display = p === page ? 'grid' : 'none';
   });
+  if (page === 'home')     { hydrateHomeStats(); }
   if (page === 'nba')      { switchNBATab(_currentNBATab); }
   if (page === 'football') { _footballData = null; switchFootballTab(_currentFootballTab); }
+}
+
+function hydrateHomeStats() {
+  // Props disponíveis
+  var props = window._bpData ? Object.keys(window._bpData).length : null;
+  var propsEl = document.getElementById('home-stat-props');
+  if (propsEl) propsEl.textContent = props !== null ? props : '—';
+
+  // NBA ao vivo
+  var liveNba = window._gameByKey ? Object.values(window._gameByKey).filter(function(g) { return g.status === 'in'; }).length : null;
+  var liveNbaEl = document.getElementById('home-stat-live-nba');
+  if (liveNbaEl) liveNbaEl.textContent = liveNba !== null ? liveNba : '—';
+
+  // Futebol jogos
+  var ftGames = (window._footballData ? window._footballData.length : 0) + (window._footballLiveData ? window._footballLiveData.length : 0);
+  var ftEl = document.getElementById('home-stat-ft-games');
+  if (ftEl) ftEl.textContent = ftGames || '—';
+
+  // Alertas ativos (PropScore >= 1.5)
+  var alerts = 0;
+  if (window._bpData) {
+    Object.values(window._bpData).forEach(function(players) {
+      if (!players) return;
+      Object.values(players).forEach(function(p) {
+        if (p && p.propScore && p.propScore >= 1.5) alerts++;
+      });
+    });
+  }
+  var alertsEl = document.getElementById('home-stat-alerts');
+  if (alertsEl) alertsEl.textContent = alerts || '—';
 }
 
 function switchNBATab(tab) {
