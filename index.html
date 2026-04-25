@@ -3698,7 +3698,7 @@ function openFtModal(fixtureId) {
   }
   // Carregar pre-jogo se agendado
   if (!isLive && !isFinished && f.league_key) {
-    loadFtPregame(f.id, f.league_key, f.home, f.away);
+    loadFtPregame(f.id, f.league_key, f.home, f.away, f);
   }
 }
 
@@ -3852,13 +3852,15 @@ function renderFtPlayers(rosters, tab) {
     starters.map(rowHTML).join('') +
     (subs.length ? '<div style="font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:8px">Banco / Entrou</div>' + subs.map(rowHTML).join('') : '');
 }
-function loadFtPregame(gameId, leagueKey, homeName, awayName) {
+function loadFtPregame(gameId, leagueKey, homeName, awayName, fixture) {
   var sec = document.getElementById('ft-modal-pregame-section');
   if (!sec) return;
   sec.style.display = 'flex';
   sec.style.flexDirection = 'column';
   sec.style.gap = '12px';
   sec.innerHTML = '<div class="ft-modal-section-title">Pr\u00e9-Jogo</div><div style="text-align:center;color:var(--text3);font-size:12px;padding:8px">Carregando...</div>';
+
+  window._pregameFixture = fixture || null;
 
   fetch('/api/football?type=pregame&gameId=' + gameId + '&leagueKey=' + leagueKey)
     .then(function(r) { return r.json(); })
@@ -3912,7 +3914,7 @@ function loadRefereeData() {
     + '&date='      + encodeURIComponent(f.date || '')
     + '&leagueKey=' + f.league_key;
 
-  fetch(url)
+  fetchWithTimeout(url, {}, 12000)
     .then(function(r) { return r.json(); })
     .then(function(data) {
       window._refereeCache[key] = data;
