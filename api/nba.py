@@ -467,7 +467,7 @@ class handler(BaseHTTPRequestHandler):
         req_type = params.get("type", [""])[0]
 
         # Valida tipo (whitelist)
-        VALID_TYPES = {"scoreboard","boxscore","season_avg","pregame","schedule","defense"}
+        VALID_TYPES = {"scoreboard","boxscore","season_avg","pregame","schedule","defense","team_info","team_last","roster"}
         if req_type not in VALID_TYPES:
             self._send(400, {"error": "invalid type"}); return
 
