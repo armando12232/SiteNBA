@@ -569,6 +569,153 @@ def get_team_season_stats(team_id, league_id, season='2024'):
     return result
 
 
+# ─── Bet365 API (via RapidAPI) ────────────────────────────────────────────────
+BET365_KEY  = '8916f08b53msh9e0258a756f7e96p12c1d5jsn125e17bdbb2d'
+BET365_HOST = 'bet36528.p.rapidapi.com'
+BET365_BASE = 'https://bet36528.p.rapidapi.com'
+
+BET365_TOURNAMENT_IDS = {
+    'premier':      17,
+    'laliga':       8,
+    'bundesliga':   35,
+    'seriea':       23,
+    'ligue1':       34,
+    'champions':    7,
+    'libertadores': 384,
+    'brasileirao':  325,
+}
+
+def bet365_fetch(path):
+    cache_key = f"bet365_{path}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+    try:
+        url = f"{BET365_BASE}/{path}"
+        req = urllib.request.Request(url, headers={
+            'x-rapidapi-key':  BET365_KEY,
+            'x-rapidapi-host': BET365_HOST,
+            'Content-Type':    'application/json',
+        })
+        with urllib.request.urlopen(req, timeout=8) as r:
+            data = json.loads(r.read())
+        _cache_set(cache_key, data)
+        return data
+    except Exception:
+        return None
+
+
+def get_bet365_fixtures(league_key):
+    tid = BET365_TOURNAMENT_IDS.get(league_key)
+    if not tid:
+        return []
+    data = bet365_fetch(f"fixtures?tournamentId={tid}&hasOdds=true")
+    if not data or not isinstance(data, list):
+        return data if data else []
+    return data
+
+
+def get_bet365_odds(fixture_id):
+    if not fixture_id:
+        return None
+    cache_key = f"bet365_odds_{fixture_id}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    data = bet365_fetch(f"odds?fixtureId={fixture_id}")
+    if not data:
+        return None
+
+    result = {}
+    markets = data if isinstance(data, list) else (data.get('markets') or [])
+
+    for market in markets:
+        name = (market.get('marketName') or market.get('name') or '').lower()
+        selections = market.get('selections') or market.get('outcomes') or []
+
+        if any(x in name for x in ['1x2', 'match winner', 'result', 'match result']):
+            for s in selections:
+                sname = (s.get('name') or s.get('selectionName') or '').lower()
+                val = s.get('odds') or s.get('price')
+                if 'home' in sname or sname == '1':
+                    result['homeML'] = val
+                elif 'draw' in sname or sname == 'x':
+                    result['drawOdds'] = val
+                elif 'away' in sname or sname == '2':
+                    result['awayML'] = val
+
+        elif 'over/under' in name or ('goals' in name and ('over' in name or 'under' in name)):
+            for s in selections:
+                sname = (s.get('name') or s.get('selectionName') or '').lower()
+                val = s.get('odds') or s.get('price')
+                if 'over' in sname and '2.5' in sname:
+                    result['over25'] = val
+                elif 'under' in sname and '2.5' in sname:
+                    result['under25'] = val
+
+        elif any(x in name for x in ['both', 'btts', 'gg/ng', 'goal/no']):
+            for s in selections:
+                sname = (s.get('name') or s.get('selectionName') or '').lower()
+                val = s.get('odds') or s.get('price')
+                if 'yes' in sname or sname == 'gg':
+                    result['bttsYes'] = val
+                elif 'no' in sname or sname == 'ng':
+                    result['bttsNo'] = val
+
+    _cache_set(cache_key, result or None)
+    return result or None
+
+
+def match_bet365_fixture(home_name, away_name, league_key):
+    fixtures = get_bet365_fixtures(league_key)
+    if not fixtures or not isinstance(fixtures, list):
+        return None
+
+    home_n = _norm(home_name)
+    away_n = _norm(away_name)
+    STOP = {'fc','af','sc','cf','ac','de','do','da','dos','city','united','the'}
+
+    for fix in fixtures:
+        h = _norm(fix.get('homeName') or fix.get('home') or fix.get('homeTeam') or '')
+        a = _norm(fix.get('awayName') or fix.get('away') or fix.get('awayTeam') or '')
+        fid = fix.get('id') or fix.get('fixtureId') or fix.get('fixture_id')
+        if not h or not a or not fid:
+            continue
+
+        h_w = set(w for w in h.split() if w not in STOP and len(w) > 2)
+        a_w = set(w for w in a.split() if w not in STOP and len(w) > 2)
+        hn_w = set(w for w in home_n.split() if w not in STOP and len(w) > 2)
+        an_w = set(w for w in away_n.split() if w not in STOP and len(w) > 2)
+
+        if (h_w & hn_w) and (a_w & an_w):
+            return {'fixture_id': fid, 'home': h, 'away': a}
+    return None
+
+
+def get_bet365_match_odds(home_name, away_name, league_key):
+    cache_key = f"bet365_match_{league_key}_{_norm(home_name)}_{_norm(away_name)}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    fix = match_bet365_fixture(home_name, away_name, league_key)
+    if not fix:
+        result = {'error': 'fixture not found'}
+        _cache_set(cache_key, result)
+        return result
+
+    odds = get_bet365_odds(fix['fixture_id'])
+    if not odds:
+        result = {'error': 'odds not found', 'fixture_id': fix['fixture_id']}
+        _cache_set(cache_key, result)
+        return result
+
+    result = {'fixture_id': fix['fixture_id'], **odds}
+    _cache_set(cache_key, result)
+    return result
+
+
 class handler(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
 
@@ -585,9 +732,21 @@ class handler(BaseHTTPRequestHandler):
         t = params.get('type', ['fixtures'])[0]
 
         # Whitelist de tipos
-        VALID_TYPES = {'fixtures','live','stats','pregame','form','lineup','referee'}
+        VALID_TYPES = {'fixtures','live','stats','pregame','form','lineup','referee','bet365odds'}
         if t not in VALID_TYPES:
             self._json(json.dumps({'error': 'invalid type'}).encode(), 400)
+            return
+
+        # ── Bet365 Odds ────────────────────────────────────────────────────────
+        if t == 'bet365odds':
+            home       = params.get('home',      [''])[0]
+            away       = params.get('away',      [''])[0]
+            league_key = params.get('leagueKey', [''])[0]
+            if not (home and away and league_key):
+                self._json(json.dumps({'error': 'home, away, leagueKey required'}).encode(), 400)
+                return
+            result = get_bet365_match_odds(home, away, league_key)
+            self._json(json.dumps(result).encode())
             return
 
         # ── Referee + stats (API-Football) ────────────────────────────────
