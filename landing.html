@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StatCast BR — Monitor de Props NBA & Futebol</title>
+<meta name="description" content="Dados em tempo real para quem leva apostas esportivas a sério. Hit rates, DVP, PropScore e alertas ao vivo.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,300;0,400;0,600;0,700;0,800;0,900;1,700&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #070707;
+  --bg2:     #0d0d0d;
+  --bg3:     #141414;
+  --border:  rgba(255,255,255,.06);
+  --border2: rgba(255,255,255,.12);
+  --text:    #ffffff;
+  --text2:   #999;
+  --text3:   #444;
+  --gold:    #fdb927;
+  --gold2:   #e8a820;
+  --green:   #00e676;
+  --red:     #ff1744;
+  --display: 'Barlow Condensed', sans-serif;
+  --body:    'Barlow', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+/* ── NOISE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.5;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  padding: 20px 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid transparent;
+  transition: all .4s;
+}
+nav.scrolled {
+  background: rgba(7,7,7,.92);
+  backdrop-filter: blur(20px);
+  border-color: var(--border);
+}
+.nav-logo {
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  color: var(--gold);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.nav-logo img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  mix-blend-mode: screen;
+  filter: brightness(1.2);
+}
+.nav-cta {
+  background: var(--gold);
+  color: #000;
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 10px 24px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all .2s;
+}
+.nav-cta:hover { background: var(--gold2); transform: translateY(-1px); }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 24px 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Grid lines background */
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(253,185,39,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(253,185,39,.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+}
+
+/* Glow */
+.hero-glow {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 400px;
+  background: radial-gradient(ellipse, rgba(253,185,39,.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(253,185,39,.08);
+  border: 1px solid rgba(253,185,39,.25);
+  border-radius: 100px;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 32px;
+  animation: fadeUp .8s ease both;
+}
+.hero-badge span { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); animation: pulse 2s infinite; }
+
+.hero-title {
+  font-family: var(--display);
+  font-size: clamp(64px, 12vw, 140px);
+  font-weight: 900;
+  line-height: .9;
+  letter-spacing: -.02em;
+  margin-bottom: 24px;
+  animation: fadeUp .8s .1s ease both;
+}
+.hero-title em {
+  font-style: normal;
+  color: var(--gold);
+  display: block;
+}
+
+.hero-sub {
+  font-size: clamp(16px, 2.5vw, 20px);
+  color: var(--text2);
+  max-width: 540px;
+  line-height: 1.6;
+  margin-bottom: 48px;
+  font-weight: 300;
+  animation: fadeUp .8s .2s ease both;
+}
+
+.hero-cta-group {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  animation: fadeUp .8s .3s ease both;
+}
+
+.btn-primary {
+  background: var(--gold);
+  color: #000;
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 16px 40px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-primary:hover { background: var(--gold2); transform: translateY(-2px); box-shadow: 0 12px 40px rgba(253,185,39,.3); }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text2);
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 16px 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border2);
+  text-decoration: none;
+  transition: all .2s;
+}
+.btn-secondary:hover { border-color: rgba(255,255,255,.3); color: var(--text); }
+
+/* Stats row */
+.hero-stats {
+  display: flex;
+  gap: 48px;
+  margin-top: 80px;
+  animation: fadeUp .8s .4s ease both;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.hero-stat { text-align: center; }
+.hero-stat-num {
+  font-family: var(--display);
+  font-size: 42px;
+  font-weight: 900;
+  color: var(--gold);
+  line-height: 1;
+}
+.hero-stat-label { font-size: 12px; color: var(--text3); letter-spacing: .08em; text-transform: uppercase; margin-top: 4px; }
+
+/* ── LIVE DEMO CARD ── */
+.demo-section {
+  padding: 100px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.section-label {
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 16px;
+}
+.section-title {
+  font-family: var(--display);
+  font-size: clamp(40px, 6vw, 72px);
+  font-weight: 900;
+  line-height: .95;
+  letter-spacing: -.01em;
+  margin-bottom: 16px;
+}
+.section-sub {
+  font-size: 16px;
+  color: var(--text2);
+  max-width: 500px;
+  font-weight: 300;
+  margin-bottom: 56px;
+}
+
+/* Mock props card */
+.mock-container {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  overflow: hidden;
+}
+.mock-header {
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mock-dot { width: 10px; height: 10px; border-radius: 50%; }
+.mock-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.mock-tab {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.mock-tab.active { background: var(--gold); color: #000; }
+.mock-tab:not(.active) { color: var(--text3); }
+
+.mock-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  animation: slideIn .6s ease both;
+}
+.mock-row:last-child { border-bottom: none; }
+.mock-avatar {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  background: var(--bg3);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--gold);
+}
+.mock-info { flex: 1; min-width: 0; }
+.mock-name { font-weight: 700; font-size: 15px; }
+.mock-meta { font-size: 12px; color: var(--text3); margin-top: 2px; display: flex; align-items: center; gap: 8px; }
+.mock-line { font-size: 13px; font-weight: 700; color: var(--gold); }
+.mock-score {
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 900;
+  min-width: 50px;
+  text-align: right;
+}
+.mock-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 5px;
+  letter-spacing: .04em;
+}
+.badge-fire { background: rgba(255,87,34,.15); color: #ff5722; }
+.badge-green { background: rgba(0,230,118,.1); color: var(--green); }
+.badge-gold { background: rgba(253,185,39,.1); color: var(--gold); }
+
+.dots { display: flex; gap: 3px; align-items: center; }
+.dot { width: 7px; height: 7px; border-radius: 50%; }
+
+/* ── FEATURES ── */
+.features-section {
+  padding: 100px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2px;
+  background: var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.feature-card {
+  background: var(--bg);
+  padding: 40px;
+  transition: background .3s;
+}
+.feature-card:hover { background: var(--bg2); }
+
+.feature-icon {
+  width: 48px; height: 48px;
+  background: rgba(253,185,39,.08);
+  border: 1px solid rgba(253,185,39,.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 20px;
+}
+
+.feature-title {
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  margin-bottom: 10px;
+}
+
+.feature-desc { font-size: 14px; color: var(--text2); line-height: 1.7; font-weight: 300; }
+
+/* ── NBA SECTION ── */
+.nba-section {
+  padding: 100px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+}
+@media (max-width: 768px) { .nba-section { grid-template-columns: 1fr; gap: 48px; } }
+
+.alert-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: transform .3s;
+}
+.alert-card:hover { transform: translateX(4px); }
+.alert-card.fire { border-left: 3px solid #ff5722; }
+.alert-card.green { border-left: 3px solid var(--green); }
+.alert-card.gold { border-left: 3px solid var(--gold); }
+
+.alert-icon { font-size: 24px; flex-shrink: 0; }
+.alert-info { flex: 1; min-width: 0; }
+.alert-player { font-weight: 700; font-size: 14px; }
+.alert-stat { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.alert-score {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--gold);
+  line-height: 1;
+}
+
+/* ── SOCCER SECTION ── */
+.soccer-section {
+  padding: 100px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.match-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.match-league {
+  background: var(--bg3);
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.match-body {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.match-team { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.match-team-name { font-family: var(--display); font-size: 15px; font-weight: 800; }
+.match-score-box { text-align: center; min-width: 80px; }
+.match-score { font-family: var(--display); font-size: 32px; font-weight: 900; }
+.match-time { font-size: 12px; color: var(--red); font-weight: 700; display: flex; align-items: center; gap: 4px; }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: pulse 1s infinite; }
+.xg-row { display: flex; gap: 8px; padding: 0 16px 14px; }
+.xg-box { flex: 1; background: rgba(253,185,39,.06); border: 1px solid rgba(253,185,39,.15); border-radius: 8px; padding: 8px 12px; }
+.xg-label { font-size: 10px; color: var(--gold); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.xg-val { font-family: var(--display); font-size: 22px; font-weight: 900; color: var(--gold); }
+
+/* ── PLANS ── */
+.plans-section {
+  padding: 100px 24px;
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 56px;
+}
+
+.plan-card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 16px;
+  padding: 32px 24px;
+  text-align: left;
+  transition: all .3s;
+  position: relative;
+}
+.plan-card:hover { border-color: rgba(253,185,39,.3); transform: translateY(-4px); }
+.plan-card.featured {
+  border-color: rgba(253,185,39,.4);
+  background: linear-gradient(135deg, rgba(253,185,39,.06), rgba(253,185,39,.02));
+}
+.plan-badge-top {
+  position: absolute;
+  top: -12px; left: 50%; transform: translateX(-50%);
+  background: var(--gold);
+  color: #000;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 4px 14px;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+.plan-name { font-family: var(--display); font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+.plan-price { font-family: var(--display); font-size: 36px; font-weight: 900; color: var(--gold); line-height: 1; margin: 12px 0 4px; }
+.plan-period { font-size: 12px; color: var(--text3); margin-bottom: 20px; }
+.plan-features { list-style: none; }
+.plan-features li { font-size: 13px; color: var(--text2); padding: 5px 0; display: flex; align-items: center; gap: 8px; }
+.plan-features li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.footer-logo { font-family: var(--display); font-size: 20px; font-weight: 800; color: var(--gold); }
+.footer-links { display: flex; gap: 24px; }
+.footer-links a { font-size: 13px; color: var(--text3); text-decoration: none; transition: color .2s; }
+.footer-links a:hover { color: var(--text); }
+.footer-copy { font-size: 12px; color: var(--text3); }
+
+/* ── DIVIDER ── */
+.gold-divider {
+  width: 60px;
+  height: 3px;
+  background: var(--gold);
+  border-radius: 2px;
+  margin: 20px 0 32px;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .3; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.fade-in {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity .7s ease, transform .7s ease;
+}
+.fade-in.visible { opacity: 1; transform: translateY(0); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  nav { padding: 16px 20px; }
+  .hero { padding: 100px 20px 60px; }
+  .hero-stats { gap: 24px; }
+  footer { padding: 30px 20px; flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <a href="/" class="nav-logo">
+    ⚡ StatCast BR
+  </a>
+  <a href="/index.html" class="nav-cta">Acessar App →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+
+  <div class="hero-badge">
+    <span></span>
+    Dados em tempo real · NBA & Futebol
+  </div>
+
+  <h1 class="hero-title">
+    VANTAGEM<br>
+    <em>ESTATÍSTICA</em><br>
+    REAL
+  </h1>
+
+  <p class="hero-sub">
+    Monitor de player props com hit rates, DVP, PropScore e alertas ao vivo. Para quem leva apostas esportivas a sério.
+  </p>
+
+  <div class="hero-cta-group">
+    <a href="/index.html" class="btn-primary">
+      Acessar grátis →
+    </a>
+    <a href="#features" class="btn-secondary">
+      Ver funcionalidades
+    </a>
+  </div>
+
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-num">L20</div>
+      <div class="hero-stat-label">Hit rate histórico</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">4+</div>
+      <div class="hero-stat-label">Stats por prop</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">DVP</div>
+      <div class="hero-stat-label">Defesa vs posição</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-num">xG</div>
+      <div class="hero-stat-label">Expected goals ao vivo</div>
+    </div>
+  </div>
+</section>
+
+<!-- MOCK PROPS TABLE -->
+<section class="demo-section fade-in">
+  <div class="section-label">Player Props · NBA</div>
+  <h2 class="section-title">DADOS QUE<br>IMPORTAM</h2>
+  <div class="gold-divider"></div>
+  <p class="section-sub">Hit rates reais dos últimos 5, 10, 15 e 20 jogos. Sem achismo.</p>
+
+  <div class="mock-container">
+    <div class="mock-header">
+      <div class="mock-dot" style="background:#ff5f57"></div>
+      <div class="mock-dot" style="background:#febc2e"></div>
+      <div class="mock-dot" style="background:#28c840"></div>
+      <span style="font-size:12px;color:var(--text3);margin-left:8px">site-nba-ten.vercel.app — Player Props</span>
+    </div>
+
+    <div class="mock-tabs">
+      <div class="mock-tab active">Pontos</div>
+      <div class="mock-tab">Rebotes</div>
+      <div class="mock-tab">Assistências</div>
+      <div class="mock-tab">3-Pontos</div>
+    </div>
+
+    <!-- Row 1 -->
+    <div class="mock-row" style="animation-delay:.1s">
+      <div class="mock-avatar">LJ</div>
+      <div class="mock-info">
+        <div class="mock-name">LeBron James</div>
+        <div class="mock-meta">
+          LAL × GSW &nbsp;·&nbsp;
+          <span class="mock-line">O 24.5</span>
+          <span class="dots">
+            <span class="dot" style="background:var(--green)"></span>
+            <span class="dot" style="background:var(--green)"></span>
+            <span class="dot" style="background:var(--red)"></span>
+            <span class="dot" style="background:var(--green)"></span>
+            <span class="dot" style="background:var(--green)"></span>
+          </span>
+          <span class="mock-badge badge-green">DVP 28º</span>
+        </div>
+      </div>
+      <div class="mock-score" style="color:var(--green)">80%</div>
+      <div class="mock-badge badge-fire">🔥 1.82</div>
+    </div>
+
+    <!-- Row 2 -->
+    <div class="mock-row" style="animation-delay:.2s">
+      <div class="mock-avatar">SG</div>
+      <div class="mock-info">
+        <div class="mock-name">Stephen Curry</div>
+        <div class="mock-meta">
+          GSW × LAL &nbsp;·&nbsp;
+          <span class="mock-line">O 28.5</span>
+          <span class="dots">
+            <span class="dot" style="background:var(--green)"></span>
+            <span class="dot" style="background:var(--red)"></span>
+            <span class="dot" style="background:var(--green)"></span>
+            <span class="dot" style="background:var(--green)"></span>
+            <span class="dot" style="background:var(--red)"></span>
+          </span>
+          <span class="mock-badge badge-gold">DVP 15º</span>
+        </div>
+      </div>
+      <div class="mock-score" style="color:var(--gold)">60%</div>
+      <div class="mock-badge badge-gold">⚡ 1.51</div>
+    </div>
+
+    <!-- Row 3 -->
+    <div class="mock-row" style="animation-delay:.3s">
+      <div class="mock-avatar">JT</div>
+      <div class="mock-info">
+        <div class="mock-name">Jayson Tatum</div>
+        <div class="mock-meta">
+          BOS × MIA &nbsp;·&nbsp;
+          <span class="mock-line">O 26.5</span>
+          <span class="dots">
+            <span class="dot" style="background:var(--green)"></span>
+            <span class="dot" style="background:var(--green)"></span>
+            <span class="dot" style="background:var(--green)"></span>
+            <span class="dot" style="background:var(--red)"></span>
+            <span class="dot" style="background:var(--green)"></span>
+          </span>
+          <span class="mock-badge badge-green">DVP 29º</span>
+        </div>
+      </div>
+      <div class="mock-score" style="color:var(--green)">80%</div>
+      <div class="mock-badge badge-fire">🔥 1.79</div>
+    </div>
+
+    <!-- Row 4 -->
+    <div class="mock-row" style="animation-delay:.4s">
+      <div class="mock-avatar">ND</div>
+      <div class="mock-info">
+        <div class="mock-name">Nikola Jokić</div>
+        <div class="mock-meta">
+          DEN × OKC &nbsp;·&nbsp;
+          <span class="mock-line">O 22.5</span>
+          <span class="dots">
+            <span class="dot" style="background:var(--red)"></span>
+            <span class="dot" style="background:var(--green)"></span>
+            <span class="dot" style="background:var(--red)"></span>
+            <span class="dot" style="background:var(--green)"></span>
+            <span class="dot" style="background:var(--red)"></span>
+          </span>
+          <span class="mock-badge" style="background:rgba(255,23,68,.1);color:var(--red)">DVP 5º</span>
+        </div>
+      </div>
+      <div class="mock-score" style="color:var(--red)">40%</div>
+      <div class="mock-badge" style="background:rgba(255,23,68,.1);color:var(--red)">⚠️ Risco</div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section fade-in" id="features">
+  <div class="section-label">Funcionalidades</div>
+  <h2 class="section-title">TUDO QUE<br>VOCÊ PRECISA</h2>
+  <div class="gold-divider"></div>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <div class="feature-title">Hit Rates L5 a L20</div>
+      <div class="feature-desc">Histórico real dos últimos 5, 10, 15 e 20 jogos. Visualize a sequência de acertos com bolinhas coloridas direto no card.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🛡️</div>
+      <div class="feature-title">DVP (Defesa vs Posição)</div>
+      <div class="feature-desc">Ranking defensivo do adversário por posição. Saiba se o matchup é favorável ou difícil antes de apostar.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">PropScore ao Vivo</div>
+      <div class="feature-desc">Score de valor calculado em tempo real com bet_rating, EV, hit rate e streak. Alertas automáticos para as melhores oportunidades.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚽</div>
+      <div class="feature-title">xG & Futebol Ao Vivo</div>
+      <div class="feature-desc">Expected goals em tempo real, estatísticas completas e forma recente dos times nas maiores ligas do mundo.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📋</div>
+      <div class="feature-title">Escalação Confirmada</div>
+      <div class="feature-desc">Lineup confirmada via TheSportsDB com titulares, reservas e formação antes de cada jogo de futebol.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎯</div>
+      <div class="feature-title">Odds da Bet365</div>
+      <div class="feature-desc">Odds ao vivo da Bet365 integradas no modal de pré-jogo. 1X2, Over/Under 2.5 e Ambos Marcam em tempo real.</div>
+    </div>
+  </div>
+</section>
+
+<!-- NBA ALERTS -->
+<section class="nba-section fade-in">
+  <div>
+    <div class="section-label">Monitor NBA</div>
+    <h2 class="section-title">ALERTAS<br>EM TEMPO<br>REAL</h2>
+    <div class="gold-divider"></div>
+    <p class="section-sub">Quando um jogador supera o PropScore 1.50, você é alertado automaticamente. Nunca perca uma oportunidade.</p>
+  </div>
+  <div>
+    <div class="alert-card fire">
+      <div class="alert-icon">🔥</div>
+      <div class="alert-info">
+        <div class="alert-player">LeBron James</div>
+        <div class="alert-stat">27 pts · O 24.5 · LAL vs GSW · Q3</div>
+      </div>
+      <div class="alert-score">1.82</div>
+    </div>
+    <div class="alert-card green">
+      <div class="alert-icon">✅</div>
+      <div class="alert-info">
+        <div class="alert-player">Jayson Tatum</div>
+        <div class="alert-stat">22 pts · O 26.5 · BOS vs MIA · Q2</div>
+      </div>
+      <div class="alert-score">1.65</div>
+    </div>
+    <div class="alert-card gold">
+      <div class="alert-icon">⚡</div>
+      <div class="alert-info">
+        <div class="alert-player">Luka Dončić</div>
+        <div class="alert-stat">18 pts · O 29.5 · DAL vs PHX · Q2</div>
+      </div>
+      <div class="alert-score">1.51</div>
+    </div>
+    <div class="alert-card" style="border-left:3px solid var(--text3)">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-info">
+        <div class="alert-player">Kevin Durant</div>
+        <div class="alert-stat">Foul trouble · 4 faltas · Q2</div>
+      </div>
+      <div class="alert-score" style="color:var(--text3);font-size:20px">Risco</div>
+    </div>
+  </div>
+</section>
+
+<!-- SOCCER SECTION -->
+<section class="soccer-section fade-in">
+  <div class="section-label">Futebol · Ao Vivo</div>
+  <h2 class="section-title">FUTEBOL COM<br>PROFUNDIDADE</h2>
+  <div class="gold-divider"></div>
+  <p class="section-sub">8 ligas cobertas em tempo real com estatísticas avançadas e dados de qualidade.</p>
+
+  <div style="max-width:600px">
+    <div class="match-card">
+      <div class="match-league">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League · 34ª rodada</div>
+      <div class="match-body">
+        <div class="match-team">
+          <div style="font-size:28px">🔴</div>
+          <div class="match-team-name">Arsenal</div>
+        </div>
+        <div class="match-score-box">
+          <div class="match-score">2 – 1</div>
+          <div class="match-time"><span class="live-dot"></span>67'</div>
+        </div>
+        <div class="match-team">
+          <div style="font-size:28px">⚫</div>
+          <div class="match-team-name">Newcastle</div>
+        </div>
+      </div>
+      <div class="xg-row">
+        <div class="xg-box">
+          <div class="xg-label">xG Arsenal</div>
+          <div class="xg-val">2.14</div>
+        </div>
+        <div class="xg-box">
+          <div class="xg-label">xG Newcastle</div>
+          <div class="xg-val" style="color:var(--text2)">0.87</div>
+        </div>
+        <div class="xg-box" style="background:rgba(0,230,118,.06);border-color:rgba(0,230,118,.15)">
+          <div class="xg-label" style="color:var(--green)">Posse</div>
+          <div class="xg-val" style="color:var(--green)">63%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="match-card">
+      <div class="match-league">🇪🇸 LaLiga · 33ª rodada</div>
+      <div class="match-body">
+        <div class="match-team">
+          <div style="font-size:28px">🔵</div>
+          <div class="match-team-name">Barcelona</div>
+        </div>
+        <div class="match-score-box">
+          <div class="match-score">1 – 1</div>
+          <div class="match-time"><span class="live-dot"></span>45'</div>
+        </div>
+        <div class="match-team">
+          <div style="font-size:28px">⚪</div>
+          <div class="match-team-name">Atlético</div>
+        </div>
+      </div>
+      <div class="xg-row">
+        <div class="xg-box">
+          <div class="xg-label">xG Barcelona</div>
+          <div class="xg-val">1.32</div>
+        </div>
+        <div class="xg-box">
+          <div class="xg-label">xG Atlético</div>
+          <div class="xg-val" style="color:var(--text2)">1.18</div>
+        </div>
+        <div class="xg-box" style="background:rgba(0,230,118,.06);border-color:rgba(0,230,118,.15)">
+          <div class="xg-label" style="color:var(--green)">Posse</div>
+          <div class="xg-val" style="color:var(--green)">58%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PLANS -->
+<section class="plans-section fade-in">
+  <div class="section-label">Planos</div>
+  <h2 class="section-title">SIMPLES E<br>TRANSPARENTE</h2>
+  <div class="gold-divider" style="margin:20px auto 32px"></div>
+  <p class="section-sub" style="margin:0 auto">Comece grátis. Faça upgrade quando quiser mais.</p>
+
+  <div class="plans-grid">
+    <div class="plan-card">
+      <div class="plan-name">Free</div>
+      <div class="plan-price">R$0</div>
+      <div class="plan-period">para sempre</div>
+      <ul class="plan-features">
+        <li>Props de pontos NBA</li>
+        <li>Hit rate L5/L10</li>
+        <li>Futebol ao vivo</li>
+        <li>5 alertas por dia</li>
+      </ul>
+    </div>
+    <div class="plan-card featured">
+      <div class="plan-badge-top">Mais popular</div>
+      <div class="plan-name">Basic</div>
+      <div class="plan-price">R$29</div>
+      <div class="plan-period">por mês</div>
+      <ul class="plan-features">
+        <li>Todas as props NBA</li>
+        <li>Hit rate L5 a L20</li>
+        <li>DVP + PropScore</li>
+        <li>Alertas ilimitados</li>
+        <li>Streak visual</li>
+      </ul>
+    </div>
+    <div class="plan-card">
+      <div class="plan-name">Pro</div>
+      <div class="plan-price">R$59</div>
+      <div class="plan-period">por mês</div>
+      <ul class="plan-features">
+        <li>Tudo do Basic</li>
+        <li>xG ao vivo</li>
+        <li>Odds Bet365</li>
+        <li>Árbitro + estatísticas</li>
+        <li>Escalação confirmada</li>
+      </ul>
+    </div>
+    <div class="plan-card">
+      <div class="plan-name">Premium</div>
+      <div class="plan-price">R$99</div>
+      <div class="plan-period">por mês</div>
+      <ul class="plan-features">
+        <li>Tudo do Pro</li>
+        <li>Acesso completo</li>
+        <li>Suporte prioritário</li>
+        <li>Novas features first</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top:48px">
+    <a href="/index.html" class="btn-primary">Começar grátis →</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">⚡ StatCast BR</div>
+  <div class="footer-links">
+    <a href="/privacidade.html">Privacidade</a>
+    <a href="/termos.html">Termos</a>
+    <a href="mailto:armandoluiz500@gmail.com">Contato</a>
+  </div>
+  <div class="footer-copy">© 2026 StatCast BR · Todos os direitos reservados</div>
+</footer>
+
+<script>
+// Nav scroll
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 40);
+});
+
+// Fade in on scroll
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
