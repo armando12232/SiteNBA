@@ -3894,6 +3894,93 @@ function ftPregameTab(tab) {
   if (newBody) body.innerHTML = newBody.innerHTML;
 }
 
+function loadRefereeData() {
+  var el = document.getElementById('ft-referee-content');
+  var f  = window._pregameFixture;
+  if (!el || !f) return;
+
+  window._refereeCache = window._refereeCache || {};
+  var key = f.id;
+  if (window._refereeCache[key]) {
+    el.outerHTML = renderRefereeData(window._refereeCache[key], f);
+    return;
+  }
+
+  var url = '/api/football?type=referee'
+    + '&home='      + encodeURIComponent(f.home)
+    + '&away='      + encodeURIComponent(f.away)
+    + '&date='      + encodeURIComponent(f.date || '')
+    + '&leagueKey=' + f.league_key;
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      window._refereeCache[key] = data;
+      var target = document.getElementById('ft-referee-content');
+      if (target) target.outerHTML = renderRefereeData(data, f);
+    })
+    .catch(function() {
+      var target = document.getElementById('ft-referee-content');
+      if (target) target.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:16px">Dados indispon\u00edveis</div>';
+    });
+}
+
+function renderRefereeData(data, f) {
+  if (!data || data.error) {
+    return '<div id="ft-referee-content" style="color:var(--text3);font-size:12px;text-align:center;padding:16px">\u23F3 Dados do \u00e1rbitro n\u00e3o encontrados</div>';
+  }
+
+  function statRow(label, val, suffix) {
+    suffix = suffix || '';
+    return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">' +
+      '<span style="color:var(--text3)">' + label + '</span>' +
+      '<span style="font-weight:700;color:var(--text)">' + (val != null ? val + suffix : '\u2014') + '</span>' +
+    '</div>';
+  }
+
+  function teamCard(name, stats, color) {
+    if (!stats) return '';
+    return '<div style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px">' +
+      '<div style="font-family:var(--display);font-size:13px;font-weight:800;color:' + color + ';margin-bottom:8px">' + escapeHtml(name) + '</div>' +
+      statRow('\uD83D\uDFE8 Cartões amarelos/jogo', stats.avg_yellow) +
+      statRow('\uD83D\uDFE5 Cartões vermelhos/jogo', stats.avg_red) +
+      statRow('\uD83D\uDC62 Faltas cometidas/jogo', stats.avg_fouls) +
+      '<div style="font-size:10px;color:var(--text3);margin-top:6px">' + (stats.games || '?') + ' jogos analisados</div>' +
+    '</div>';
+  }
+
+  var refStats = data.referee_stats;
+  var html = '<div id="ft-referee-content">';
+
+  // Árbitro
+  html += '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">';
+  html += '<div style="font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">\uD83D\uDC64 \u00c1rbitro</div>';
+  html += '<div style="font-family:var(--display);font-size:22px;font-weight:800;color:var(--gold);margin-bottom:12px">' + escapeHtml(data.referee || 'Não divulgado') + '</div>';
+
+  if (refStats) {
+    html += statRow('\uD83D\uDFE8 Média cartões/jogo', refStats.avg_cards);
+    html += statRow('\uD83D\uDFE8 Amarelos/jogo', refStats.avg_yellow);
+    html += statRow('\uD83D\uDFE5 Vermelhos/jogo', refStats.avg_red);
+    html += statRow('\uD83D\uDC62 Faltas/jogo', refStats.avg_fouls);
+    html += '<div style="font-size:10px;color:var(--text3);margin-top:8px">Baseado em ' + (refStats.games || '?') + ' jogos</div>';
+  } else {
+    html += '<div style="font-size:12px;color:var(--text3)">Histórico do árbitro indisponível</div>';
+  }
+  html += '</div>';
+
+  // Times
+  if (data.home_stats || data.away_stats) {
+    html += '<div style="font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Times nesta temporada</div>';
+    html += '<div style="display:flex;gap:10px">' +
+      teamCard(f.home, data.home_stats, 'var(--accent)') +
+      teamCard(f.away, data.away_stats, 'var(--red2)') +
+    '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
 function ftPregameRender(data, tab, homeName, awayName) {
   var odds      = data.odds || {};
   var standings = data.standings || [];
@@ -3903,7 +3990,8 @@ function ftPregameRender(data, tab, homeName, awayName) {
   var tabDefs = [
     ['standings', 'Classifica\u00e7\u00e3o'],
     ['odds',      'Odds'],
-    ['leaders',   'Destaques']
+    ['leaders',   'Destaques'],
+    ['referee',   '\u{1F464} \u00c1rbitro'],
   ];
   if (h2h.length) tabDefs.push(['h2h', 'H2H']);
 
@@ -4001,6 +4089,11 @@ function ftPregameRender(data, tab, homeName, awayName) {
           '<span class="ft-h2h-team">' + (g.away || '-') + '</span></div>';
       }).join('');
     }
+  } else if (tab === 'referee') {
+    bodyHTML = '<div id="ft-referee-content" style="color:var(--text3);font-size:12px;text-align:center;padding:20px">' +
+      '<div style="width:28px;height:28px;border:2px solid rgba(253,185,39,.3);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px"></div>' +
+      'Carregando dados do \u00e1rbitro...</div>';
+    setTimeout(loadRefereeData, 30);
   }
 
   return '<div class="ft-modal-section-title">Pr\u00e9-Jogo</div>' +
