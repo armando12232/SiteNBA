@@ -3896,6 +3896,70 @@ function ftPregameTab(tab) {
   if (newBody) body.innerHTML = newBody.innerHTML;
 }
 
+function loadBet365Odds() {
+  var el = document.getElementById('ft-bet365-odds');
+  var f  = window._pregameFixture;
+  if (!el || !f) return;
+
+  window._bet365Cache = window._bet365Cache || {};
+  var key = f.id;
+  if (window._bet365Cache[key]) { el.outerHTML = renderBet365Odds(window._bet365Cache[key], f); return; }
+
+  var url = '/api/football?type=bet365odds'
+    + '&home='      + encodeURIComponent(f.home)
+    + '&away='      + encodeURIComponent(f.away)
+    + '&leagueKey=' + f.league_key;
+
+  fetchWithTimeout(url, {}, 10000)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      window._bet365Cache[key] = data;
+      var t = document.getElementById('ft-bet365-odds');
+      if (t) t.outerHTML = renderBet365Odds(data, f);
+    })
+    .catch(function() {
+      var t = document.getElementById('ft-bet365-odds');
+      if (t) t.innerHTML = '';
+    });
+}
+
+function renderBet365Odds(data, f) {
+  if (!data || data.error || (!data.homeML && !data.over25 && !data.bttsYes)) {
+    return '<div id="ft-bet365-odds"></div>';
+  }
+  function fmt(v) {
+    if (!v) return '-';
+    var n = parseFloat(v);
+    if (isNaN(n)) return String(v);
+    if (Math.abs(n) > 10) return (n > 0 ? '+' : '') + Math.round(n);
+    return n.toFixed(2);
+  }
+  var html = '<div id="ft-bet365-odds" style="margin-top:16px">' +
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
+      '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--gold)">Bet365</span>' +
+    '</div>';
+  if (data.homeML || data.drawOdds || data.awayML) {
+    html += '<div class="ft-odds-grid">' +
+      '<div class="ft-odds-box"><div class="ft-odds-label">' + escapeHtml(f.home) + '</div>' +
+      '<div class="ft-odds-val" style="color:var(--accent)">' + fmt(data.homeML) + '</div></div>' +
+      '<div class="ft-odds-box"><div class="ft-odds-label">Empate</div>' +
+      '<div class="ft-odds-val">' + fmt(data.drawOdds) + '</div></div>' +
+      '<div class="ft-odds-box"><div class="ft-odds-label">' + escapeHtml(f.away) + '</div>' +
+      '<div class="ft-odds-val" style="color:var(--red2)">' + fmt(data.awayML) + '</div></div>' +
+    '</div>';
+  }
+  var extras = [];
+  if (data.over25 || data.under25)
+    extras.push('<div class="ft-odds-box" style="flex:1"><div class="ft-odds-label">Over 2.5</div><div class="ft-odds-val">' + fmt(data.over25) + '</div></div>' +
+      '<div class="ft-odds-box" style="flex:1"><div class="ft-odds-label">Under 2.5</div><div class="ft-odds-val">' + fmt(data.under25) + '</div></div>');
+  if (data.bttsYes || data.bttsNo)
+    extras.push('<div class="ft-odds-box" style="flex:1"><div class="ft-odds-label">Ambos marcam</div><div class="ft-odds-val">' + fmt(data.bttsYes) + '</div></div>' +
+      '<div class="ft-odds-box" style="flex:1"><div class="ft-odds-label">N\u00e3o marcam</div><div class="ft-odds-val">' + fmt(data.bttsNo) + '</div></div>');
+  if (extras.length)
+    html += '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">' + extras.join('') + '</div>';
+  return html + '</div>';
+}
+
 function loadRefereeData() {
   var el = document.getElementById('ft-referee-content');
   var f  = window._pregameFixture;
@@ -4041,6 +4105,7 @@ function ftPregameRender(data, tab, homeName, awayName) {
       var awayTeam = (data.teams || []).find(function(t) { return t.homeAway === 'away'; });
       function fml(v) { return v ? (v > 0 ? '+' + v : String(v)) : '-'; }
       bodyHTML =
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);margin-bottom:8px">DraftKings</div>' +
         '<div class="ft-odds-grid">' +
           '<div class="ft-odds-box"><div class="ft-odds-label">' + ((homeTeam && homeTeam.team) || homeName) + '</div>' +
           '<div class="ft-odds-val" style="color:var(--accent)">' + fml(odds.homeML) + '</div></div>' +
@@ -4054,10 +4119,12 @@ function ftPregameRender(data, tab, homeName, awayName) {
           '<div class="ft-odds-box" style="flex:1"><div class="ft-odds-label">Over/Under</div>' +
           '<div class="ft-odds-val">' + odds.overUnder + '</div></div></div>';
       }
-      if (odds.provider) {
-        bodyHTML += '<div style="font-size:10px;color:var(--text3);text-align:right;margin-top:4px">via ' + odds.provider + '</div>';
-      }
     }
+    // Bet365 odds (assíncrono)
+    bodyHTML += '<div id="ft-bet365-odds" style="margin-top:16px">' +
+      '<div style="width:20px;height:20px;border:2px solid rgba(253,185,39,.3);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div>' +
+      '</div>';
+    setTimeout(loadBet365Odds, 30);
 
   } else if (tab === 'leaders') {
     if (!leaders.length) {
