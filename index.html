@@ -1056,11 +1056,6 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
       </div>
 
       <div style="display:flex;gap:8px;margin-bottom:18px">
-        <button id="page-nba-btn" onclick="switchPage('nba')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--body)">🏀 NBA</button>
-        <button id="page-football-btn" onclick="switchPage('football')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">⚽ Futebol</button>
-      </div>
-
-      <div style="display:flex;gap:8px;margin-bottom:18px">
         <button id="page-home-btn" onclick="switchPage('home')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">🏠 Home</button>
         <button id="page-nba-btn" onclick="switchPage('nba')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">🏀 NBA</button>
         <button id="page-football-btn" onclick="switchPage('football')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">⚽ Futebol</button>
@@ -2889,10 +2884,15 @@ async function runMonitor() {
 
 function updateFootballStats() {
   var fixtures = window._footballData || [];
-  var live    = fixtures.filter(function(f) { return f.live; }).length;
+  var liveData = window._footballLiveData || [];
+  var live    = fixtures.filter(function(f) { return f.live; }).length + liveData.length;
   var done    = fixtures.filter(function(f) { return f.finished; }).length;
-  var total   = fixtures.length;
-  var leagues = new Set(fixtures.map(function(f) { return f.league_key; })).size;
+  var total   = fixtures.length + liveData.length;
+  var leagueSet = new Set([
+    ...fixtures.map(function(f) { return f.league_key; }),
+    ...liveData.map(function(f) { return f.league_key; })
+  ]);
+  var leagues = leagueSet.size;
   var el;
   el = document.getElementById('ft-stat-live');    if (el) el.textContent = live;
   el = document.getElementById('ft-stat-today');   if (el) el.textContent = total;
@@ -3642,6 +3642,7 @@ async function loadFootballLive() {
     const data = await res.json();
     window._footballLiveData = data.fixtures || [];
     renderFootballLive();
+    updateFootballStats();
     if (window._liveInterval) clearInterval(window._liveInterval);
     window._liveInterval = setInterval(async () => {
       if (window._currentFootballTab === 'live') {
