@@ -47,53 +47,7 @@ def _nba_fetch(url, timeout=9):
     with urlopen(req, timeout=timeout) as r:
         return json.loads(r.read())
 
-# ── Mapa nome → player_id (cache de longa duração — atualiza 1x/dia) ────────
-_PLAYERS_INDEX = {"data": None, "ts": 0}
-_PLAYERS_INDEX_TTL = 24 * 3600
-
-def _build_players_index():
-    """Constrói índice {nome_lower: player_id} via stats.nba.com/commonallplayers."""
-    now = time.time()
-    if _PLAYERS_INDEX["data"] and (now - _PLAYERS_INDEX["ts"]) < _PLAYERS_INDEX_TTL:
-        return _PLAYERS_INDEX["data"]
-    try:
-        url = "https://stats.nba.com/stats/commonallplayers?LeagueID=00&Season=2025-26&IsOnlyCurrentSeason=1"
-        data = _nba_fetch(url, timeout=10)
-        rs = data.get("resultSets", [{}])[0]
-        headers = rs.get("headers", [])
-        rows = rs.get("rowSet", [])
-        try:
-            idx_id   = headers.index("PERSON_ID")
-            idx_name = headers.index("DISPLAY_FIRST_LAST")
-        except ValueError:
-            return {}
-        index = {}
-        for row in rows:
-            pid  = row[idx_id]
-            name = (row[idx_name] or "").strip()
-            if name and pid:
-                index[name.lower()] = int(pid)
-        _PLAYERS_INDEX["data"] = index
-        _PLAYERS_INDEX["ts"]   = now
-        return index
-    except Exception:
-        return _PLAYERS_INDEX["data"] or {}
-
-def get_player_id_by_name(player_name):
-    """Retorna o player_id NBA dado o nome. None se não encontrar."""
-    if not player_name:
-        return None
-    idx = _build_players_index()
-    key = player_name.strip().lower()
-    pid = idx.get(key)
-    if pid:
-        return pid
-    # Fallback: tentar match parcial (ex: 'Bruce Brown Jr.' pode estar como 'Bruce Brown')
-    for name, pid in idx.items():
-        if name.startswith(key) or key.startswith(name):
-            return pid
-    return None
-
+# ── Cache do CDN playerIndex (usado para resolver nome→id e médias) ─────────
 def get_live_games():
     from nba_api.live.nba.endpoints import scoreboard
     board = scoreboard.ScoreBoard()
@@ -211,56 +165,122 @@ def _calc_prop(game_rows, stat_key, season_avg, n5=5, n10=10):
     }
 
 
+def _get_player_index_cdn():
+    """Cache do playerIndex CDN — rápido (~1s), inclui nome+id+médias."""
+    cached = _cache_get("player_index_cdn")
+    if cached:
+        return cached
+    try:
+        url  = "https://cdn.nba.com/static/json/staticData/playerIndex.json"
+        data = _nba_fetch(url, timeout=8)
+        rs   = data.get("resultSets", [{}])[0]
+        hdrs = rs.get("headers", [])
+        rows = rs.get("rowSet", [])
+        # Construir mapas: por id e por nome
+        by_id   = {}
+        by_name = {}
+        try:
+            i_id   = hdrs.index("PERSON_ID")
+            i_first = hdrs.index("PLAYER_FIRST_NAME") if "PLAYER_FIRST_NAME" in hdrs else hdrs.index("FIRST_NAME")
+            i_last  = hdrs.index("PLAYER_LAST_NAME")  if "PLAYER_LAST_NAME"  in hdrs else hdrs.index("LAST_NAME")
+        except ValueError:
+            return {"by_id": {}, "by_name": {}, "headers": hdrs, "rows": rows}
+        for r in rows:
+            pid  = r[i_id]
+            name = f"{r[i_first]} {r[i_last]}".strip()
+            by_id[pid] = r
+            if name:
+                by_name[name.lower()] = r
+        result = {"by_id": by_id, "by_name": by_name, "headers": hdrs, "rows": rows}
+        _cache_set("player_index_cdn", result)
+        return result
+    except Exception:
+        return {"by_id": {}, "by_name": {}, "headers": [], "rows": []}
+
+
+def get_player_id_by_name(player_name):
+    """Resolve nome → player_id usando o CDN playerIndex (rápido)."""
+    if not player_name:
+        return None
+    idx = _get_player_index_cdn()
+    by_name = idx.get("by_name", {})
+    key = player_name.strip().lower()
+    row = by_name.get(key)
+    if row:
+        try:
+            i_id = idx["headers"].index("PERSON_ID")
+            return int(row[i_id])
+        except Exception:
+            return None
+    # Fallback: match por prefixo (ex: "Bruce Brown Jr." → "Bruce Brown")
+    for nm, r in by_name.items():
+        if key.startswith(nm) or nm.startswith(key):
+            try:
+                i_id = idx["headers"].index("PERSON_ID")
+                return int(r[i_id])
+            except Exception:
+                return None
+    return None
+
+
 def get_pregame(player_id):
-    """Busca L5/L10/hitRate para PTS, REB, AST e 3PM via urllib direto."""
+    """Busca L5/L10/hitRate. Otimizado para Vercel (10s timeout):
+    - Usa CDN para médias (rápido)
+    - Tenta playergamelog com timeout agressivo (5s) para temporada atual
+    - Se falhar, retorna apenas médias da temporada (sem last5_games)
+    """
     cached = _cache_get(f"pregame_{player_id}")
     if cached:
         return cached
 
-    # 1. Médias da temporada via CDN (~1s, não bloqueado)
+    # 1. Médias da temporada via CDN (~1s, sempre funciona)
+    season_pts = season_reb = season_ast = season_3pm = 0
     try:
-        cdn_url  = "https://cdn.nba.com/static/json/staticData/playerIndex.json"
-        cdn_data = _nba_fetch(cdn_url, timeout=8)
-        rs   = cdn_data.get("resultSets", [{}])[0]
-        hdrs = rs.get("headers", [])
-        rows = rs.get("rowSet", [])
-        pid_idx = hdrs.index("PERSON_ID") if "PERSON_ID" in hdrs else 0
-        row = next((r for r in rows if r[pid_idx] == player_id), None)
-        def _h(key):
-            idx = hdrs.index(key) if key in hdrs else -1
-            return round(float(row[idx] or 0), 1) if (row and idx >= 0) else 0
-        season_pts = _h("PTS"); season_reb = _h("REB")
-        season_ast = _h("AST"); season_3pm = _h("FG3M")
+        idx = _get_player_index_cdn()
+        row = idx.get("by_id", {}).get(player_id)
+        hdrs = idx.get("headers", [])
+        if row and hdrs:
+            def _h(key):
+                if key not in hdrs: return 0
+                i = hdrs.index(key)
+                try: return round(float(row[i] or 0), 1)
+                except: return 0
+            season_pts = _h("PTS"); season_reb = _h("REB")
+            season_ast = _h("AST"); season_3pm = _h("FG3M")
     except Exception:
-        season_pts = season_reb = season_ast = season_3pm = 0
+        pass
 
-    # 2. Game log via stats.nba.com (~3-5s)
+    # 2. Game log — apenas Regular Season da temporada atual, timeout curto
     game_rows = []
-    for season_type in ["Regular+Season", "Playoffs"]:
+    SEASONS_TO_TRY = ["2025-26", "2024-25"]  # tenta atual, fallback pra anterior
+    for season in SEASONS_TO_TRY:
+        if game_rows:  # já temos dados, parar
+            break
         try:
             log_url = (
                 f"https://stats.nba.com/stats/playergamelog"
-                f"?PlayerID={player_id}&Season=2024-25"
-                f"&SeasonType={season_type}&LeagueID=00"
+                f"?PlayerID={player_id}&Season={season}"
+                f"&SeasonType=Regular+Season&LeagueID=00"
             )
-            log_data  = _nba_fetch(log_url, timeout=9)
-            rs2       = log_data.get("resultSets", [{}])[0]
-            rows      = [dict(zip(rs2["headers"], r)) for r in rs2.get("rowSet", [])]
+            log_data = _nba_fetch(log_url, timeout=5)  # timeout agressivo
+            rs2  = log_data.get("resultSets", [{}])[0]
+            rows = [dict(zip(rs2.get("headers", []), r)) for r in rs2.get("rowSet", [])]
             game_rows.extend(rows)
         except Exception:
-            pass
-    # Ordenar do mais recente para o mais antigo
+            continue
+
+    # Ordenar do mais recente
     game_rows = sorted(game_rows, key=lambda r: r.get("GAME_DATE",""), reverse=True)
 
-    if len(game_rows) < 5:
-        # Gerar props básicas com dados da temporada mesmo sem game log
+    # ── Se não conseguimos game log, retorna apenas médias da temporada ──
+    if len(game_rows) < 3:
         props_fallback = {}
         for stat_key, avg_val, label in [
             ("PTS", season_pts, "pts"), ("REB", season_reb, "reb"),
             ("AST", season_ast, "ast"), ("FG3M", season_3pm, "fg3m"),
         ]:
             if avg_val >= 1.5:
-                line = math.floor(avg_val) + 0.5  # sempre .5
+                line = math.floor(avg_val) + 0.5
                 props_fallback[label] = {
                     "l5": None, "l10": None,
                     "line": line, "hit_rate": None, "edge": None
@@ -285,30 +305,33 @@ def get_pregame(player_id):
     # Calcular props para cada categoria
     props = {}
     for stat_key, avg_val, label in [
-        ("PTS",  season_pts,  "pts"),
-        ("REB",  season_reb,  "reb"),
-        ("AST",  season_ast,  "ast"),
-        ("FG3M", season_3pm,  "fg3m"),
+        ("PTS", season_pts, "pts"), ("REB", season_reb, "reb"),
+        ("AST", season_ast, "ast"), ("FG3M", season_3pm, "fg3m"),
     ]:
-        if avg_val >= 1.5:  # só calcular se jogador tem relevância nessa stat
-            p = _calc_prop(game_rows, stat_key, avg_val)
-            if p:
-                props[label] = p
+        if avg_val >= 1.5:
+            line = math.floor(avg_val) + 0.5
+            l5_vals  = [float(r.get(stat_key, 0)) for r in last5]
+            l10_vals = [float(r.get(stat_key, 0)) for r in last10]
+            l5_hits  = sum(1 for v in l5_vals  if v >= line)
+            l10_hits = sum(1 for v in l10_vals if v >= line)
+            props[label] = {
+                "l5":  round((l5_hits / len(l5_vals)) * 100)   if l5_vals  else None,
+                "l10": round((l10_hits / len(l10_vals)) * 100) if l10_vals else None,
+                "line": line,
+                "hit_rate": round((l10_hits / len(l10_vals)) * 100) if l10_vals else None,
+                "edge": round((sum(l5_vals)/len(l5_vals)) - line, 1) if l5_vals else None,
+            }
 
-    # Compat retroativa — manter campos antigos para não quebrar frontend
     pts_prop = props.get("pts", {})
-    last5_mins = round(sum(
-        float(r.get("MIN", "0").split(":")[0]) for r in last5
-    ) / len(last5), 1)
+    last5_mins = round(sum(float(r.get("MIN", 0)) for r in last5) / len(last5), 1) if last5 else 0
 
     result = {
-        "player_id":  player_id,
+        "player_id": player_id,
         "season_avg": {"pts": season_pts, "reb": season_reb, "ast": season_ast, "fg3m": season_3pm},
-        "props":      props,  # novo: {pts:{l5,l10,line,hit_rate,edge}, reb:{...}, ast:{...}, fg3m:{...}}
-        # campos legados para não quebrar código existente
-        "last5_avg":  {"pts": pts_prop.get("l5"), "reb": props.get("reb",{}).get("l5"), "ast": props.get("ast",{}).get("l5"), "fg3m": props.get("fg3m",{}).get("l5")},
-        "last10_avg": {"pts": pts_prop.get("l10")},
-        "synthetic_lines": {"pts": pts_prop.get("line")},
+        "props": props,
+        "last5_avg":  {"pts": round(sum(float(r.get("PTS",0)) for r in last5)/len(last5), 1)} if last5 else {},
+        "last10_avg": {"pts": round(sum(float(r.get("PTS",0)) for r in last10)/len(last10), 1)} if last10 else {},
+        "synthetic_lines": {k: v.get("line") for k,v in props.items()},
         "hit_rates":  {"pts_last10": pts_prop.get("hit_rate")},
         "edge_points": pts_prop.get("edge"),
         "minsL5": last5_mins,
@@ -324,7 +347,7 @@ def get_pregame(player_id):
             }
             for r in game_rows[:10]
         ],
-        "summary": f"L5 {pts_prop.get('l5','—')}pts / {props.get('reb',{}).get('l5','—')}reb / {props.get('ast',{}).get('l5','—')}ast"
+        "summary": f"L5 {pts_prop.get('l5','—')}pts"
     }
     _cache_set(f"pregame_{player_id}", result)
     return result
@@ -515,7 +538,7 @@ class handler(BaseHTTPRequestHandler):
         req_type = params.get("type", [""])[0]
 
         # Valida tipo (whitelist)
-        VALID_TYPES = {"scoreboard","boxscore","season_avg","pregame","schedule","defense","team_info","team_last","roster"}
+        VALID_TYPES = {"scoreboard","boxscore","season_avg","pregame","pregame_by_name","schedule","defense","team_info","team_last","roster"}
         if req_type not in VALID_TYPES:
             self._send(400, {"error": "invalid type"}); return
 
