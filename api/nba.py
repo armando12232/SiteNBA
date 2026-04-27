@@ -267,14 +267,15 @@ def get_pregame(player_id):
         "minsL5": last5_mins,
         "last5_games": [
             {
-                "opp": r.get("MATCHUP",""),
-                "pts": float(r.get("PTS",0)),
-                "reb": float(r.get("REB",0)),
-                "ast": float(r.get("AST",0)),
+                "opp":  r.get("MATCHUP",""),
+                "date": r.get("GAME_DATE",""),
+                "pts":  float(r.get("PTS",0)),
+                "reb":  float(r.get("REB",0)),
+                "ast":  float(r.get("AST",0)),
                 "fg3m": float(r.get("FG3M",0)),
-                "hit": float(r.get("PTS",0)) >= (pts_prop.get("line") or 0)
+                "hit":  float(r.get("PTS",0)) >= (pts_prop.get("line") or 0)
             }
-            for r in last5
+            for r in game_rows[:10]
         ],
         "summary": f"L5 {pts_prop.get('l5','—')}pts / {props.get('reb',{}).get('l5','—')}reb / {props.get('ast',{}).get('l5','—')}ast"
     }
