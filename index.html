@@ -2278,9 +2278,63 @@ function _renderPPModalBody(bp) {
       }).join('')}
     </div>` : '';
 
+  // ── Gráfico de barras dos últimos jogos ──────────────────────────────────
+  const statKey = { pts: 'pts', reb: 'reb', ast: 'ast', fg3m: 'fg3m' }[stat] || 'pts';
+  const games   = (bp.last5_games || []).slice().reverse(); // cronológico: esq→dir
+  const line    = prop ? (ensureHalfLine(prop.line) ?? 0) : 0;
+  const barColor = (v) => v >= line ? '#00c853' : '#d32f2f';
+
+  let chartHtml = '';
+  if (games.length > 0) {
+    const maxVal = Math.max(...games.map(g => g[statKey] || 0), line * 1.3, 1);
+    const barH   = 120; // px altura máxima das barras
+
+    const bars = games.map(g => {
+      const val    = g[statKey] ?? 0;
+      const height = Math.max(Math.round((val / maxVal) * barH), val > 0 ? 6 : 2);
+      const color  = barColor(val);
+      // label do opp: "DEN vs LAL 2/1" → pegar só adversário + data
+      const oppRaw = g.opp || '';
+      const oppParts = oppRaw.split(' ');
+      const oppTeam  = oppParts.length >= 3 ? oppParts[oppParts.length - 1] : oppRaw;
+      const dateStr  = g.date ? g.date.replace(/\d{4}-/, '').replace('-', '/') : '';
+      return `
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:0">
+          <div style="font-family:var(--display);font-size:11px;font-weight:800;color:#fff;background:${color};border-radius:4px;padding:1px 4px;min-width:20px;text-align:center">${val}</div>
+          <div style="width:100%;max-width:36px;height:${height}px;background:${color};border-radius:4px 4px 0 0;transition:height .3s"></div>
+          <div style="font-size:9px;color:var(--text3);text-align:center;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38px">${oppTeam}<br>${dateStr}</div>
+        </div>`;
+    }).join('');
+
+    // linha de prop tracejada como posição %
+    const linePct = Math.min((line / maxVal) * 100, 98);
+    const lineY   = barH - Math.round((line / maxVal) * barH);
+
+    chartHtml = `
+      <div class="pp-section-title" style="margin-top:4px">Últimos Jogos</div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 14px 8px;margin-bottom:16px">
+        <div style="position:relative;margin-bottom:4px">
+          <!-- área das barras -->
+          <div style="display:flex;align-items:flex-end;gap:4px;height:${barH + 20}px;padding-bottom:0;position:relative">
+            <!-- linha tracejada da prop -->
+            <div style="position:absolute;left:0;right:0;bottom:${lineY + 20}px;border-top:2px dashed rgba(255,255,255,0.35);z-index:2;pointer-events:none">
+              <span style="position:absolute;right:0;top:-16px;font-size:9px;font-weight:700;color:rgba(255,255,255,0.5);background:var(--bg3);padding:0 4px">${line}</span>
+            </div>
+            ${bars}
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:6px;justify-content:center">
+          <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;background:#00c853"></div><span style="font-size:10px;color:var(--text3)">Over</span></div>
+          <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:2px;background:#d32f2f"></div><span style="font-size:10px;color:var(--text3)">Under</span></div>
+          <div style="display:flex;align-items:center;gap:4px"><div style="width:16px;border-top:2px dashed rgba(255,255,255,0.35)"></div><span style="font-size:10px;color:var(--text3)">Linha ${line}</span></div>
+        </div>
+      </div>`;
+  }
+
   body.innerHTML = `
     ${availableProps.length > 1 ? `<div class="pp-section-title">Prop</div><div class="pp-prop-tabs">${tabsHtml}</div>` : ''}
     ${statGrid}
+    ${chartHtml}
     ${hitRatesHtml}
     ${streakHtml}
     ${allPropsHtml}
