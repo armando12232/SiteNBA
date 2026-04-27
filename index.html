@@ -1126,6 +1126,9 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
         <div class="page-nav-pill" id="page-nav-pill"></div>
         <button id="page-home-btn" class="page-nav-btn active" onclick="switchPage('home')">🏠 Home</button>
         <button id="page-nba-btn" class="page-nav-btn" onclick="switchPage('nba')">🏀 NBA</button>
+        <button id="page-nfl-btn" class="page-nav-btn" onclick="switchPage('nfl')">🏈 NFL</button>
+        <button id="page-nhl-btn" class="page-nav-btn" onclick="switchPage('nhl')">🏒 NHL</button>
+        <button id="page-mlb-btn" class="page-nav-btn" onclick="switchPage('mlb')">⚾ MLB</button>
         <button id="page-football-btn" class="page-nav-btn" onclick="switchPage('football')">⚽ Futebol</button>
       </div>
 
@@ -1180,6 +1183,36 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
             <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:6px">Futebol Ao Vivo</div>
             <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:14px">Jogos em andamento com xG, stats e eventos atualizando a cada 60s.</div>
             <div style="font-family:var(--display);font-size:12px;font-weight:700;color:var(--danger);letter-spacing:.06em;text-transform:uppercase">🔴 Abrir →</div>
+          </div>
+
+          <div onclick="switchPage('nfl')" style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden"
+            onmouseover="this.style.borderColor='rgba(255,179,0,.4)';this.style.transform='translateY(-2px)'"
+            onmouseout="this.style.borderColor='var(--border2)';this.style.transform=''">
+            <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(255,179,0,.08),transparent 70%);pointer-events:none"></div>
+            <div style="font-size:32px;margin-bottom:12px">🏈</div>
+            <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:6px">NFL</div>
+            <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:14px">Scores, standings e jogos ao vivo da NFL via ESPN.</div>
+            <div style="font-family:var(--display);font-size:12px;font-weight:700;color:var(--amber);letter-spacing:.06em;text-transform:uppercase">🏈 Abrir →</div>
+          </div>
+
+          <div onclick="switchPage('nhl')" style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden"
+            onmouseover="this.style.borderColor='rgba(79,195,247,.3)';this.style.transform='translateY(-2px)'"
+            onmouseout="this.style.borderColor='var(--border2)';this.style.transform=''">
+            <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(79,195,247,.08),transparent 70%);pointer-events:none"></div>
+            <div style="font-size:32px;margin-bottom:12px">🏒</div>
+            <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:6px">NHL</div>
+            <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:14px">Hockey no gelo — jogos ao vivo, placares e standings da NHL.</div>
+            <div style="font-family:var(--display);font-size:12px;font-weight:700;color:#4fc3f7;letter-spacing:.06em;text-transform:uppercase">🏒 Abrir →</div>
+          </div>
+
+          <div onclick="switchPage('mlb')" style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden"
+            onmouseover="this.style.borderColor='rgba(200,16,46,.4)';this.style.transform='translateY(-2px)'"
+            onmouseout="this.style.borderColor='var(--border2)';this.style.transform=''">
+            <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(200,16,46,.08),transparent 70%);pointer-events:none"></div>
+            <div style="font-size:32px;margin-bottom:12px">⚾</div>
+            <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:6px">MLB</div>
+            <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:14px">Baseball — jogos do dia, scores ao vivo e standings da MLB.</div>
+            <div style="font-family:var(--display);font-size:12px;font-weight:700;color:var(--red2);letter-spacing:.06em;text-transform:uppercase">⚾ Abrir →</div>
           </div>
 
         </div>
@@ -1272,6 +1305,42 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
         </div>
       </div>
       </div><!-- end live-view -->
+      </div>
+
+      <!-- ══ PÁGINA NFL ══ -->
+      <div id="page-nfl" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-family:var(--display);font-size:22px;font-weight:900;letter-spacing:.02em">🏈 <span style="color:var(--amber)">NFL</span></div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">National Football League · ESPN</div>
+          </div>
+          <button onclick="loadSportsPage('nfl')" style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:var(--body)">🔄 Atualizar</button>
+        </div>
+        <div id="nfl-content"><div style="color:var(--text3);padding:40px 0;text-align:center">Carregando jogos da NFL...</div></div>
+      </div>
+
+      <!-- ══ PÁGINA NHL ══ -->
+      <div id="page-nhl" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-family:var(--display);font-size:22px;font-weight:900;letter-spacing:.02em">🏒 <span style="color:#4fc3f7">NHL</span></div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">National Hockey League · ESPN</div>
+          </div>
+          <button onclick="loadSportsPage('nhl')" style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:var(--body)">🔄 Atualizar</button>
+        </div>
+        <div id="nhl-content"><div style="color:var(--text3);padding:40px 0;text-align:center">Carregando jogos da NHL...</div></div>
+      </div>
+
+      <!-- ══ PÁGINA MLB ══ -->
+      <div id="page-mlb" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-family:var(--display);font-size:22px;font-weight:900;letter-spacing:.02em">⚾ <span style="color:var(--red2)">MLB</span></div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">Major League Baseball · ESPN</div>
+          </div>
+          <button onclick="loadSportsPage('mlb')" style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:var(--body)">🔄 Atualizar</button>
+        </div>
+        <div id="mlb-content"><div style="color:var(--text3);padding:40px 0;text-align:center">Carregando jogos da MLB...</div></div>
       </div>
 
       <!-- ══ PÁGINA FUTEBOL ══ -->
@@ -3655,7 +3724,7 @@ let _currentFootballTab = 'jogos';
 
 function switchPage(page) {
   _currentPage = page;
-  ['home', 'nba', 'football'].forEach(p => {
+  ['home', 'nba', 'nfl', 'nhl', 'mlb', 'football'].forEach(p => {
     var btn = document.getElementById('page-' + p + '-btn');
     var el  = document.getElementById('page-' + p);
     var statsRow = document.getElementById('stats-row-' + p);
@@ -3682,7 +3751,134 @@ function switchPage(page) {
   if (page === 'home')     { hydrateHomeStats(); }
   if (page === 'nba')      { switchNBATab(_currentNBATab); }
   if (page === 'football') { _footballData = null; switchFootballTab(_currentFootballTab); }
+  if (page === 'nfl' || page === 'nhl' || page === 'mlb') { loadSportsPage(page); }
 }
+
+// ── SPORTS PAGES (NFL / NHL / MLB) ───────────────────────────────────────────
+const _sportsCache = {};
+
+async function loadSportsPage(league) {
+  const el = document.getElementById(league + '-content');
+  if (!el) return;
+
+  // Usar cache se < 60s
+  const cached = _sportsCache[league];
+  if (cached && Date.now() - cached.ts < 60000) {
+    el.innerHTML = renderSportsGames(cached.games, league);
+    return;
+  }
+
+  el.innerHTML = `<div style="color:var(--text3);padding:40px 0;text-align:center">Carregando jogos da ${league.toUpperCase()}...</div>`;
+
+  try {
+    const res  = await fetchWithTimeout(`/api/sports?type=scoreboard&league=${league}`, {}, 10000);
+    const data = await res.json();
+    const games = data.games || [];
+    _sportsCache[league] = { games, ts: Date.now() };
+    el.innerHTML = renderSportsGames(games, league);
+  } catch(e) {
+    el.innerHTML = `<div style="color:var(--text3);padding:40px 0;text-align:center">Erro ao carregar jogos da ${league.toUpperCase()}<br><span style="font-size:11px;opacity:.6">${e.message}</span></div>`;
+  }
+}
+
+function renderSportsGames(games, league) {
+  if (!games || !games.length) {
+    return `<div style="color:var(--text3);padding:40px 0;text-align:center">
+      <div style="font-size:32px;margin-bottom:12px">📅</div>
+      <div>Nenhum jogo encontrado para hoje</div>
+      <div style="font-size:11px;margin-top:6px;opacity:.6">Verifique novamente mais tarde</div>
+    </div>`;
+  }
+
+  const leagueColors = { nfl:'var(--amber)', nhl:'#4fc3f7', mlb:'var(--red2)', nba:'var(--gold)' };
+  const color = leagueColors[league] || 'var(--gold)';
+
+  // Separar por estado
+  const live = games.filter(g => g.state === 'in');
+  const pre  = games.filter(g => g.state === 'pre');
+  const post = games.filter(g => g.state === 'post');
+
+  const renderGroup = (title, list, dot) => {
+    if (!list.length) return '';
+    return `
+      <div style="margin-bottom:24px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <span style="font-size:8px">${dot}</span>
+          <span style="font-family:var(--display);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)">${title}</span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <span style="font-size:11px;color:var(--text3)">${list.length} jogo${list.length > 1 ? 's' : ''}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px">
+          ${list.map(g => renderGameCard(g, color)).join('')}
+        </div>
+      </div>`;
+  };
+
+  return renderGroup('Ao Vivo', live, '🔴') +
+         renderGroup('Próximos', pre, '⚪') +
+         renderGroup('Encerrados', post, '⚫');
+}
+
+function renderGameCard(g, color) {
+  const isLive = g.state === 'in';
+  const isPost = g.state === 'post';
+  const home = g.home, away = g.away;
+
+  const scoreHtml = (isLive || isPost)
+    ? `<div style="font-family:var(--display);font-size:28px;font-weight:900;text-align:center;min-width:60px">
+        <span style="color:${color}">${away.score || 0}</span>
+        <span style="color:var(--text3);font-size:18px;margin:0 4px">–</span>
+        <span style="color:${color}">${home.score || 0}</span>
+       </div>`
+    : `<div style="font-family:var(--display);font-size:13px;font-weight:700;color:var(--text3);text-align:center;min-width:60px">
+        ${new Date(g.date).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+       </div>`;
+
+  const statusBadge = isLive
+    ? `<div style="display:flex;align-items:center;gap:4px;margin-top:6px;justify-content:center">
+        <div style="width:6px;height:6px;border-radius:50%;background:var(--danger);animation:blink 1.2s infinite"></div>
+        <span style="font-size:11px;font-weight:700;color:var(--danger)">${g.detail || 'AO VIVO'}</span>
+       </div>`
+    : isPost
+    ? `<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px">Encerrado</div>`
+    : `<div style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px">${g.detail || ''}</div>`;
+
+  const teamLogo = (team) => team.logo
+    ? `<img src="${_a(safeUrl(team.logo))}" style="width:32px;height:32px;object-fit:contain" onerror="this.style.display='none'">`
+    : `<div style="width:32px;height:32px;border-radius:6px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:12px;font-weight:800;color:var(--text3)">${team.abbr||'?'}</div>`;
+
+  const borderStyle = isLive ? 'border-color:rgba(255,23,68,.3)' : '';
+  const borderClass = isLive ? 'var(--border2)' : 'var(--border)';
+
+  return `
+    <div style="background:var(--bg2);border:1px solid ${borderClass};border-radius:12px;padding:14px 16px;transition:border-color .2s;${borderStyle}">
+      <div style="display:flex;align-items:center;gap:10px">
+        <!-- Away -->
+        <div style="flex:1;display:flex;align-items:center;gap:8px;min-width:0">
+          ${teamLogo(away)}
+          <div style="min-width:0">
+            <div style="font-family:var(--display);font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_h(away.name)}</div>
+            <div style="font-size:11px;color:var(--text3)">${away.record || ''}</div>
+          </div>
+        </div>
+        <!-- Score / Time -->
+        <div style="flex-shrink:0">
+          ${scoreHtml}
+          ${statusBadge}
+        </div>
+        <!-- Home -->
+        <div style="flex:1;display:flex;align-items:center;gap:8px;justify-content:flex-end;min-width:0">
+          <div style="min-width:0;text-align:right">
+            <div style="font-family:var(--display);font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_h(home.name)}</div>
+            <div style="font-size:11px;color:var(--text3)">${home.record || ''}</div>
+          </div>
+          ${teamLogo(home)}
+        </div>
+      </div>
+      ${g.venue ? '<div style="font-size:10px;color:var(--text3);text-align:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">' + _h(g.venue) + '</div>' : ''}
+    </div>`;
+}
+
 
 function hydrateHomeStats() {
   // Props disponíveis
