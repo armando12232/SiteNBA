@@ -327,8 +327,14 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
   border-bottom: 1px solid var(--border);
 }
 @media (max-width: 600px) {
-  .props-table-header { grid-template-columns: 1fr 64px 70px 70px 80px; }
+  .props-table-header {
+    grid-template-columns: 1fr 58px 64px 64px 72px;
+    padding: 10px 10px;
+  }
+  .props-table-header > div:nth-child(6),
+  .props-table-header > div:nth-child(7) { display: none; }
   .hide-mobile { display: none !important; }
+  .player-img-mobile { width: 38px !important; height: 38px !important; }
 }
 .props-table-row {
   display: grid; grid-template-columns: 1fr 64px 76px 76px 76px 90px 96px;
@@ -338,7 +344,15 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 }
 .props-table-row:hover { background: var(--bg3); }
 @media (max-width: 600px) {
-  .props-table-row { grid-template-columns: 1fr 64px 70px 70px 80px; }
+  .props-table-row {
+    grid-template-columns: 1fr 58px 64px 64px 72px;
+    padding: 12px 10px;
+    gap: 0;
+  }
+  .props-table-row > div:nth-child(6),
+  .props-table-row > div:nth-child(7) {
+    display: none;
+  }
 }
 .props-table-wrap {
   background: var(--bg2); border: 1px solid var(--border);
@@ -1936,7 +1950,14 @@ function renderPropsTable() {
     return `<div class="hit-rate-cell ${cls}">${n}%</div>`;
   };
 
-  table.innerHTML = Object.entries(byDate).map(([date, players]) => {
+  table.innerHTML = Object.entries(byDate)
+    .sort(([a], [b]) => {
+      // Hoje sempre primeiro, depois ordem cronológica
+      if (a === todayStr) return -1;
+      if (b === todayStr) return 1;
+      return a < b ? -1 : a > b ? 1 : 0;
+    })
+    .map(([date, players]) => {
     let dateLabel = date === todayStr ? 'Hoje' :
       date === new Date(Date.now()+86400000).toISOString().slice(0,10) ? 'Amanhã' : '';
     if (!dateLabel && date.length === 10) {
@@ -1965,9 +1986,10 @@ function renderPropsTable() {
           <div style="display:flex;align-items:center;gap:10px;min-width:0">
             <img src="${_a(safeUrl(p.player_id ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${p.player_id}.png` : (p.image || '')))}"
                  style="width:48px;height:48px;border-radius:10px;object-fit:cover;object-position:top;flex-shrink:0;background:var(--bg3)"
+                 class="player-img-mobile"
                  onerror="this.style.background='var(--bg4)'">
-            <div style="min-width:0">
-              <div style="font-family:var(--display);font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_h(p.player_name)}</div>
+            <div style="min-width:0;flex:1;overflow:hidden">
+              <div style="font-family:var(--display);font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">${_h(p.player_name)}</div>
               <div style="font-size:11px;color:var(--text3);margin-top:2px">
                 ${_h(p.gameLabel)} &middot; <span style="color:var(--gold);font-weight:700">O ${_h(ensureHalfLine(prop.line))}</span>
                 ${prop.rec_side === 'over' ? '<span style="color:var(--green)"> ↑</span>' : prop.rec_side === 'under' ? '<span style="color:var(--danger)"> ↓</span>' : ''}
