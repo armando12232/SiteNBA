@@ -62,6 +62,16 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; overflow-x: hidden; position: relative; }
 
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ── PAGE TRANSITION ── */
+@keyframes pageIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+.page-enter { animation: pageIn .25s ease both; }
+
 /* COURT BG */
 .court-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: 0.07; }
 .app-layer { position: relative; z-index: 1; }
@@ -185,9 +195,47 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 /* MAIN */
 .main { max-width: 1000px; margin: 0 auto; padding: 24px 16px 80px; }
 
+/* ── SLIDING NAV TABS ── */
+.page-nav {
+  display: flex; gap: 4px; margin-bottom: 20px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 4px;
+  position: relative; width: fit-content;
+}
+.page-nav-btn {
+  position: relative; z-index: 1;
+  background: transparent; border: none;
+  border-radius: 9px; padding: 9px 20px;
+  font-size: 13px; font-weight: 700;
+  color: var(--text3); cursor: pointer;
+  font-family: var(--body);
+  transition: color .2s;
+  display: flex; align-items: center; gap: 7px;
+  white-space: nowrap;
+}
+.page-nav-btn:hover { color: var(--text2); }
+.page-nav-btn.active { color: var(--text); }
+.page-nav-pill {
+  position: absolute;
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  border-radius: 9px;
+  transition: all .25s cubic-bezier(.4,0,.2,1);
+  pointer-events: none;
+  z-index: 0;
+  top: 4px; height: calc(100% - 8px);
+}
+
 /* STATS ROW */
 .stats-row { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 20px; }
-.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; position: relative; overflow: hidden; }
+.stat-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px;
+  position: relative; overflow: hidden;
+  transition: border-color .2s, transform .2s;
+  cursor: default;
+}
+.stat-card:hover { border-color: var(--border2); transform: translateY(-1px); }
 .stat-card::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; }
 .stat-card.s-games::after { background: var(--gold); }
 .stat-card.s-alerts::after { background: var(--green); }
@@ -202,8 +250,13 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 
 /* FILTERS */
 .filters { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
-.filter-btn { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 600; color: var(--text3); cursor: pointer; transition: all 0.15s; font-family: var(--body); }
-.filter-btn:hover { border-color: var(--border2); color: var(--text2); }
+.filter-btn {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 14px;
+  font-size: 12px; font-weight: 600; color: var(--text3);
+  cursor: pointer; transition: all .2s; font-family: var(--body);
+}
+.filter-btn:hover { border-color: var(--border2); color: var(--text2); transform: translateY(-1px); }
 .filter-btn.active { color: var(--text); border-color: var(--border2); background: var(--bg3); }
 .filter-btn.f-fire.active   { color: #00e676; border-color: #00e676; background: rgba(0,230,118,0.1); }
 .filter-btn.f-red.active    { color: #00c853; border-color: #00c853; background: rgba(0,200,83,0.1); }
@@ -892,10 +945,10 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 
 
 /* Pre-jogo */
-.ft-pregame-tabs { display:flex; gap:6px; margin-bottom:4px; flex-wrap:wrap; }
-.ft-pregame-tab { padding:5px 14px; border-radius:20px; border:1px solid var(--border); background:var(--bg3); color:var(--text2); font-size:11px; font-weight:700; cursor:pointer; transition:all .2s; }
-.ft-pregame-tab:hover { border-color:var(--accent); color:var(--accent); }
-.ft-pregame-tab.active { background:var(--accent); color:#000; border-color:var(--accent); }
+.ft-pregame-tabs { display:flex; gap:4px; margin-bottom:4px; flex-wrap:wrap; background:var(--bg3); border-radius:10px; padding:3px; }
+.ft-pregame-tab { padding:5px 14px; border-radius:8px; border:none; background:transparent; color:var(--text3); font-size:11px; font-weight:700; cursor:pointer; transition:all .2s; font-family:var(--body); }
+.ft-pregame-tab:hover { color:var(--text2); }
+.ft-pregame-tab.active { background:var(--bg4); color:var(--text); border:1px solid var(--border2); }
 .ft-standing-row { display:flex; align-items:center; gap:6px; padding:7px 10px; border-radius:8px; font-size:12px; transition:background .15s; }
 .ft-standing-row:hover { background:var(--bg3); }
 .ft-standing-row.highlight { background:rgba(100,220,100,.12); border:1px solid rgba(100,220,100,.35); }
@@ -1055,10 +1108,11 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
         <div class="stat-card s-blocked"><div class="stat-label">ligas ativas</div><div class="stat-value amber" id="ft-stat-leagues">—</div></div>
       </div>
 
-      <div style="display:flex;gap:8px;margin-bottom:18px">
-        <button id="page-home-btn" onclick="switchPage('home')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">🏠 Home</button>
-        <button id="page-nba-btn" onclick="switchPage('nba')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">🏀 NBA</button>
-        <button id="page-football-btn" onclick="switchPage('football')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 22px;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">⚽ Futebol</button>
+      <div class="page-nav" id="page-nav">
+        <div class="page-nav-pill" id="page-nav-pill"></div>
+        <button id="page-home-btn" class="page-nav-btn active" onclick="switchPage('home')">🏠 Home</button>
+        <button id="page-nba-btn" class="page-nav-btn" onclick="switchPage('nba')">🏀 NBA</button>
+        <button id="page-football-btn" class="page-nav-btn" onclick="switchPage('football')">⚽ Futebol</button>
       </div>
 
       <!-- ══ PÁGINA HOME ══ -->
@@ -1144,9 +1198,10 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
             <!-- ══ PÁGINA NBA ══ -->
       <div id="page-nba" style="display:block">
         <!-- Sub-tabs NBA -->
-        <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px">
-          <button id="nba-tab-props-btn" onclick="switchNBATab('props')" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--body)">📊 Player Props</button>
-          <button id="nba-tab-live-btn" onclick="switchNBATab('live')" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body)">🔴 Ao Vivo</button>
+        <div style="display:flex;gap:4px;margin-bottom:16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:3px;width:fit-content;position:relative">
+          <div id="nba-tab-pill" style="position:absolute;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;top:3px;height:calc(100% - 6px);transition:all .25s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:0"></div>
+          <button id="nba-tab-props-btn" onclick="switchNBATab('props')" style="position:relative;z-index:1;background:transparent;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--body);transition:color .2s">📊 Player Props</button>
+          <button id="nba-tab-live-btn" onclick="switchNBATab('live')" style="position:relative;z-index:1;background:transparent;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body);transition:color .2s">🔴 Ao Vivo</button>
         </div>
 
         <!-- Props -->
@@ -2473,6 +2528,15 @@ function showDashboard(user) {
   loadUserPlan();
   checkPaymentReturn();
   switchPage('home');
+  // Inicializar pill após layout
+  requestAnimationFrame(function() {
+    var pill = document.getElementById('page-nav-pill');
+    var homeBtn = document.getElementById('page-home-btn');
+    if (pill && homeBtn) {
+      pill.style.left  = homeBtn.offsetLeft + 'px';
+      pill.style.width = homeBtn.offsetWidth + 'px';
+    }
+  });
   startMonitor();
 }
 
@@ -3573,14 +3637,26 @@ function switchPage(page) {
     var btn = document.getElementById('page-' + p + '-btn');
     var el  = document.getElementById('page-' + p);
     var statsRow = document.getElementById('stats-row-' + p);
-    if (btn) {
-      btn.style.background  = p === page ? 'var(--bg3)' : 'var(--bg2)';
-      btn.style.borderColor = p === page ? 'var(--border2)' : 'var(--border)';
-      btn.style.color       = p === page ? 'var(--text)' : 'var(--text3)';
+    if (btn) btn.classList.toggle('active', p === page);
+    if (el) {
+      if (p === page) {
+        el.style.display = 'block';
+        el.classList.remove('page-enter');
+        void el.offsetWidth;
+        el.classList.add('page-enter');
+      } else {
+        el.style.display = 'none';
+      }
     }
-    if (el) el.style.display = p === page ? 'block' : 'none';
     if (statsRow) statsRow.style.display = p === page ? 'grid' : 'none';
   });
+  // Mover pill animado
+  var pill = document.getElementById('page-nav-pill');
+  var activeBtn = document.getElementById('page-' + page + '-btn');
+  if (pill && activeBtn) {
+    pill.style.left  = activeBtn.offsetLeft + 'px';
+    pill.style.width = activeBtn.offsetWidth + 'px';
+  }
   if (page === 'home')     { hydrateHomeStats(); }
   if (page === 'nba')      { switchNBATab(_currentNBATab); }
   if (page === 'football') { _footballData = null; switchFootballTab(_currentFootballTab); }
@@ -3620,12 +3696,15 @@ function switchNBATab(tab) {
   _currentNBATab = tab;
   ['props', 'live'].forEach(t => {
     const btn = document.getElementById('nba-tab-' + t + '-btn');
-    if (btn) {
-      btn.style.background  = t === tab ? 'var(--bg3)' : 'var(--bg2)';
-      btn.style.borderColor = t === tab ? 'var(--border2)' : 'var(--border)';
-      btn.style.color       = t === tab ? 'var(--text)' : 'var(--text3)';
-    }
+    if (btn) btn.style.color = t === tab ? 'var(--text)' : 'var(--text3)';
   });
+  // Mover pill
+  var pill = document.getElementById('nba-tab-pill');
+  var activeBtn = document.getElementById('nba-tab-' + tab + '-btn');
+  if (pill && activeBtn) {
+    pill.style.left  = activeBtn.offsetLeft + 'px';
+    pill.style.width = activeBtn.offsetWidth + 'px';
+  }
   const todayEl = document.getElementById('today-view');
   const liveEl  = document.getElementById('live-view');
   if (todayEl) todayEl.style.display = tab === 'props' ? 'block' : 'none';
