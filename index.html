@@ -2111,6 +2111,9 @@ function renderPropsTable() {
 // ─── PLAYER PROPS MODAL ──────────────────────────────────────────────────────
 let _ppModalCurrentStat = 'pts';
 
+// Cache de last5_games por nome (sobrevive entre aberturas do modal)
+const _last5GamesCache = {};
+
 function openPlayerPropsModal(playerName, gameLabel) {
   const bp = (window._bpData || {})[playerName];
   if (!bp) return;
@@ -2134,10 +2137,42 @@ function openPlayerPropsModal(playerName, gameLabel) {
   document.getElementById('pp-name').textContent  = playerName;
   document.getElementById('pp-team').textContent  = `${bp.team} · ${bp.position || '—'} · ${gameLabel}`;
 
+  // Anexar last5_games se já estiver em cache
+  if (_last5GamesCache[playerName] !== undefined) {
+    bp.last5_games = _last5GamesCache[playerName];
+  }
+
   _renderPPModalBody(bp);
 
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
+
+  // Buscar last5_games em background se ainda não tiver
+  if (_last5GamesCache[playerName] === undefined) {
+    fetch(`/api/nba?type=pregame_by_name&name=${encodeURIComponent(playerName)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && Array.isArray(data.last5_games)) {
+          _last5GamesCache[playerName] = data.last5_games;
+          // Atualizar o player_id na foto se possível
+          if (data.player_id) {
+            const newPhoto = `https://cdn.nba.com/headshots/nba/latest/1040x760/${data.player_id}.png`;
+            const photoEl = document.getElementById('pp-photo');
+            if (photoEl && photoEl.src !== newPhoto) photoEl.src = newPhoto;
+          }
+          // Re-renderizar somente se modal ainda aberto e for o mesmo jogador
+          const overlayStillOpen = document.getElementById('pp-modal-overlay').classList.contains('open');
+          const stillSame = document.getElementById('pp-name').textContent === playerName;
+          if (overlayStillOpen && stillSame) {
+            bp.last5_games = data.last5_games;
+            _renderPPModalBody(bp);
+          }
+        } else {
+          _last5GamesCache[playerName] = []; // marca como tentado, evita refetch
+        }
+      })
+      .catch(() => { _last5GamesCache[playerName] = []; });
+  }
 }
 
 function _renderPPModalBody(bp) {
@@ -2288,7 +2323,19 @@ function _renderPPModalBody(bp) {
   const barColor = (v) => Number(v) >= line ? COLOR_OVER : COLOR_UNDER;
 
   let chartHtml = '';
-  if (games.length > 0) {
+  if (games.length === 0) {
+    // Placeholder enquanto carrega ou quando não há dados
+    const isLoading = bp.last5_games === undefined;
+    chartHtml = `
+      <div class="pp-section-title" style="margin-top:4px">Últimos Jogos</div>
+      <div style="background:#0f0f10;border:1px solid rgba(255,255,255,.06);
+                  border-radius:10px;padding:40px 20px;margin-bottom:16px;
+                  text-align:center;color:rgba(255,255,255,.4);font-size:13px">
+        ${isLoading
+          ? '<div style="display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.15);border-top-color:rgba(255,255,255,.6);border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle;margin-right:8px"></div>Carregando histórico do jogador...'
+          : 'Histórico recente não disponível.'}
+      </div>`;
+  } else if (games.length > 0) {
     const CHART_H = 220; // altura zona de barras (alta como referência)
     // Eixo Y termina num número redondo acima do maior valor / linha
     const rawMax  = Math.max(...games.map(g => Number(g[statKey]) || 0), line);
