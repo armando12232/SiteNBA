@@ -47,6 +47,53 @@ def _nba_fetch(url, timeout=9):
     with urlopen(req, timeout=timeout) as r:
         return json.loads(r.read())
 
+# ── Mapa nome → player_id (cache de longa duração — atualiza 1x/dia) ────────
+_PLAYERS_INDEX = {"data": None, "ts": 0}
+_PLAYERS_INDEX_TTL = 24 * 3600
+
+def _build_players_index():
+    """Constrói índice {nome_lower: player_id} via stats.nba.com/commonallplayers."""
+    now = time.time()
+    if _PLAYERS_INDEX["data"] and (now - _PLAYERS_INDEX["ts"]) < _PLAYERS_INDEX_TTL:
+        return _PLAYERS_INDEX["data"]
+    try:
+        url = "https://stats.nba.com/stats/commonallplayers?LeagueID=00&Season=2025-26&IsOnlyCurrentSeason=1"
+        data = _nba_fetch(url, timeout=10)
+        rs = data.get("resultSets", [{}])[0]
+        headers = rs.get("headers", [])
+        rows = rs.get("rowSet", [])
+        try:
+            idx_id   = headers.index("PERSON_ID")
+            idx_name = headers.index("DISPLAY_FIRST_LAST")
+        except ValueError:
+            return {}
+        index = {}
+        for row in rows:
+            pid  = row[idx_id]
+            name = (row[idx_name] or "").strip()
+            if name and pid:
+                index[name.lower()] = int(pid)
+        _PLAYERS_INDEX["data"] = index
+        _PLAYERS_INDEX["ts"]   = now
+        return index
+    except Exception:
+        return _PLAYERS_INDEX["data"] or {}
+
+def get_player_id_by_name(player_name):
+    """Retorna o player_id NBA dado o nome. None se não encontrar."""
+    if not player_name:
+        return None
+    idx = _build_players_index()
+    key = player_name.strip().lower()
+    pid = idx.get(key)
+    if pid:
+        return pid
+    # Fallback: tentar match parcial (ex: 'Bruce Brown Jr.' pode estar como 'Bruce Brown')
+    for name, pid in idx.items():
+        if name.startswith(key) or key.startswith(name):
+            return pid
+    return None
+
 def get_live_games():
     from nba_api.live.nba.endpoints import scoreboard
     board = scoreboard.ScoreBoard()
@@ -493,6 +540,15 @@ class handler(BaseHTTPRequestHandler):
                 if not is_valid_id(player_id) or not player_id.isdigit():
                     self._send(400, {"error": "invalid playerId"}); return
                 self._send(200, get_pregame(int(player_id)))
+
+            elif req_type == "pregame_by_name":
+                player_name = params.get("name", [""])[0].strip()
+                if not player_name or len(player_name) > 60:
+                    self._send(400, {"error": "invalid name"}); return
+                pid = get_player_id_by_name(player_name)
+                if not pid:
+                    self._send(404, {"error": "player not found", "name": player_name}); return
+                self._send(200, get_pregame(int(pid)))
 
             elif req_type == "schedule":
                 result = get_upcoming_schedule()
