@@ -3825,6 +3825,7 @@ function renderSportsGameCard(g, color) {
   const isPost = g.state === 'post';
   const home = g.home, away = g.away;
 
+  const scoreHtml = (isLive || isPost)
     ? `<div style="font-family:var(--display);font-size:28px;font-weight:900;text-align:center;min-width:60px">
         <span style="color:${color}">${away.score || 0}</span>
         <span style="color:var(--text3);font-size:18px;margin:0 4px">–</span>
