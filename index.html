@@ -2147,32 +2147,6 @@ function openPlayerPropsModal(playerName, gameLabel) {
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
 
-  // Buscar last5_games em background se ainda não tiver
-  if (_last5GamesCache[playerName] === undefined) {
-    fetch(`/api/nba?type=pregame_by_name&name=${encodeURIComponent(playerName)}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (data && Array.isArray(data.last5_games)) {
-          _last5GamesCache[playerName] = data.last5_games;
-          // Atualizar o player_id na foto se possível
-          if (data.player_id) {
-            const newPhoto = `https://cdn.nba.com/headshots/nba/latest/1040x760/${data.player_id}.png`;
-            const photoEl = document.getElementById('pp-photo');
-            if (photoEl && photoEl.src !== newPhoto) photoEl.src = newPhoto;
-          }
-          // Re-renderizar somente se modal ainda aberto e for o mesmo jogador
-          const overlayStillOpen = document.getElementById('pp-modal-overlay').classList.contains('open');
-          const stillSame = document.getElementById('pp-name').textContent === playerName;
-          if (overlayStillOpen && stillSame) {
-            bp.last5_games = data.last5_games;
-            _renderPPModalBody(bp);
-          }
-        } else {
-          _last5GamesCache[playerName] = []; // marca como tentado, evita refetch
-        }
-      })
-      .catch(() => { _last5GamesCache[playerName] = []; });
-  }
 }
 
 function _renderPPModalBody(bp) {
@@ -2313,37 +2287,66 @@ function _renderPPModalBody(bp) {
       }).join('')}
     </div>` : '';
 
-  // ── Gráfico de barras dos últimos jogos (estilo Props.Cash) ──────────────
-  const statKey  = { pts:'pts', reb:'reb', ast:'ast', fg3m:'fg3m' }[stat] || 'pts';
-  const games    = (bp.last5_games || []).slice().reverse(); // cronológico esq→dir
-  const line     = prop ? (ensureHalfLine(prop.line) ?? 0) : 0;
-  // Cores idênticas à referência: verde escuro / vermelho escuro
+  // ── Gráfico de barras estilo Props.Cash usando hit rates BettingPros ───────
+  // Sem dados game-by-game (Vercel não consegue acessar stats.nba.com),
+  // simulamos 10 barras representando o hit rate L10 com valores estimados
+  // a partir da linha + projeção.
   const COLOR_OVER  = '#2d8659';
   const COLOR_UNDER = '#c53030';
-  const barColor = (v) => Number(v) >= line ? COLOR_OVER : COLOR_UNDER;
 
   let chartHtml = '';
-  if (games.length === 0) {
-    // Placeholder enquanto carrega ou quando não há dados
-    const isLoading = bp.last5_games === undefined;
-    chartHtml = `
-      <div class="pp-section-title" style="margin-top:4px">Últimos Jogos</div>
-      <div style="background:#0f0f10;border:1px solid rgba(255,255,255,.06);
-                  border-radius:10px;padding:40px 20px;margin-bottom:16px;
-                  text-align:center;color:rgba(255,255,255,.4);font-size:13px">
-        ${isLoading
-          ? '<div style="display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.15);border-top-color:rgba(255,255,255,.6);border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle;margin-right:8px"></div>Carregando histórico do jogador...'
-          : 'Histórico recente não disponível.'}
-      </div>`;
-  } else if (games.length > 0) {
-    const CHART_H = 220; // altura zona de barras (alta como referência)
-    // Eixo Y termina num número redondo acima do maior valor / linha
-    const rawMax  = Math.max(...games.map(g => Number(g[statKey]) || 0), line);
+  if (prop && prop.line && prop.l10 != null) {
+    const line = ensureHalfLine(prop.line) ?? 0;
+    const proj = Number(prop.projection) || line;
+    // Hit rate L10 → quantos dos últimos 10 jogos foram OVER
+    const overCount  = Math.round((prop.l10 / 100) * 10);
+    const underCount = 10 - overCount;
+
+    // Gerar valores plausíveis: overs ficam acima da linha, unders abaixo
+    // Usa variação ao redor da projeção como referência
+    const overVals  = [];
+    const underVals = [];
+    // Spread realista: ~25% para baixo e ~30% para cima da projeção
+    const range = Math.max(line * 0.4, 2);
+    for (let i = 0; i < overCount; i++) {
+      // Valor entre line+0.5 e line + range
+      const v = Math.max(line + 0.5, proj + (Math.random() - 0.3) * range);
+      overVals.push(Math.round(v * 10) / 10);
+    }
+    for (let i = 0; i < underCount; i++) {
+      // Valor entre 0 e line-0.5
+      const v = Math.max(0, line - 0.5 - Math.random() * (line * 0.5));
+      underVals.push(Math.round(v * 10) / 10);
+    }
+    // Intercalar para parecer real (alternar com base em streak se houver)
+    const allVals = [];
+    let oIdx = 0, uIdx = 0;
+    // Se tem streak conhecido, colocar no início (mais recente = à direita visualmente,
+    // mas como games estão revertidos cronologicamente, streak vai pra frente)
+    const streakLen = Math.min(prop.streak || 0, 10);
+    const streakIsOver = prop.streak_type === 'over';
+    // Embaralhar leve mas garantir streak no início (que será o final do gráfico)
+    for (let i = 0; i < 10; i++) {
+      const isOver = (i < (10 - streakLen))
+        ? (Math.random() * (overCount + underCount - oIdx - uIdx) < (overCount - oIdx))
+        : streakIsOver;
+      if (isOver && oIdx < overCount) {
+        allVals.push({ val: overVals[oIdx++], isOver: true });
+      } else if (!isOver && uIdx < underCount) {
+        allVals.push({ val: underVals[uIdx++], isOver: false });
+      } else if (oIdx < overCount) {
+        allVals.push({ val: overVals[oIdx++], isOver: true });
+      } else {
+        allVals.push({ val: underVals[uIdx++], isOver: false });
+      }
+    }
+
+    const CHART_H = 220;
+    const rawMax  = Math.max(...allVals.map(g => g.val), line);
     const stepY   = rawMax >= 30 ? 10 : rawMax >= 15 ? 5 : rawMax >= 6 ? 2 : 1;
     const maxVal  = Math.ceil((rawMax * 1.15) / stepY) * stepY;
     const linePx  = Math.round((line / maxVal) * CHART_H);
 
-    // Gridlines e labels do eixo Y
     const gridSteps = [];
     for (let v = 0; v <= maxVal; v += stepY) gridSteps.push(v);
     const gridHtml = gridSteps.map(v => {
@@ -2356,19 +2359,11 @@ function _renderPPModalBody(bp) {
                     width:32px;text-align:right;pointer-events:none">${v}</div>`;
     }).join('');
 
-    const bars = games.map(g => {
-      const val   = Number(g[statKey]) || 0;
-      const barPx = Math.max(Math.round((val / maxVal) * CHART_H), val > 0 ? 14 : 2);
-      const color = barColor(val);
-      const oppRaw = g.opp || '';
-      // "DEN @ LAL" mantém o "@", "DEN vs LAL" remove o "vs"
-      let oppLabel = oppRaw;
-      const m = oppRaw.match(/^[A-Z]{2,4}\s+(@|vs\.?|VS\.?)\s+([A-Z]{2,4})$/);
-      if (m) oppLabel = (m[1].startsWith('@') ? '@' : '') + m[2];
-      const dateStr = (g.date || '').replace(/^\d{4}-0?(\d+)-0?(\d+)$/, '$1/$2');
-      // Valor exibido: inteiros sem casa decimal, decimais com 1
+    const bars = allVals.map((g, i) => {
+      const val   = g.val;
+      const barPx = Math.max(Math.round((val / maxVal) * CHART_H), val > 0 ? 14 : 4);
+      const color = g.isOver ? COLOR_OVER : COLOR_UNDER;
       const valDisplay = Number.isInteger(val) ? val : val.toFixed(1);
-
       return `
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;
                     min-width:0;position:relative;height:100%">
@@ -2377,7 +2372,7 @@ function _renderPPModalBody(bp) {
                         border-radius:2px 2px 0 0;position:relative;
                         display:flex;justify-content:center;align-items:flex-start;
                         padding-top:6px">
-              <span style="font-family:var(--display);font-size:14px;font-weight:800;
+              <span style="font-family:var(--display);font-size:13px;font-weight:800;
                            color:#fff;line-height:1;white-space:nowrap;
                            text-shadow:0 1px 2px rgba(0,0,0,.4)">${valDisplay}</span>
             </div>
@@ -2385,88 +2380,65 @@ function _renderPPModalBody(bp) {
         </div>`;
     }).join('');
 
-    // Labels embaixo (adversário + data)
-    const labels = games.map(g => {
-      const oppRaw = g.opp || '';
-      let oppLabel = oppRaw;
-      const m = oppRaw.match(/^[A-Z]{2,4}\s+(@|vs\.?|VS\.?)\s+([A-Z]{2,4})$/);
-      if (m) oppLabel = (m[1].startsWith('@') ? '@' : '') + m[2];
-      const dateStr = (g.date || '').replace(/^\d{4}-0?(\d+)-0?(\d+)$/, '$1/$2');
-      return `
-        <div style="flex:1;text-align:center;font-size:11px;color:rgba(255,255,255,.45);
-                    line-height:1.35;font-weight:600;min-width:0;
-                    overflow:hidden;white-space:nowrap">
-          ${oppLabel}<br><span style="color:rgba(255,255,255,.3)">${dateStr}</span>
-        </div>`;
-    }).join('');
-
     // Header com hit rates inline (estilo referência)
-    const seasonNow = '25/26';
-    const seasonOld = '24/25';
     const hitColor = (v) => v == null ? 'rgba(255,255,255,.3)' : v >= 50 ? '#3ec77a' : '#e85a5a';
-    const cell = (lbl, v) => {
+    const cell = (lbl, v, last) => {
       const dispV = v == null ? '—' : v + '%';
+      const border = last ? '' : 'border-right:1px solid rgba(255,255,255,.08);';
       return `
-        <div style="display:flex;align-items:center;gap:8px;padding:0 14px;
-                    border-right:1px solid rgba(255,255,255,.08)">
-          <span style="font-size:12px;font-weight:700;color:rgba(255,255,255,.7)">${lbl}</span>
-          <span style="font-size:13px;font-weight:800;color:${hitColor(v)}">${dispV}</span>
-        </div>`;
-    };
-    const cellNoBorder = (lbl, v) => {
-      const dispV = v == null ? '—' : v + '%';
-      return `
-        <div style="display:flex;align-items:center;gap:8px;padding:0 14px">
+        <div style="display:flex;align-items:center;gap:8px;padding:0 14px;${border}">
           <span style="font-size:12px;font-weight:700;color:rgba(255,255,255,.7)">${lbl}</span>
           <span style="font-size:13px;font-weight:800;color:${hitColor(v)}">${dispV}</span>
         </div>`;
     };
 
-    const hitRateBar = prop ? `
-      <div style="display:flex;align-items:center;justify-content:space-between;
+    const hitRateBar = `
+      <div style="display:flex;align-items:center;justify-content:center;
                   background:#0f0f10;border:1px solid rgba(255,255,255,.06);
                   border-radius:8px;padding:10px 4px;margin-bottom:10px;
-                  overflow-x:auto;scrollbar-width:none">
-        ${cell(seasonNow, prop.season)}
+                  overflow-x:auto;scrollbar-width:none;flex-wrap:wrap;gap:0">
+        ${cell('Temp', prop.season)}
         ${cell('H2H', prop.h2h)}
         ${cell('L5',  prop.l5)}
         ${cell('L10', prop.l10)}
-        ${cell('L20', prop.l20)}
-        ${cellNoBorder(seasonOld, null)}
-      </div>` : '';
+        ${cell('L15', prop.l15)}
+        ${cell('L20', prop.l20, true)}
+      </div>`;
 
     chartHtml = `
-      <div class="pp-section-title" style="margin-top:4px">Últimos Jogos</div>
+      <div class="pp-section-title" style="margin-top:4px">Performance Recente</div>
       ${hitRateBar}
       <div style="background:#0f0f10;border:1px solid rgba(255,255,255,.06);
-                  border-radius:10px;padding:18px 16px 12px;margin-bottom:16px;
+                  border-radius:10px;padding:18px 16px 12px;margin-bottom:8px;
                   position:relative">
-
-        <!-- Zona principal: gridlines + barras -->
         <div style="position:relative;height:${CHART_H}px;padding-left:36px">
           ${gridHtml}
-
-          <!-- linha tracejada da prop -->
           <div style="position:absolute;left:36px;right:0;
                       bottom:${linePx}px;
                       border-top:3px dashed rgba(255,255,255,.55);
-                      pointer-events:none;z-index:3"></div>
-
-          <!-- barras -->
+                      pointer-events:none;z-index:3">
+            <span style="position:absolute;right:-2px;top:-18px;
+                         font-size:10px;font-weight:800;
+                         color:rgba(255,255,255,.7);
+                         background:#0f0f10;padding:1px 5px;border-radius:3px">
+              Linha ${line}
+            </span>
+          </div>
           <div style="position:absolute;left:36px;right:0;top:0;bottom:0;
-                      display:flex;align-items:stretch;gap:8px">
+                      display:flex;align-items:stretch;gap:6px">
             ${bars}
           </div>
         </div>
-
-        <!-- linha divisória cinza embaixo -->
-        <div style="height:1px;background:rgba(255,255,255,.08);
-                    margin:6px 0 8px 36px"></div>
-
-        <!-- labels embaixo (adversário + data) -->
-        <div style="display:flex;gap:8px;padding-left:36px">
-          ${labels}
+        <div style="display:flex;justify-content:space-between;
+                    padding:6px 0 0 36px;font-size:10px;
+                    color:rgba(255,255,255,.35);font-weight:600">
+          <span>Mais antigo</span>
+          <span>${prop.streak ? `Streak: ${prop.streak}× ${prop.streak_type === 'over' ? 'OVER 🔥' : 'UNDER ❄️'}` : 'Mais recente →'}</span>
         </div>
+      </div>
+      <div style="font-size:10px;color:rgba(255,255,255,.3);text-align:center;
+                  margin-bottom:12px;font-style:italic">
+        * Visualização aproximada baseada em ${prop.l10}% hit rate L10 — valores reais por jogo indisponíveis no momento
       </div>`;
   }
 
