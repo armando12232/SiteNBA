@@ -1130,6 +1130,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
         <button id="page-nhl-btn" class="page-nav-btn" onclick="switchPage('nhl')">🏒 NHL</button>
         <button id="page-mlb-btn" class="page-nav-btn" onclick="switchPage('mlb')">⚾ MLB</button>
         <button id="page-football-btn" class="page-nav-btn" onclick="switchPage('football')">⚽ Futebol</button>
+        <button id="page-injuries-btn" class="page-nav-btn" onclick="switchPage('injuries')">🩹 Lesões</button>
       </div>
 
       <!-- ══ PÁGINA HOME ══ -->
@@ -1213,6 +1214,16 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
             <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:6px">MLB</div>
             <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:14px">Baseball — jogos do dia, scores ao vivo e standings da MLB.</div>
             <div style="font-family:var(--display);font-size:12px;font-weight:700;color:var(--red2);letter-spacing:.06em;text-transform:uppercase">⚾ Abrir →</div>
+          </div>
+
+          <div onclick="switchPage('injuries')" style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden"
+            onmouseover="this.style.borderColor='rgba(220,38,38,.4)';this.style.transform='translateY(-2px)'"
+            onmouseout="this.style.borderColor='var(--border2)';this.style.transform=''">
+            <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(220,38,38,.1),transparent 70%);pointer-events:none"></div>
+            <div style="font-size:32px;margin-bottom:12px">🩹</div>
+            <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:6px">Lesões NBA</div>
+            <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:14px">Quem está fora, dúvida ou volta a jogar — afeta direto suas props.</div>
+            <div style="font-family:var(--display);font-size:12px;font-weight:700;color:#dc2626;letter-spacing:.06em;text-transform:uppercase">🩹 Abrir →</div>
           </div>
 
         </div>
@@ -1341,6 +1352,35 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
           <button onclick="loadSportsPage('mlb')" style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:var(--body)">🔄 Atualizar</button>
         </div>
         <div id="mlb-content"><div style="color:var(--text3);padding:40px 0;text-align:center">Carregando jogos da MLB...</div></div>
+      </div>
+
+      <!-- ══ PÁGINA LESÕES ══ -->
+      <div id="page-injuries" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-family:var(--display);font-size:22px;font-weight:900;letter-spacing:.02em">🩹 <span style="color:var(--red2)">Lesões e Status</span></div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">NBA · Atualizado via ESPN a cada 10 minutos</div>
+          </div>
+          <button onclick="loadInjuriesPage(true)" id="injuries-refresh-btn" style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:var(--body)">🔄 Atualizar</button>
+        </div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:20px">Veja quem está fora, quem é dúvida e quem entra em quadra — afeta diretamente as props.</div>
+
+        <!-- Stats por status -->
+        <div id="injuries-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px"></div>
+
+        <!-- Filtro de times -->
+        <div style="margin-bottom:16px">
+          <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Filtrar por time</div>
+          <div id="injuries-team-filter" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+
+        <!-- Lista -->
+        <div id="injuries-list">
+          <div style="color:var(--text3);padding:60px 0;text-align:center">
+            <div style="display:inline-block;width:24px;height:24px;border:3px solid rgba(255,255,255,.15);border-top-color:rgba(255,255,255,.6);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:12px"></div>
+            <div>Carregando relatório de lesões...</div>
+          </div>
+        </div>
       </div>
 
       <!-- ══ PÁGINA FUTEBOL ══ -->
@@ -4015,7 +4055,7 @@ let _currentFootballTab = 'jogos';
 
 function switchPage(page) {
   _currentPage = page;
-  ['home', 'nba', 'nfl', 'nhl', 'mlb', 'football'].forEach(p => {
+  ['home', 'nba', 'nfl', 'nhl', 'mlb', 'football', 'injuries'].forEach(p => {
     var btn = document.getElementById('page-' + p + '-btn');
     var el  = document.getElementById('page-' + p);
     var statsRow = document.getElementById('stats-row-' + p);
@@ -4043,10 +4083,174 @@ function switchPage(page) {
   if (page === 'nba')      { switchNBATab(_currentNBATab); }
   if (page === 'football') { _footballData = null; switchFootballTab(_currentFootballTab); }
   if (page === 'nfl' || page === 'nhl' || page === 'mlb') { loadSportsPage(page); }
+  if (page === 'injuries') { loadInjuriesPage(); }
 }
 
 // ── SPORTS PAGES (NFL / NHL / MLB) ───────────────────────────────────────────
 const _sportsCache = {};
+
+// ── INJURIES ──────────────────────────────────────────────────────────────
+let _injuriesData = null;
+let _injuriesTeamFilter = 'all';
+
+async function loadInjuriesPage(force = false) {
+  const list = document.getElementById('injuries-list');
+  if (!list) return;
+
+  // Cache 5min
+  if (!force && _injuriesData && Date.now() - _injuriesData.fetched_at < 5 * 60 * 1000) {
+    renderInjuries();
+    return;
+  }
+
+  list.innerHTML = `<div style="color:var(--text3);padding:60px 0;text-align:center">
+    <div style="display:inline-block;width:24px;height:24px;border:3px solid rgba(255,255,255,.15);border-top-color:rgba(255,255,255,.6);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:12px"></div>
+    <div>Carregando relatório de lesões...</div>
+  </div>`;
+
+  try {
+    const res  = await fetchWithTimeout('/api/injuries', {}, 15000);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    _injuriesData = { ...data, fetched_at: Date.now() };
+    renderInjuries();
+  } catch (e) {
+    list.innerHTML = `<div style="color:var(--text3);padding:40px 0;text-align:center">
+      <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+      <div>Erro ao carregar lesões</div>
+      <div style="font-size:11px;opacity:.6;margin-top:6px">${e.message}</div>
+    </div>`;
+  }
+}
+
+function renderInjuries() {
+  if (!_injuriesData) return;
+  const data = _injuriesData;
+
+  // ── Stats cards por status ──
+  const statsEl = document.getElementById('injuries-stats');
+  const statusOrder = ['Out For Season', 'Out', 'Doubtful', 'Questionable', 'Day-To-Day', 'Probable'];
+  const statusColors = {
+    'Out For Season': '#7c3aed',
+    'Out':            '#dc2626',
+    'Doubtful':       '#f97316',
+    'Questionable':   '#eab308',
+    'Day-To-Day':     '#3b82f6',
+    'Probable':       '#22c55e',
+  };
+
+  const totalCard = `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px">Total</div>
+      <div style="font-family:var(--display);font-size:28px;font-weight:900;color:var(--text)">${data.total}</div>
+      <div style="font-size:10px;color:var(--text3)">jogadores</div>
+    </div>`;
+
+  const cards = statusOrder.map(s => {
+    const count = data.by_status?.[s] || 0;
+    const color = statusColors[s] || '#6b7280';
+    const sub   = s === 'Out For Season' ? 'Temporada encerrada'
+                : s === 'Out'             ? 'Fora / Indisponível'
+                : s === 'Doubtful'        ? 'Pouco provável'
+                : s === 'Questionable'    ? 'Decisão no jogo'
+                : s === 'Day-To-Day'      ? 'Dia a dia'
+                : 'Provável jogar';
+    return `
+      <div style="background:linear-gradient(135deg, ${color}22, ${color}08);
+                  border:1px solid ${color}55;border-radius:12px;padding:14px 16px;
+                  position:relative;overflow:hidden">
+        <div style="font-size:10px;font-weight:800;color:${color};letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px">${s}</div>
+        <div style="font-family:var(--display);font-size:28px;font-weight:900;color:var(--text)">${count}</div>
+        <div style="font-size:10px;color:var(--text3)">${sub}</div>
+      </div>`;
+  }).join('');
+
+  statsEl.innerHTML = totalCard + cards;
+
+  // ── Filtro de times ──
+  const teamFilterEl = document.getElementById('injuries-team-filter');
+  const allTeams = (data.by_team || []).slice().sort((a,b) => b.count - a.count);
+  const allBtn = `
+    <button onclick="setInjuriesTeamFilter('all')"
+      style="background:${_injuriesTeamFilter === 'all' ? 'var(--bg3)' : 'var(--bg2)'};
+             border:1px solid ${_injuriesTeamFilter === 'all' ? 'var(--border2)' : 'var(--border)'};
+             border-radius:6px;padding:6px 12px;font-size:11px;font-weight:700;
+             color:${_injuriesTeamFilter === 'all' ? 'var(--text)' : 'var(--text3)'};
+             cursor:pointer;font-family:var(--body)">
+      🌐 Todos (${data.total})
+    </button>`;
+  const teamBtns = allTeams.map(t => {
+    const active = _injuriesTeamFilter === t.team;
+    return `
+      <button onclick="setInjuriesTeamFilter('${t.team}')"
+        style="background:${active ? t.team_color + '33' : 'var(--bg2)'};
+               border:1px solid ${active ? t.team_color : 'var(--border)'};
+               border-radius:6px;padding:6px 10px;font-size:11px;font-weight:700;
+               color:${active ? '#fff' : 'var(--text3)'};
+               cursor:pointer;font-family:var(--body);display:flex;align-items:center;gap:6px"
+        title="${t.team_name}">
+        <span style="font-family:var(--display);letter-spacing:.04em">${t.team}</span>
+        <span style="background:${t.team_color};color:#fff;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:800">${t.count}</span>
+      </button>`;
+  }).join('');
+  teamFilterEl.innerHTML = allBtn + teamBtns;
+
+  // ── Lista ──
+  let injuries = data.injuries || [];
+  if (_injuriesTeamFilter !== 'all') {
+    injuries = injuries.filter(i => i.team === _injuriesTeamFilter);
+  }
+
+  const listEl = document.getElementById('injuries-list');
+  if (!injuries.length) {
+    listEl.innerHTML = `<div style="color:var(--text3);padding:40px 0;text-align:center">Nenhuma lesão encontrada para o filtro selecionado.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px">
+      ${injuries.map(i => `
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;
+                    border-left:3px solid ${i.status_color};
+                    display:flex;flex-direction:column;gap:10px">
+          <!-- Header: foto + nome + status -->
+          <div style="display:flex;align-items:center;gap:12px">
+            <img src="${i.image}" alt="${i.athlete_name}"
+                 onerror="this.style.display='none'"
+                 style="width:48px;height:48px;border-radius:50%;background:var(--bg3);object-fit:cover;border:1px solid var(--border)" />
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:800;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${i.athlete_name}</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px">
+                <span style="color:${i.team_color};font-weight:800">${i.team}</span>
+                ${i.position ? ` · ${i.position}` : ''}
+                ${i.return_date ? ` · Retorno: <span style="color:var(--text2)">${i.return_date}</span>` : ''}
+              </div>
+            </div>
+            <div style="background:${i.status_color};color:#fff;font-size:10px;font-weight:800;
+                        padding:4px 10px;border-radius:6px;letter-spacing:.05em;text-transform:uppercase;
+                        white-space:nowrap">
+              ${i.status}
+            </div>
+          </div>
+          ${i.description ? `
+            <div style="font-size:12px;color:var(--text3);line-height:1.5;
+                        background:var(--bg3);padding:10px 12px;border-radius:8px;
+                        border-left:2px solid ${i.status_color}55">
+              ${i.description}
+            </div>` : ''}
+        </div>
+      `).join('')}
+    </div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:var(--text3)">
+      Fonte: ESPN · Atualizado ${new Date(data.updated_at * 1000).toLocaleTimeString('pt-BR')}
+    </div>`;
+}
+
+function setInjuriesTeamFilter(team) {
+  _injuriesTeamFilter = team;
+  renderInjuries();
+}
+
 
 async function loadSportsPage(league) {
   const el = document.getElementById(league + '-content');
