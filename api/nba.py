@@ -1,7 +1,18 @@
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import Request, urlopen, ProxyHandler, build_opener
 import json, time, math, sys, os
+
+# ── Proxy residencial (Webshare ou similar) ──────────────────────────────────
+# Adicione no Vercel: PROXY_URL = http://user:pass@proxy.webshare.io:80
+# Quando ausente, faz requests diretos (CDN NBA funciona sem proxy)
+PROXY_URL = os.environ.get("PROXY_URL", "")
+
+def _make_opener():
+    if PROXY_URL:
+        handler = ProxyHandler({"http": PROXY_URL, "https": PROXY_URL})
+        return build_opener(handler)
+    return None
 
 # Import do módulo de segurança (está em api/)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -43,9 +54,17 @@ NBA_HEADERS = {
 }
 
 def _nba_fetch(url, timeout=9):
-    req = Request(url, headers=NBA_HEADERS)
-    with urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read())
+    """Fetch com proxy residencial se PROXY_URL estiver definido.
+    CDN NBA funciona sem proxy. stats.nba.com requer proxy no Vercel.
+    """
+    req    = Request(url, headers=NBA_HEADERS)
+    opener = _make_opener()
+    if opener:
+        with opener.open(req, timeout=timeout) as r:
+            return json.loads(r.read())
+    else:
+        with urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read())
 
 # ── Cache do CDN playerIndex (usado para resolver nome→id e médias) ─────────
 def get_live_games():
@@ -262,7 +281,7 @@ def get_pregame(player_id):
                 f"?PlayerID={player_id}&Season={season}"
                 f"&SeasonType=Regular+Season&LeagueID=00"
             )
-            log_data = _nba_fetch(log_url, timeout=5)  # timeout agressivo
+            log_data = _nba_fetch(log_url, timeout=8)  # 8s — proxy residencial pode adicionar latência
             rs2  = log_data.get("resultSets", [{}])[0]
             rows = [dict(zip(rs2.get("headers", []), r)) for r in rs2.get("rowSet", [])]
             game_rows.extend(rows)
