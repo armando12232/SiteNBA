@@ -20,6 +20,9 @@
     },
     "api/sports.py": {
       "maxDuration": 10
+    },
+    "api/injuries.py": {
+      "maxDuration": 15
     }
   },
   "headers": [
