@@ -185,60 +185,43 @@ def _calc_prop(game_rows, stat_key, season_avg, n5=5, n10=10):
 
 
 def _get_player_index_cdn():
-    """Cache do playerIndex CDN — rápido (~1s), inclui nome+id+médias."""
+    """Mapa nome→id usando dados estáticos do nba_api (zero HTTP, instantâneo)."""
     cached = _cache_get("player_index_cdn")
     if cached:
         return cached
     try:
-        url  = "https://cdn.nba.com/static/json/staticData/playerIndex.json"
-        data = _nba_fetch(url, timeout=8)
-        rs   = data.get("resultSets", [{}])[0]
-        hdrs = rs.get("headers", [])
-        rows = rs.get("rowSet", [])
-        # Construir mapas: por id e por nome
+        from nba_api.stats.static import players as nba_static
+        all_players = nba_static.get_active_players()
         by_id   = {}
         by_name = {}
-        try:
-            i_id   = hdrs.index("PERSON_ID")
-            i_first = hdrs.index("PLAYER_FIRST_NAME") if "PLAYER_FIRST_NAME" in hdrs else hdrs.index("FIRST_NAME")
-            i_last  = hdrs.index("PLAYER_LAST_NAME")  if "PLAYER_LAST_NAME"  in hdrs else hdrs.index("LAST_NAME")
-        except ValueError:
-            return {"by_id": {}, "by_name": {}, "headers": hdrs, "rows": rows}
-        for r in rows:
-            pid  = r[i_id]
-            name = f"{r[i_first]} {r[i_last]}".strip()
-            by_id[pid] = r
-            if name:
-                by_name[name.lower()] = r
-        result = {"by_id": by_id, "by_name": by_name, "headers": hdrs, "rows": rows}
+        for p in all_players:
+            pid  = p['id']
+            name = p['full_name']
+            hdrs = ['PERSON_ID', 'PLAYER_FIRST_NAME', 'PLAYER_LAST_NAME']
+            row  = [pid, p['first_name'], p['last_name']]
+            by_id[pid]           = row
+            by_name[name.lower()] = row
+        result = {"by_id": by_id, "by_name": by_name, "headers": ['PERSON_ID', 'PLAYER_FIRST_NAME', 'PLAYER_LAST_NAME']}
         _cache_set("player_index_cdn", result)
         return result
-    except Exception:
-        return {"by_id": {}, "by_name": {}, "headers": [], "rows": []}
+    except Exception as e:
+        return {"by_id": {}, "by_name": {}, "headers": []}
 
 
 def get_player_id_by_name(player_name):
-    """Resolve nome → player_id usando o CDN playerIndex (rápido)."""
+    """Resolve nome → player_id usando dados estáticos (instantâneo, sem HTTP)."""
     if not player_name:
         return None
-    idx = _get_player_index_cdn()
+    idx    = _get_player_index_cdn()
     by_name = idx.get("by_name", {})
-    key = player_name.strip().lower()
-    row = by_name.get(key)
+    key    = player_name.strip().lower()
+    row    = by_name.get(key)
     if row:
-        try:
-            i_id = idx["headers"].index("PERSON_ID")
-            return int(row[i_id])
-        except Exception:
-            return None
-    # Fallback: match por prefixo (ex: "Bruce Brown Jr." → "Bruce Brown")
-    for nm, r in by_name.items():
-        if key.startswith(nm) or nm.startswith(key):
-            try:
-                i_id = idx["headers"].index("PERSON_ID")
-                return int(r[i_id])
-            except Exception:
-                return None
+        return int(row[0])  # PERSON_ID é índice 0
+    # Fallback: match parcial
+    for name, r in by_name.items():
+        if key.startswith(name) or name.startswith(key):
+            return int(r[0])
     return None
 
 
@@ -273,17 +256,19 @@ def get_pregame(player_id):
     game_rows = []
     SEASONS_TO_TRY = ["2025-26", "2024-25"]  # tenta atual, fallback pra anterior
     for season in SEASONS_TO_TRY:
-        if game_rows:  # já temos dados, parar
+        if game_rows:
             break
         try:
-            log_url = (
-                f"https://stats.nba.com/stats/playergamelog"
-                f"?PlayerID={player_id}&Season={season}"
-                f"&SeasonType=Regular+Season&LeagueID=00"
+            from nba_api.stats.endpoints import playergamelog
+            proxy_dict = {"http": PROXY_URL, "https": PROXY_URL} if PROXY_URL else None
+            log = playergamelog.PlayerGameLog(
+                player_id=str(player_id),
+                season=season,
+                season_type_all_star="Regular Season",
+                proxy=proxy_dict,
+                timeout=9,
             )
-            log_data = _nba_fetch(log_url, timeout=8)  # 8s — proxy residencial pode adicionar latência
-            rs2  = log_data.get("resultSets", [{}])[0]
-            rows = [dict(zip(rs2.get("headers", []), r)) for r in rs2.get("rowSet", [])]
+            rows = log.get_data_frames()[0].to_dict('records')
             game_rows.extend(rows)
         except Exception:
             continue
