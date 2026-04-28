@@ -84,6 +84,141 @@ def _espn_fetch(url, timeout=8):
     except Exception as e:
         return None
 
+def _translate_injury_desc(text):
+    """Traduz descrição de lesão EN → PT-BR via substituições inteligentes."""
+    if not text:
+        return text
+
+    import re
+
+    # Status / disponibilidade
+    replacements = [
+        # Partes do corpo
+        (r'\bknee\b', 'joelho'), (r'\bknees\b', 'joelhos'),
+        (r'\bankle\b', 'tornozelo'), (r'\bankles\b', 'tornozelos'),
+        (r'\bshoulder\b', 'ombro'), (r'\bshoulders\b', 'ombros'),
+        (r'\bback\b', 'costas'), (r'\blower back\b', 'lombar'),
+        (r'\bhamstring\b', 'isquiotibial'), (r'\bhamstrings\b', 'isquiotibiais'),
+        (r'\bquadricep\b', 'quadríceps'), (r'\bquadriceps\b', 'quadríceps'),
+        (r'\bcalf\b', 'panturrilha'), (r'\bCalves\b', 'panturrilhas'),
+        (r'\bfoot\b', 'pé'), (r'\bfeet\b', 'pés'),
+        (r'\bhip\b', 'quadril'), (r'\bhips\b', 'quadris'),
+        (r'\bgroin\b', 'virilha'), (r'\bwrist\b', 'pulso'),
+        (r'\belbow\b', 'cotovelo'), (r'\bfinger\b', 'dedo'),
+        (r'\bthumb\b', 'polegar'), (r'\bhand\b', 'mão'),
+        (r'\brib\b', 'costela'), (r'\bribs\b', 'costelas'),
+        (r'\bchest\b', 'peitoral'), (r'\bneck\b', 'pescoço'),
+        (r'\bhead\b', 'cabeça'), (r'\bfacial\b', 'facial'),
+        (r'\beye\b', 'olho'), (r'\beyes\b', 'olhos'),
+        (r'\bleg\b', 'perna'), (r'\blegs\b', 'pernas'),
+        (r'\barm\b', 'braço'), (r'\barms\b', 'braços'),
+        (r'\bthigh\b', 'coxa'), (r'\bshin\b', 'canela'),
+        (r'\bAchilles\b', 'Aquiles'), (r'\bplantar fascia\b', 'fáscia plantar'),
+        (r'\bmeniscus\b', 'menisco'), (r'\bACL\b', 'LCA'),
+        (r'\bMCL\b', 'LCM'), (r'\bPCL\b', 'LCP'),
+        (r'\brotator cuff\b', 'manguito rotador'),
+        # Tipos de lesão
+        (r'\bsprain\b', 'entorse'), (r'\bsprains\b', 'entorses'),
+        (r'\bstrain\b', 'distensão'), (r'\bstrains\b', 'distensões'),
+        (r'\bfracture\b', 'fratura'), (r'\bfractures\b', 'fraturas'),
+        (r'\bcontusion\b', 'contusão'), (r'\bcontusions\b', 'contusões'),
+        (r'\bsurgery\b', 'cirurgia'), (r'\bsurgical\b', 'cirúrgico'),
+        (r'\bsore\b', 'dolorido'), (r'\bsoreness\b', 'dor'),
+        (r'\bswelling\b', 'inchaço'), (r'\bswollen\b', 'inchado'),
+        (r'\binfection\b', 'infecção'), (r'\billness\b', 'doença'),
+        (r'\bconcussion\b', 'concussão'), (r'\bfatigue\b', 'fadiga'),
+        (r'\btightness\b', 'tensão muscular'), (r'\bbruise\b', 'hematoma'),
+        (r'\bbruised\b', 'machucado'), (r'\bdislocation\b', 'deslocamento'),
+        (r'\btendinitis\b', 'tendinite'), (r'\btendinopathy\b', 'tendinopatia'),
+        (r'\barthritis\b', 'artrite'), (r'\binflammation\b', 'inflamação'),
+        (r'\bpain\b', 'dor'), (r'\binjury\b', 'lesão'),
+        (r'\binjuries\b', 'lesões'), (r'\binjured\b', 'lesionado'),
+        # Status / ações
+        (r'\blisted as out\b', 'listado como fora'),
+        (r'\blisted as doubtful\b', 'listado como duvidoso'),
+        (r'\blisted as questionable\b', 'listado como questionável'),
+        (r'\blisted as probable\b', 'listado como provável'),
+        (r'\bday-to-day\b', 'dia a dia'),
+        (r'\bout for the season\b', 'fora pela temporada'),
+        (r'\bexpected to miss\b', 'deve perder'),
+        (r'\bexpected to return\b', 'deve retornar'),
+        (r'\bwill miss\b', 'perderá'),
+        (r'\bwill not play\b', 'não jogará'),
+        (r'\bwill be re-evaluated\b', 'será reavaliado'),
+        (r'\bhas been ruled out\b', 'foi descartado'),
+        (r'\brunning tests\b', 'realizando testes'),
+        (r'\bpractice\b', 'treino'), (r'\bpractices\b', 'treinos'),
+        (r'\bmanagement\b', 'gerenciamento'),
+        (r'\brest\b', 'descanso'), (r'\brested\b', 'descansado'),
+        (r'\brecovery\b', 'recuperação'), (r'\brecovering\b', 'se recuperando'),
+        (r'\brehabilitation\b', 'reabilitação'), (r'\brehab\b', 'reabilitação'),
+        (r'\btreatment\b', 'tratamento'), (r'\btreatments\b', 'tratamentos'),
+        (r'\bdiagnosed\b', 'diagnosticado'), (r'\bdiagnosis\b', 'diagnóstico'),
+        (r'\bschedule\b', 'cronograma'), (r'\bscheduled\b', 'programado'),
+        (r'\breport\b', 'relatório'), (r'\breports\b', 'informa'),
+        (r'\baccording to\b', 'de acordo com'),
+        (r'\bper sources\b', 'segundo fontes'),
+        (r'\bcontract\b', 'contrato'), (r'\bsigned\b', 'assinou'),
+        (r'\bwaived\b', 'dispensado'), (r'\btrade\b', 'negociado'),
+        (r'\btraded\b', 'negociado'), (r'\bseason\b', 'temporada'),
+        (r'\bgame\b', 'jogo'), (r'\bgames\b', 'jogos'),
+        (r'\bweek\b', 'semana'), (r'\bweeks\b', 'semanas'),
+        (r'\bmonth\b', 'mês'), (r'\bmonths\b', 'meses'),
+        (r'\btwo-way contract\b', 'contrato bidirecional'),
+        (r'\bassign\b', 'designado'), (r'\bassigned\b', 'designado'),
+        # Preposições e conectivos comuns
+        (r'\bwith\b', 'com'), (r'\bwithout\b', 'sem'),
+        (r'\bin\b', 'em'), (r'\bon\b', 'em'),
+        (r'\bfor\b', 'por'), (r'\bas\b', 'como'),
+        (r'\bthe\b', 'o'), (r'\ba\b', 'um'),
+        (r'\ban\b', 'um'), (r'\band\b', 'e'),
+        (r'\bof\b', 'de'), (r'\bto\b', 'para'),
+        (r'\bfrom\b', 'de'), (r'\bis\b', 'está'),
+        (r'\bhas\b', 'tem'), (r'\bhave\b', 'ter'),
+        (r'\bnot\b', 'não'), (r'\bno\b', 'nenhum'),
+        (r'\bat\b', 'em'), (r'\bby\b', 'por'),
+        (r'\bafter\b', 'após'), (r'\bbefore\b', 'antes de'),
+        (r'\buntil\b', 'até'), (r'\bsince\b', 'desde'),
+        (r'\bthat\b', 'que'), (r'\bthis\b', 'este'),
+        (r'\bwhen\b', 'quando'), (r'\bwhich\b', 'que'),
+        (r'\bthere\b', 'lá'), (r'\bhere\b', 'aqui'),
+        (r'\bsome\b', 'algum'), (r'\ball\b', 'todos'),
+        (r'\bmore\b', 'mais'), (r'\bless\b', 'menos'),
+        (r'\bper\b', 'por'), (r'\babout\b', 'sobre'),
+        # Verbos comuns
+        (r'\bplaying\b', 'jogando'), (r'\bplayed\b', 'jogou'),
+        (r'\bplays\b', 'joga'), (r'\bplay\b', 'jogar'),
+        (r'\bsitting out\b', 'ficará fora'), (r'\bsitting\b', 'sentado'),
+        (r'\bmissing\b', 'perdendo'), (r'\bmissed\b', 'perdeu'),
+        (r'\bmiss\b', 'perder'), (r'\bavailable\b', 'disponível'),
+        (r'\bactivated\b', 'ativado'), (r'\bactive\b', 'ativo'),
+        (r'\bcleared\b', 'liberado'), (r'\bcleared for\b', 'liberado para'),
+        (r'\breturning\b', 'retornando'), (r'\bregained\b', 'recuperou'),
+        (r'\bunderwent\b', 'passou por'), (r'\bundergoing\b', 'passando por'),
+        (r'\bundergo\b', 'passar por'), (r'\bscheduled\b', 'programado'),
+        (r'\bexpected\b', 'deve'), (r'\banticipated\b', 'previsto'),
+        (r'\bevaluated\b', 'avaliado'), (r'\bevaluate\b', 'avaliar'),
+        (r'\bmonitored\b', 'monitorado'), (r'\bmonitor\b', 'monitorar'),
+        # Advérbios e expressões de tempo
+        (r'\btoday\b', 'hoje'), (r'\bTuesday\b', 'terça-feira'),
+        (r'\bMonday\b', 'segunda-feira'), (r'\bWednesday\b', 'quarta-feira'),
+        (r'\bThursday\b', 'quinta-feira'), (r'\bFriday\b', 'sexta-feira'),
+        (r'\bSaturday\b', 'sábado'), (r'\bSunday\b', 'domingo'),
+        (r'\bJanuary\b', 'janeiro'), (r'\bFebruary\b', 'fevereiro'),
+        (r'\bMarch\b', 'março'), (r'\bApril\b', 'abril'),
+        (r'\bMay\b', 'maio'), (r'\bJune\b', 'junho'),
+        (r'\bJuly\b', 'julho'), (r'\bAugust\b', 'agosto'),
+        (r'\bSeptember\b', 'setembro'), (r'\bOctober\b', 'outubro'),
+        (r'\bNovember\b', 'novembro'), (r'\bDecember\b', 'dezembro'),
+    ]
+
+    result = text
+    for pattern, replacement in replacements:
+        result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
+
+    return result
+
+
 def _fetch_team_injuries(team):
     """Busca lesões de um time específico via ESPN core API."""
     team_id, abbr, full_name, color = team
@@ -132,7 +267,7 @@ def _fetch_team_injuries(team):
             'status_color': cat['color'],
             'priority':     cat['priority'],
             'return_date':  return_date,
-            'description':  short_desc[:500],
+            'description':  _translate_injury_desc(short_desc[:500]),
         })
     return injuries
 
