@@ -32,6 +32,52 @@ _STATUS_PT = {
     'Final/Pen': 'Encerrado (Pen.)',
 }
 
+def _build_event_text(e):
+    """Monta descrição do evento em PT-BR a partir dos campos estruturados da ESPN."""
+    etype = e.get('type', {}).get('text', '')
+    athlete = e.get('athletesInvolved', [])
+    team = e.get('team', {}).get('displayName', '') or e.get('team', {}).get('abbreviation', '')
+    clock = e.get('clock', {}).get('displayValue', '')
+
+    # Nome do atleta principal
+    name1 = athlete[0].get('displayName', '') if athlete else ''
+    name2 = athlete[1].get('displayName', '') if len(athlete) > 1 else ''
+
+    EVENT_PT = {
+        'Goal':         'Gol',
+        'Own Goal':     'Gol Contra',
+        'Yellow Card':  'Cartão Amarelo',
+        'Red Card':     'Cartão Vermelho',
+        'Penalty':      'Pênalti',
+        'Substitution': 'Substituição',
+    }
+    label = EVENT_PT.get(etype, etype)
+
+    if etype in ('Goal', 'Own Goal', 'Penalty'):
+        txt = f'{label} — {name1}' if name1 else label
+        if name2:
+            txt += f' (ass. {name2})'
+        if team:
+            txt += f' [{team}]'
+    elif etype in ('Yellow Card', 'Red Card'):
+        txt = f'{label} — {name1}' if name1 else label
+        if team:
+            txt += f' [{team}]'
+    elif etype == 'Substitution':
+        if name1 and name2:
+            txt = f'Substituição: {name2} ▶ {name1}'
+        elif name1:
+            txt = f'Substituição: {name1}'
+        else:
+            txt = 'Substituição'
+        if team:
+            txt += f' [{team}]'
+    else:
+        txt = label
+
+    return txt
+
+
 def _translate_status(s):
     if not s:
         return s
@@ -136,12 +182,17 @@ def get_stats(game_id, league_key):
 
     # Eventos chave (gols, cartoes)
     IMPORTANT = {'Goal', 'Yellow Card', 'Red Card', 'Penalty', 'Own Goal', 'Substitution'}
+    EVENT_PT = {
+        'Goal': 'Gol', 'Own Goal': 'Gol Contra',
+        'Yellow Card': 'Cartão Amarelo', 'Red Card': 'Cartão Vermelho',
+        'Penalty': 'Pênalti', 'Substitution': 'Substituição',
+    }
     key_events = data.get('keyEvents', [])
     result['events'] = [
         {
             'type':  e.get('type', {}).get('text', ''),
             'clock': e.get('clock', {}).get('displayValue', ''),
-            'text':  e.get('text', ''),
+            'text':  _build_event_text(e),
             'team':  e.get('team', {}).get('displayName', '') if e.get('team') else '',
         }
         for e in key_events
