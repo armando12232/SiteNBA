@@ -121,7 +121,7 @@ def _translate_batch(texts):
                     "content-type": "application/json"
                 }
             )
-            with ur.urlopen(req, timeout=20) as r:
+            with ur.urlopen(req, timeout=15) as r:
                 resp = js.loads(r.read())
             raw = resp["content"][0]["text"].strip()
 
@@ -205,11 +205,14 @@ def get_all_injuries():
     all_injuries = []
     with ThreadPoolExecutor(max_workers=8) as ex:
         futures = {ex.submit(_fetch_team_injuries, team): team for team in NBA_TEAMS}
-        for fut in as_completed(futures, timeout=8):
-            try:
-                all_injuries.extend(fut.result())
-            except Exception:
-                pass
+        try:
+            for fut in as_completed(futures, timeout=20):
+                try:
+                    all_injuries.extend(fut.result())
+                except Exception:
+                    pass
+        except Exception:
+            pass  # timeout parcial: usa o que já chegou
 
     all_injuries.sort(key=lambda x: (-x['priority'], x['team'], x['athlete_name']))
 
