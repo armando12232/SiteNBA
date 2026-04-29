@@ -1130,7 +1130,6 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
         <button id="page-nhl-btn" class="page-nav-btn" onclick="switchPage('nhl')">🏒 NHL</button>
         <button id="page-mlb-btn" class="page-nav-btn" onclick="switchPage('mlb')">⚾ MLB</button>
         <button id="page-football-btn" class="page-nav-btn" onclick="switchPage('football')">⚽ Futebol</button>
-        <button id="page-injuries-btn" class="page-nav-btn" onclick="switchPage('injuries')">🩹 Lesões</button>
       </div>
 
       <!-- ══ PÁGINA HOME ══ -->
@@ -1216,7 +1215,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
             <div style="font-family:var(--display);font-size:12px;font-weight:700;color:var(--red2);letter-spacing:.06em;text-transform:uppercase">⚾ Abrir →</div>
           </div>
 
-          <div onclick="switchPage('injuries')" style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden"
+          <div onclick="switchPage('nba');setTimeout(()=>switchNBATab('injuries'),100)" style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden"
             onmouseover="this.style.borderColor='rgba(220,38,38,.4)';this.style.transform='translateY(-2px)'"
             onmouseout="this.style.borderColor='var(--border2)';this.style.transform=''">
             <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(220,38,38,.1),transparent 70%);pointer-events:none"></div>
@@ -1260,6 +1259,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
           <div id="nba-tab-pill" style="position:absolute;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;top:3px;height:calc(100% - 6px);transition:all .25s cubic-bezier(.4,0,.2,1);pointer-events:none;z-index:0"></div>
           <button id="nba-tab-props-btn" onclick="switchNBATab('props')" style="position:relative;z-index:1;background:transparent;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--body);transition:color .2s">📊 Player Props</button>
           <button id="nba-tab-live-btn" onclick="switchNBATab('live')" style="position:relative;z-index:1;background:transparent;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body);transition:color .2s">🔴 Ao Vivo</button>
+          <button id="nba-tab-injuries-btn" onclick="switchNBATab('injuries')" style="position:relative;z-index:1;background:transparent;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;color:var(--text3);cursor:pointer;font-family:var(--body);transition:color .2s">🩹 Lesões</button>
         </div>
 
         <!-- Props -->
@@ -1316,6 +1316,20 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
         </div>
       </div>
       </div><!-- end live-view -->
+
+      <!-- Lesões NBA (sub-tab) -->
+      <div id="injuries-nba-view" style="display:none">
+        <div id="injuries-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px"></div>
+        <div style="margin-bottom:12px">
+          <div id="injuries-team-filter" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        </div>
+        <div id="injuries-list">
+          <div style="color:var(--text3);padding:40px 0;text-align:center">
+            <div style="display:inline-block;width:20px;height:20px;border:2px solid rgba(255,255,255,.15);border-top-color:rgba(255,255,255,.6);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:10px"></div>
+            <div>Carregando lesões...</div>
+          </div>
+        </div>
+      </div>
       </div>
 
       <!-- ══ PÁGINA NFL ══ -->
@@ -1352,35 +1366,6 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
           <button onclick="loadSportsPage('mlb')" style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:var(--body)">🔄 Atualizar</button>
         </div>
         <div id="mlb-content"><div style="color:var(--text3);padding:40px 0;text-align:center">Carregando jogos da MLB...</div></div>
-      </div>
-
-      <!-- ══ PÁGINA LESÕES ══ -->
-      <div id="page-injuries" style="display:none">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:10px">
-          <div>
-            <div style="font-family:var(--display);font-size:22px;font-weight:900;letter-spacing:.02em">🩹 <span style="color:var(--red2)">Lesões e Status</span></div>
-            <div style="font-size:12px;color:var(--text3);margin-top:2px">NBA · Atualizado via ESPN a cada 10 minutos</div>
-          </div>
-          <button onclick="loadInjuriesPage(true)" id="injuries-refresh-btn" style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;font-family:var(--body)">🔄 Atualizar</button>
-        </div>
-        <div style="font-size:13px;color:var(--text3);margin-bottom:20px">Veja quem está fora, quem é dúvida e quem entra em quadra — afeta diretamente as props.</div>
-
-        <!-- Stats por status -->
-        <div id="injuries-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px"></div>
-
-        <!-- Filtro de times -->
-        <div style="margin-bottom:16px">
-          <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Filtrar por time</div>
-          <div id="injuries-team-filter" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-        </div>
-
-        <!-- Lista -->
-        <div id="injuries-list">
-          <div style="color:var(--text3);padding:60px 0;text-align:center">
-            <div style="display:inline-block;width:24px;height:24px;border:3px solid rgba(255,255,255,.15);border-top-color:rgba(255,255,255,.6);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:12px"></div>
-            <div>Carregando relatório de lesões...</div>
-          </div>
-        </div>
       </div>
 
       <!-- ══ PÁGINA FUTEBOL ══ -->
@@ -2011,7 +1996,7 @@ function renderPropsTable() {
     const hasBP    = Object.keys(bpData).length > 0;
     const hasGames = Object.keys(games).length > 0;
     if (!hasBP) {
-      loading.innerHTML = '<div style="color:var(--text3);padding:20px 0">Buscando props do BettingPros...<br><span style="font-size:11px;opacity:.6">Aguarde alguns segundos</span></div>';
+      loading.innerHTML = '';
     } else if (!hasGames) {
       loading.innerHTML = '<div style="color:var(--text3);padding:20px 0">Sem jogos nas próximas 24h<br><span style="font-size:11px;opacity:.6">Tente novamente mais tarde</span></div>';
     } else {
@@ -4055,7 +4040,7 @@ let _currentFootballTab = 'jogos';
 
 function switchPage(page) {
   _currentPage = page;
-  ['home', 'nba', 'nfl', 'nhl', 'mlb', 'football', 'injuries'].forEach(p => {
+  ['home', 'nba', 'nfl', 'nhl', 'mlb', 'football'].forEach(p => {
     var btn = document.getElementById('page-' + p + '-btn');
     var el  = document.getElementById('page-' + p);
     var statsRow = document.getElementById('stats-row-' + p);
@@ -4083,7 +4068,6 @@ function switchPage(page) {
   if (page === 'nba')      { switchNBATab(_currentNBATab); }
   if (page === 'football') { _footballData = null; switchFootballTab(_currentFootballTab); }
   if (page === 'nfl' || page === 'nhl' || page === 'mlb') { loadSportsPage(page); }
-  if (page === 'injuries') { loadInjuriesPage(); }
 }
 
 // ── SPORTS PAGES (NFL / NHL / MLB) ───────────────────────────────────────────
@@ -4408,7 +4392,7 @@ function hydrateHomeStats() {
 
 function switchNBATab(tab) {
   _currentNBATab = tab;
-  ['props', 'live'].forEach(t => {
+  ['props', 'live', 'injuries'].forEach(t => {
     const btn = document.getElementById('nba-tab-' + t + '-btn');
     if (btn) btn.style.color = t === tab ? 'var(--text)' : 'var(--text3)';
   });
@@ -4419,11 +4403,14 @@ function switchNBATab(tab) {
     pill.style.left  = activeBtn.offsetLeft + 'px';
     pill.style.width = activeBtn.offsetWidth + 'px';
   }
-  const todayEl = document.getElementById('today-view');
-  const liveEl  = document.getElementById('live-view');
-  if (todayEl) todayEl.style.display = tab === 'props' ? 'block' : 'none';
-  if (liveEl)  liveEl.style.display  = tab === 'live'  ? 'block' : 'none';
-  if (tab === 'props') loadTodayGames();
+  const todayEl    = document.getElementById('today-view');
+  const liveEl     = document.getElementById('live-view');
+  const injuriesEl = document.getElementById('injuries-nba-view');
+  if (todayEl)    todayEl.style.display    = tab === 'props'    ? 'block' : 'none';
+  if (liveEl)     liveEl.style.display     = tab === 'live'     ? 'block' : 'none';
+  if (injuriesEl) injuriesEl.style.display = tab === 'injuries' ? 'block' : 'none';
+  if (tab === 'props')    loadTodayGames();
+  if (tab === 'injuries') loadInjuriesPage();
 }
 
 async function loadFootballLive() {
