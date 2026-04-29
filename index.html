@@ -4671,13 +4671,33 @@ function loadFtStats(gameId, leagueKey, homeName, awayName) {
           'Yellow Card': '\u{1F7E8}', 'Red Card': '\u{1F7E5}',
           'Penalty': '\u26BD', 'Substitution': '\u{1F504}'
         };
-        const evHTML = events.map(e => `
+        const EVENT_PT = {
+          'Goal': 'Gol', 'Own Goal': 'Gol Contra',
+          'Yellow Card': 'Cartão Amarelo', 'Red Card': 'Cartão Vermelho',
+          'Penalty': 'Pênalti', 'Substitution': 'Substituição',
+          'Missed Penalty': 'Pênalti Perdido', 'Var': 'VAR',
+        };
+        const evHTML = events.map(e => {
+          const typePT = EVENT_PT[e.type] || e.type;
+          // Traduzir texto do evento (ex: "Goal - Player Name" → "Gol - Player Name")
+          let txt = e.text || e.type;
+          txt = txt.replace(/^Goal/i, 'Gol')
+                   .replace(/^Own Goal/i, 'Gol Contra')
+                   .replace(/^Yellow Card/i, 'Cartão Amarelo')
+                   .replace(/^Red Card/i, 'Cartão Vermelho')
+                   .replace(/^Penalty/i, 'Pênalti')
+                   .replace(/^Substitution/i, 'Substituição')
+                   .replace(/\bSubstitution\b/ig, 'Substituição')
+                   .replace(/\bon target\b/ig, 'no gol')
+                   .replace(/\bAssist\b/ig, 'Assistência')
+                   .replace(/\bown goal\b/ig, 'gol contra');
+          return `
           <div class="ft-event-item">
             <span class="ft-event-clock">${e.clock || ''}</span>
             <span class="ft-event-icon">${ICONS[e.type]||'\u2022'}</span>
-            <span class="ft-event-text">${e.text || e.type}</span>
-          </div>
-        `).join('');
+            <span class="ft-event-text">${txt}</span>
+          </div>`;
+        }).join('');
         eventsSection.innerHTML = `<div class="ft-modal-section-title">Eventos</div><div class="ft-event-list">${evHTML}</div>`;
       }
       // Jogadores
