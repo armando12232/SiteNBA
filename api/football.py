@@ -17,6 +17,27 @@ except ImportError:
 
 ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer'
 
+_STATUS_PT = {
+    'Half Time': 'Intervalo', 'HT': 'Intervalo',
+    'Full Time': 'Encerrado', 'FT': 'Encerrado',
+    'Extra Time': 'Prorrogação', 'ET': 'Prorrogação',
+    'Penalty': 'Pênaltis', 'Penalties': 'Pênaltis',
+    'Not Started': 'Agendado', 'Kick Off': 'Início',
+    'First Half': '1º Tempo', '1st Half': '1º Tempo',
+    'Second Half': '2º Tempo', '2nd Half': '2º Tempo',
+    'Postponed': 'Adiado', 'Cancelled': 'Cancelado',
+    'Abandoned': 'Abandonado', 'Suspended': 'Suspenso',
+    'Live': 'Ao Vivo', 'In Progress': 'Em Andamento',
+    'Final': 'Encerrado', 'Final/OT': 'Encerrado (Prorr.)',
+    'Final/Pen': 'Encerrado (Pen.)',
+}
+
+def _translate_status(s):
+    if not s:
+        return s
+    return _STATUS_PT.get(s, s)
+
+
 import time
 _CACHE = {}
 _CACHE_TTL = 600  # 10 min
@@ -69,7 +90,7 @@ def parse_fixture(ev, league, state=None):
         'away_logo':    away.get('team', {}).get('logo', ''),
         'away_goals':   away.get('score', None),
         'status':       s if s else 'pre',
-        'status_long':  status.get('type', {}).get('shortDetail', ''),
+        'status_long':  _translate_status(status.get('type', {}).get('shortDetail', '')),
         'elapsed':      elapsed,
         'period':       period,
         'live':         s == 'in',
