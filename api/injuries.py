@@ -17,10 +17,11 @@ def _cache_get(k):
         return v['data']
     return None
 
-def _cache_set(k, data, ttl=600):
+def _cache_set(k, data, ttl=600):  # 10min — injuries não mudam tão rápido
     _cache[k] = {'data': data, 'exp': time.time() + ttl}
 
 # ── Times NBA na ESPN ──────────────────────────────────────────────────────────
+# id, abbr, full_name, primary_color
 NBA_TEAMS = [
     (1,  'ATL', 'Atlanta Hawks',         '#E03A3E'),
     (2,  'BOS', 'Boston Celtics',        '#007A33'),
@@ -54,7 +55,8 @@ NBA_TEAMS = [
     (27, 'WAS', 'Washington Wizards',    '#002B5C'),
 ]
 
-# ── Status ─────────────────────────────────────────────────────────────────────
+# ── Mapeamento status ESPN → categorias visuais ─────────────────────────────────
+# ESPN retorna: "Out", "Day-To-Day", "Out For Season", "Doubtful", "Questionable", "Probable"
 STATUS_CATEGORIES = {
     'out':            {'label': 'Out',             'color': '#dc2626', 'priority': 5},
     'out for season': {'label': 'Out For Season',  'color': '#7c3aed', 'priority': 6},
@@ -79,76 +81,71 @@ def _espn_fetch(url, timeout=8):
         })
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return json.loads(r.read())
-    except Exception:
+    except Exception as e:
         return None
 
-# ── Tradução em batch via Claude Haiku ────────────────────────────────────────
 def _translate_batch(texts):
-    """Traduz lista de descrições EN→PT-BR via Claude API em chunks de 40."""
+    """Traduz lista de descrições EN→PT-BR via Claude API. Cache por texto."""
     if not texts:
         return []
     import urllib.request as ur, json as js
 
-    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    key = os.environ.get("ANTHROPIC_API_KEY","")
     if not key:
-        return texts
+        return texts  # sem key, retorna original
 
+    # Só traduzir os que ainda não estão em cache
     cache_key = "trans_" + str(hash("|".join(texts)))
     cached = _cache_get(cache_key)
     if cached:
         return cached
 
-    def _translate_chunk(chunk):
-        numbered = "\n".join(f"{i+1}. {t}" for i, t in enumerate(chunk))
-        prompt = (
-            "Traduza as descrições de lesão de NBA abaixo para português brasileiro. "
-            "Preserve nomes próprios (jogadores, times, jornalistas, veículos de imprensa). "
-            "Responda APENAS com as traduções numeradas no formato '1. texto', uma por linha, sem comentários extras.\n\n"
-            + numbered
+    numbered = "\n".join(f"{i+1}. {t}" for i,t in enumerate(texts))
+    prompt = (
+        "Traduza as descrições de lesão de NBA abaixo para português brasileiro. "
+        "Preserve nomes próprios (jogadores, times, jornalistas). "
+        "Responda APENAS com as traduções numeradas, sem explicações.\n\n"
+        + numbered
+    )
+    try:
+        body = js.dumps({
+            "model": "claude-haiku-4-5-20251001",
+            "max_tokens": 2000,
+            "messages": [{"role": "user", "content": prompt}]
+        }).encode()
+        req = ur.Request(
+            "https://api.anthropic.com/v1/messages",
+            data=body,
+            headers={
+                "x-api-key": key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json"
+            }
         )
-        try:
-            body = js.dumps({
-                "model": "claude-haiku-4-5-20251001",
-                "max_tokens": 4096,
-                "messages": [{"role": "user", "content": prompt}]
-            }).encode()
-            req = ur.Request(
-                "https://api.anthropic.com/v1/messages",
-                data=body,
-                headers={
-                    "x-api-key": key,
-                    "anthropic-version": "2023-06-01",
-                    "content-type": "application/json"
-                }
-            )
-            with ur.urlopen(req, timeout=15) as r:
-                resp = js.loads(r.read())
-            raw = resp["content"][0]["text"].strip()
+        with ur.urlopen(req, timeout=10) as r:
+            resp = js.loads(r.read())
+        raw = resp["content"][0]["text"].strip()
+        # Parsear linhas numeradas "1. texto"
+        lines = [l for l in raw.split("\n") if l.strip()]
+        result = []
+        for i, orig in enumerate(texts):
+            match = next((l for l in lines if l.startswith(f"{i+1}.")), None)
+            result.append(match[len(f"{i+1}."):].strip() if match else orig)
+        _cache_set(cache_key, result, ttl=86400)  # cache 24h
+        return result
+    except Exception:
+        return texts  # fallback: original em inglês
 
-            import re
-            parsed = {}
-            for line in raw.split("\n"):
-                line = line.strip()
-                m = re.match(r'^(\d+)\.\s+(.*)', line)
-                if m:
-                    idx = int(m.group(1)) - 1
-                    parsed[idx] = m.group(2).strip()
 
-            return [parsed.get(i, chunk[i]) for i in range(len(chunk))]
-        except Exception:
-            return chunk
+def _translate_injury_desc(text):
+    if not text:
+        return text
+    result = _translate_batch([text])
+    return result[0] if result else text
 
-    CHUNK_SIZE = 40
-    result = []
-    for start in range(0, len(texts), CHUNK_SIZE):
-        chunk = texts[start:start + CHUNK_SIZE]
-        result.extend(_translate_chunk(chunk))
 
-    _cache_set(cache_key, result, ttl=86400)
-    return result
-
-# ── Fetch por time ─────────────────────────────────────────────────────────────
 def _fetch_team_injuries(team):
+    """Busca lesões de um time específico via ESPN core API."""
     team_id, abbr, full_name, color = team
     url = (f'https://sports.core.api.espn.com/v2/sports/basketball/'
            f'leagues/nba/teams/{team_id}/injuries')
@@ -158,6 +155,7 @@ def _fetch_team_injuries(team):
 
     injuries = []
     for ref_item in data.get('items', []):
+        # Cada item é um $ref para o detalhe da lesão
         ref_url = ref_item.get('$ref') if isinstance(ref_item, dict) else None
         if not ref_url:
             continue
@@ -165,7 +163,8 @@ def _fetch_team_injuries(team):
         if not detail:
             continue
 
-        athlete_ref  = detail.get('athlete', {}).get('$ref')
+        # Extrair athlete info via $ref
+        athlete_ref = detail.get('athlete', {}).get('$ref')
         athlete_data = _espn_fetch(athlete_ref, timeout=5) if athlete_ref else None
 
         athlete_name = athlete_data.get('displayName', '—') if athlete_data else '—'
@@ -177,7 +176,8 @@ def _fetch_team_injuries(team):
         status      = detail.get('status', '') or detail.get('type', {}).get('description', '')
         short_desc  = detail.get('shortComment', '') or detail.get('longComment', '')
         return_date = detail.get('details', {}).get('returnDate', '')
-        cat         = _categorize_status(status)
+
+        cat = _categorize_status(status)
 
         injuries.append({
             'team':         abbr,
@@ -192,50 +192,52 @@ def _fetch_team_injuries(team):
             'status_color': cat['color'],
             'priority':     cat['priority'],
             'return_date':  return_date,
-            'description':  short_desc[:500],  # tradução feita em batch depois
+            'description':  _translate_injury_desc(short_desc[:500]),
         })
     return injuries
 
-# ── Busca todos os 30 times ────────────────────────────────────────────────────
+
 def get_all_injuries():
+    """Busca lesões de todos os 30 times em paralelo."""
     cached = _cache_get('all_injuries')
     if cached:
         return cached
 
     all_injuries = []
+    # Paralelo: 8 workers — ESPN aguenta tranquilo
     with ThreadPoolExecutor(max_workers=8) as ex:
         futures = {ex.submit(_fetch_team_injuries, team): team for team in NBA_TEAMS}
-        try:
-            for fut in as_completed(futures, timeout=20):
-                try:
-                    all_injuries.extend(fut.result())
-                except Exception:
-                    pass
-        except Exception:
-            pass  # timeout parcial: usa o que já chegou
+        for fut in as_completed(futures, timeout=8):
+            try:
+                all_injuries.extend(fut.result())
+            except Exception:
+                pass
 
+    # Ordenar: prioridade alta primeiro
     all_injuries.sort(key=lambda x: (-x['priority'], x['team'], x['athlete_name']))
 
-    # Tradução em batch — UMA chamada pra tudo
-    descs      = [i['description'] for i in all_injuries]
+    # Traduzir todas as descrições em batch (1 chamada API pra tudo)
+    descs = [i['description'] for i in all_injuries]
     translated = _translate_batch(descs)
     for i, inj in enumerate(all_injuries):
         inj['description'] = translated[i]
 
+    # Stats por categoria
     by_cat = {}
     for inj in all_injuries:
         st = inj['status']
         by_cat[st] = by_cat.get(st, 0) + 1
 
     result = {
-        'total':      len(all_injuries),
-        'by_status':  by_cat,
-        'by_team':    _group_by_team(all_injuries),
-        'injuries':   all_injuries,
-        'updated_at': int(time.time()),
+        'total':       len(all_injuries),
+        'by_status':   by_cat,
+        'by_team':     _group_by_team(all_injuries),
+        'injuries':    all_injuries,
+        'updated_at':  int(time.time()),
     }
     _cache_set('all_injuries', result, ttl=600)
     return result
+
 
 def _group_by_team(injuries):
     grouped = {}
@@ -248,12 +250,14 @@ def _group_by_team(injuries):
         grouped[t]['players'].append(inj['athlete_name'])
     return list(grouped.values())
 
-# ── Handler HTTP ───────────────────────────────────────────────────────────────
+
+# ── Handler ────────────────────────────────────────────────────────────────────
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         ip = get_client_ip(self.headers)
         if not rate_limit_check(ip):
             self._send(429, {'error': 'rate limited'}); return
+
         try:
             data = get_all_injuries()
             self._send(200, data)
