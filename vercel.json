@@ -22,7 +22,7 @@
       "maxDuration": 10
     },
     "api/injuries.py": {
-      "maxDuration": 15
+      "maxDuration": 30
     }
   },
   "headers": [
