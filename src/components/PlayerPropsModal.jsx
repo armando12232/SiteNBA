@@ -3,11 +3,13 @@ import { getPregameByName } from '../api/nba.js';
 import { ensureHalfLine, getBestProp } from '../utils/props.js';
 
 export function PlayerPropsModal({ playerName, onClose }) {
+  const [activeStat, setActiveStat] = useState('pts');
   const [state, setState] = useState({ loading: true, error: null, data: null });
 
   useEffect(() => {
     if (!playerName) return;
     let alive = true;
+    setActiveStat('pts');
     setState({ loading: true, error: null, data: null });
 
     getPregameByName(playerName)
@@ -26,8 +28,9 @@ export function PlayerPropsModal({ playerName, onClose }) {
   if (!playerName) return null;
 
   const data = state.data;
-  const best = getBestProp(data);
-  const stat = best?.stat || 'pts';
+  const activeProp = data?.props?.[activeStat];
+  const best = activeProp?.line != null ? { stat: activeStat, ...activeProp } : getBestProp(data);
+  const stat = best?.stat || activeStat || 'pts';
   const line = ensureHalfLine(best?.line ?? data?.synthetic_lines?.pts);
   const games = data?.last5_games || [];
   const maxValue = Math.max(...games.map((game) => Number(game[stat] ?? game.pts ?? 0)), Number(line) || 20, 1);
@@ -53,6 +56,19 @@ export function PlayerPropsModal({ playerName, onClose }) {
 
         {!state.loading && !state.error ? (
           <>
+            <div className="modalTabs">
+              {Object.entries(statLabels).map(([key, label]) => (
+                <button
+                  type="button"
+                  key={key}
+                  className={stat === key ? 'active' : ''}
+                  onClick={() => setActiveStat(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
             <div className="propSummary modalSummary">
               <ModalMetric label="Temp" value={data?.season_avg?.[stat] ?? '-'} />
               <ModalMetric label="L5" value={data?.last5_avg?.[stat] ?? '-'} />
@@ -83,6 +99,13 @@ export function PlayerPropsModal({ playerName, onClose }) {
     </div>
   );
 }
+
+const statLabels = {
+  pts: 'Pontos',
+  reb: 'Rebotes',
+  ast: 'Assists',
+  fg3m: '3PT',
+};
 
 function ModalMetric({ label, value, accent = false }) {
   return (

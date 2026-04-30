@@ -35,3 +35,8 @@ export function getPregame(playerId) {
 export function getPregameByName(name) {
   return fetchJson(`/api/nba?type=pregame_by_name&name=${encodeURIComponent(name)}`);
 }
+
+export function clearPregameCache() {
+  pregameCache.clear();
+  pregameInflight.clear();
+}

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { getPregame } from '../api/nba.js';
+import { useEffect, useMemo, useState } from 'react';
+import { clearPregameCache, getPregame } from '../api/nba.js';
 import { PREGAME_PLAYERS } from '../data/pregamePlayers.js';
 import { promisePool } from '../utils/promisePool.js';
 import { confidenceFromEdge, ensureHalfLine, getBestProp } from '../utils/props.js';
@@ -12,6 +12,10 @@ const statLabels = {
 };
 
 export function PregameRadar({ onSelectPlayer }) {
+  const [activeStat, setActiveStat] = useState('pts');
+  const [sortBy, setSortBy] = useState('edge');
+  const [query, setQuery] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
   const [state, setState] = useState({
     loading: true,
     error: null,
@@ -43,7 +47,18 @@ export function PregameRadar({ onSelectPlayer }) {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [refreshKey]);
+
+  const visiblePlayers = useMemo(() => {
+    const cleaned = query.trim().toLowerCase();
+    const filtered = cleaned
+      ? state.players.filter((player) => player.player_name?.toLowerCase().includes(cleaned))
+      : state.players;
+    return sortPlayers(filtered, activeStat, sortBy);
+  }, [activeStat, query, sortBy, state.players]);
+
+  const topEdge = visiblePlayers[0]?.props?.[activeStat]?.edge;
+  const avgHit = averageHitRate(visiblePlayers, activeStat);
 
   return (
     <section className="panel radarPanel">
@@ -64,26 +79,78 @@ export function PregameRadar({ onSelectPlayer }) {
         <span className="statusPill">{state.loading ? 'Carregando' : `${state.players.length} jogadores`}</span>
       </div>
 
+      <div className="radarToolbar">
+        <div className="segmented">
+          {Object.entries(statLabels).map(([stat, label]) => (
+            <button
+              type="button"
+              key={stat}
+              className={activeStat === stat ? 'active' : ''}
+              onClick={() => setActiveStat(stat)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+          <option value="edge">Ordenar: Edge</option>
+          <option value="hit">Ordenar: Hit rate</option>
+          <option value="l5">Ordenar: L5</option>
+        </select>
+      </div>
+
+      <div className="radarSubToolbar">
+        <label className="searchBox">
+          <span>Buscar jogador</span>
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="LeBron, Luka, Jokic..."
+          />
+        </label>
+        <div className="radarStats">
+          <span>Top edge <strong>{topEdge ?? '-'}</strong></span>
+          <span>Hit medio <strong>{avgHit != null ? `${avgHit}%` : '-'}</strong></span>
+          <button
+            type="button"
+            className="refreshButton"
+            onClick={() => {
+              clearPregameCache();
+              setRefreshKey((value) => value + 1);
+            }}
+          >
+            Atualizar
+          </button>
+        </div>
+      </div>
+
       {state.error ? <div className="alertBox">{state.error.message}</div> : null}
       {state.loading ? <div className="loadingGrid">Buscando dados NBA...</div> : null}
 
       {!state.loading && !state.error ? (
         <div className="pregameGrid">
-          {state.players.map((player) => (
-            <PregameCard key={player.player_id} player={player} onSelectPlayer={onSelectPlayer} />
+          {visiblePlayers.map((player) => (
+            <PregameCard
+              key={player.player_id}
+              player={player}
+              activeStat={activeStat}
+              onSelectPlayer={onSelectPlayer}
+            />
           ))}
+          {!visiblePlayers.length ? <div className="emptyState">Nenhum jogador encontrado para esse filtro.</div> : null}
         </div>
       ) : null}
     </section>
   );
 }
 
-function PregameCard({ player, onSelectPlayer }) {
-  const best = getBestProp(player);
-  const edge = Number(best?.edge ?? player.edge_points ?? 0);
+function PregameCard({ player, activeStat, onSelectPlayer }) {
+  const activeProp = player.props?.[activeStat];
+  const best = activeProp?.line != null ? { stat: activeStat, ...activeProp } : getBestProp(player);
+  const stat = best?.stat || activeStat || 'pts';
+  const edge = Number(best?.edge ?? 0);
   const confidence = confidenceFromEdge(edge);
   const line = ensureHalfLine(best?.line ?? player.synthetic_lines?.pts);
-  const stat = best?.stat || 'pts';
   const lastGames = (player.last5_games || []).slice(0, 10);
   const maxValue = Math.max(...lastGames.map((game) => Number(game[stat] ?? game.pts ?? 0)), Number(line) || 20, 1);
   const photoUrl = `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.player_id}.png`;
@@ -128,6 +195,24 @@ function PregameCard({ player, onSelectPlayer }) {
       </div>
     </article>
   );
+}
+
+function sortPlayers(players, stat, sortBy) {
+  return [...players].sort((a, b) => {
+    const aProp = a.props?.[stat] || {};
+    const bProp = b.props?.[stat] || {};
+    if (sortBy === 'hit') return (bProp.hit_rate ?? -1) - (aProp.hit_rate ?? -1);
+    if (sortBy === 'l5') return (b.last5_avg?.[stat] ?? -1) - (a.last5_avg?.[stat] ?? -1);
+    return (bProp.edge ?? -999) - (aProp.edge ?? -999);
+  });
+}
+
+function averageHitRate(players, stat) {
+  const values = players
+    .map((player) => player.props?.[stat]?.hit_rate)
+    .filter((value) => typeof value === 'number');
+  if (!values.length) return null;
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
 }
 
 function Metric({ label, value, accent = false }) {
