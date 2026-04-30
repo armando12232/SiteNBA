@@ -1569,6 +1569,19 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
   }
 }
 
+async function promisePool(items, limit, worker) {
+  const results = new Array(items.length);
+  let next = 0;
+  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await worker(items[i], i);
+    }
+  });
+  await Promise.all(runners);
+  return results;
+}
+
 // ─── PLANOS ──────────────────────────────────────────────────────────────────
 const PLANS = {
   free:    { name: 'Free',    price: 0,   color: '#555',    props: ['pts'],                    alertsPerDay: 5,  ai: false, history: false },
@@ -1674,6 +1687,26 @@ const NBA_HEADERS = {
 
 // Cache local para não buscar o mesmo jogador duas vezes
 const pregameCache = {};
+const pregameInflight = {};
+
+async function fetchPregameCached(playerId, playerName = '') {
+  if (pregameCache[playerId]) return pregameCache[playerId];
+  if (pregameInflight[playerId]) return pregameInflight[playerId];
+
+  pregameInflight[playerId] = fetchNBA('pregame', null, playerId)
+    .then(data => {
+      if (data && !data.error) {
+        const result = playerName ? { ...data, player_name: playerName } : data;
+        pregameCache[playerId] = result;
+        return result;
+      }
+      return null;
+    })
+    .catch(() => null)
+    .finally(() => { delete pregameInflight[playerId]; });
+
+  return pregameInflight[playerId];
+}
 
 async function fetchPlayerPregame(playerId, playerName) {
   if (pregameCache[playerId]) return pregameCache[playerId];
@@ -2738,17 +2771,10 @@ async function loadGamePregame(g) {
   const toFetch = PREGAME_PLAYERS.filter(p => starIds.includes(p.id));
   if (!toFetch.length) return;
 
-  const results = await Promise.allSettled(
-    toFetch.map(p =>
-      fetchNBA('pregame', null, p.id)
-        .then(data => ({ ...data, player_name: p.name }))
-        .catch(() => null)
-    )
-  );
+  const results = await promisePool(toFetch, 2, p => fetchPregameCached(p.id, p.name));
 
   const valid = results
-    .filter(r => r.status === 'fulfilled' && r.value && !r.value.error)
-    .map(r => r.value)
+    .filter(Boolean)
     .sort((a,b) => (b.edge_points||0) - (a.edge_points||0));
 
   window._todayPregameCache = window._todayPregameCache || {};
@@ -2801,16 +2827,9 @@ async function loadPregame() {
     const seen = new Set();
     const unique = PREGAME_PLAYERS.filter(p => { if (seen.has(p.id)) return false; seen.add(p.id); return true; });
 
-    // Busca via servidor (nba_api) em paralelo
-    const promises = unique.map(p =>
-      fetchNBA('pregame', null, p.id)
-        .then(data => ({ ...data, player_name: p.name }))
-        .catch(e => { console.error(p.name, e); return null; })
-    );
-    const settled = await Promise.allSettled(promises);
-    const results = settled
-      .filter(r => r.status === 'fulfilled' && r.value)
-      .map(r => r.value);
+    // Busca via servidor (nba_api) com concorrência limitada para não estourar o Vercel.
+    const results = (await promisePool(unique, 3, p => fetchPregameCached(p.id, p.name)))
+      .filter(Boolean);
 
     if (!results.length) { loading.textContent = 'Não foi possível carregar o radar pré-jogo agora.'; return; }
     results.sort((a, b) => (b.edge_points || 0) - (a.edge_points || 0));
@@ -3255,9 +3274,7 @@ async function runMonitor() {
         // ─── PropScore: equação unificada ───────────────────────────────
         // Pré-jogo: buscar silenciosamente se não tiver no cache ainda
         if (!pregameCache[player.playerId]) {
-          fetchNBA('pregame', null, player.playerId)
-            .then(data => { if (data && !data.error) pregameCache[player.playerId] = data; })
-            .catch(() => {});
+          fetchPregameCached(player.playerId);
         }
         const pg = pregameCache[player.playerId] || {};
         const hitRate = pg.hit_rates?.pts_last10 ?? null;
