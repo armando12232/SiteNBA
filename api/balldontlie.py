@@ -10,7 +10,11 @@ except ImportError:
     def rate_limit_check(ip): return True
     def get_client_ip(h): return '0.0.0.0'
 
-BLL_KEY = os.environ.get("BALLDONTLIE_KEY")
+BLL_KEY = (
+    os.environ.get("BALLDONTLIE_KEY")
+    or os.environ.get("balldontlie_key")
+    or os.environ.get("BALLDONTLIE_API_KEY")
+)
 BLL_BASE = "https://api.balldontlie.io/v1"
 
 _cache = {}
@@ -30,7 +34,7 @@ def _player_full_name(p):
 
 def _fetch(path, params=None):
     if not BLL_KEY:
-        raise RuntimeError("BALLDONTLIE_KEY not configured")
+        raise RuntimeError("BALLDONTLIE_KEY not configured. Set BALLDONTLIE_KEY in Vercel environment variables.")
 
     url = f"{BLL_BASE}/{path}"
     if params:
@@ -148,7 +152,9 @@ class handler(BaseHTTPRequestHandler):
             else:
                 self._send(400, {"error": "invalid type"})
         except Exception as e:
-            self._send(500, {"error": str(e)[:200]})
+            message = str(e)[:200]
+            status = 503 if "BALLDONTLIE_KEY not configured" in message else 500
+            self._send(status, {"error": message})
 
     def do_OPTIONS(self):
         self.send_response(200)
