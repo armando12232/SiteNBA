@@ -1,4 +1,4 @@
-import json, os, time, urllib.request
+import json, os, time, urllib.error, urllib.request
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
@@ -15,6 +15,8 @@ BLL_KEY = (
     or os.environ.get("balldontlie_key")
     or os.environ.get("BALLDONTLIE_API_KEY")
 )
+if BLL_KEY:
+    BLL_KEY = BLL_KEY.strip().strip('"').strip("'")
 BLL_BASE = "https://api.balldontlie.io/v1"
 
 _cache = {}
@@ -41,8 +43,14 @@ def _fetch(path, params=None):
         from urllib.parse import urlencode
         url += "?" + urlencode(params, doseq=True)
     req = urllib.request.Request(url, headers={"Authorization": BLL_KEY})
-    with urllib.request.urlopen(req, timeout=10) as r:
-        return json.loads(r.read())
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")[:500]
+        if e.code == 401:
+            raise RuntimeError("BALLDONTLIE unauthorized. Check the key value and Production environment in Vercel.")
+        raise RuntimeError(f"BALLDONTLIE HTTP {e.code}: {body}")
 
 def _search_player(name, per_page=10):
     name = (name or "").strip()
@@ -131,7 +139,13 @@ class handler(BaseHTTPRequestHandler):
         req_type = params.get("type", [""])[0]
 
         try:
-            if req_type == "debug_search":
+            if req_type == "health":
+                self._send(200, {
+                    "ok": True,
+                    "key_configured": bool(BLL_KEY),
+                    "base": BLL_BASE,
+                })
+            elif req_type == "debug_search":
                 name = params.get("name", [""])[0].strip()
                 exact, raw = _search_player(name, per_page=10)
                 self._send(200, {
@@ -165,7 +179,8 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Cache-Control', 'public, max-age=300')
+        cache_control = 'public, max-age=300' if status < 400 else 'no-store, no-cache, must-revalidate'
+        self.send_header('Cache-Control', cache_control)
         self.end_headers()
         self.wfile.write(json.dumps(data).encode())
 
