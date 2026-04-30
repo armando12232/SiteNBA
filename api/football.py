@@ -34,23 +34,47 @@ _STATUS_PT = {
 
 def _build_event_text(e):
     """Monta descrição do evento em PT-BR a partir dos campos estruturados da ESPN."""
-    etype = e.get('type', {}).get('text', '')
-    athlete = e.get('athletesInvolved', [])
+    import re
+    etype     = e.get('type', {}).get('text', '')
+    athlete   = e.get('athletesInvolved', [])
     team_name = (e.get('team') or {}).get('shortDisplayName', '') or (e.get('team') or {}).get('abbreviation', '')
-    raw_text = e.get('text', '')
+    raw_text  = e.get('text', '')
+    clock     = e.get('clock', {}).get('displayValue', '')
 
-    # Nome do atleta: athletesInvolved ou extrair do texto (ex: "Eduardo(Mirassol)")
-    name1 = ''
-    name2 = ''
+    # Extrair nomes dos atletas
+    name1 = name2 = ''
     if athlete:
         name1 = athlete[0].get('shortName') or athlete[0].get('displayName', '')
-        name2 = athlete[1].get('shortName') or athlete[1].get('displayName', '') if len(athlete) > 1 else ''
-    elif raw_text:
-        import re
-        # Padrão ESPN: "Goal - Player Name" ou "Player Name (Team)"
-        m = re.search(r'(?:Goal!?|Gol!?)[^.]*\.\s+(\w[\w\s]+?)\s*\(', raw_text)
+        if len(athlete) > 1:
+            name2 = athlete[1].get('shortName') or athlete[1].get('displayName', '')
+    if not name1 and raw_text:
+        # ESPN: "Goal! Team1 1, Team2 0. PlayerName(Team) left footed..."
+        # Pegar nome após o placar (padrão: "N, N. NomePrimeiroMaiusculo")
+        m = re.search(r'\d+\.\s+([A-Z][a-záéíóúàâêôãç][^\(]{2,30}?)\s*\(', raw_text)
         if m:
             name1 = m.group(1).strip()
+        # Fallback: "Yellow Card - Player Name"
+        if not name1:
+            m2 = re.search(r'(?:Card|Penalty|Substitution)[:\-\s]+([A-Z][a-záéíóúàâêôãç\w\s\.]{2,30}?)(?:\s*[\(\[]|$)', raw_text)
+            if m2:
+                name1 = m2.group(1).strip()
+        a = re.search(r'[Aa]ssisted? by ([\w\s\-\.\']+?)(?:\s+with|\.|$)', raw_text)
+        if a:
+            name2 = a.group(1).strip()
+
+    # Extrair detalhes extras do raw_text
+    extra = ''
+    if raw_text and etype in ('Goal', 'Own Goal', 'Penalty'):
+        if re.search(r'left foot', raw_text, re.I):
+            extra = 'pé esquerdo'
+        elif re.search(r'right foot', raw_text, re.I):
+            extra = 'pé direito'
+        elif re.search(r'header', raw_text, re.I):
+            extra = 'cabeça'
+        if re.search(r'penalty', raw_text, re.I) and etype != 'Penalty':
+            extra += (' · pênalti' if extra else 'pênalti')
+        if re.search(r'free.?kick', raw_text, re.I):
+            extra += (' · falta' if extra else 'falta')
 
     EVENT_PT = {
         'Goal':         'Gol',
@@ -63,26 +87,43 @@ def _build_event_text(e):
     label = EVENT_PT.get(etype, etype)
 
     if etype in ('Goal', 'Own Goal', 'Penalty'):
-        txt = f'{label} — {name1}' if name1 else label
+        txt = f'⚽ {label}'
+        if name1:
+            txt += f' — {name1}'
+        if team_name:
+            txt += f' ({team_name})'
+        if extra:
+            txt += f' · {extra}'
         if name2:
-            txt += f' (ass. {name2})'
+            txt += f' · ass. {name2}'
+
+    elif etype == 'Yellow Card':
+        txt = f'🟨 {label}'
+        if name1:
+            txt += f' — {name1}'
         if team_name:
-            txt += f' [{team_name}]'
-    elif etype in ('Yellow Card', 'Red Card'):
-        txt = f'{label} — {name1}' if name1 else label
+            txt += f' ({team_name})'
+
+    elif etype == 'Red Card':
+        txt = f'🟥 {label}'
+        if name1:
+            txt += f' — {name1}'
         if team_name:
-            txt += f' [{team_name}]'
+            txt += f' ({team_name})'
+
     elif etype == 'Substitution':
-        if name1 and name2:
-            txt = f'Substituição: {name2} ▶ {name1}'
+        txt = f'🔄 Substituição'
+        if name2 and name1:
+            txt += f': {name2} ▶ {name1}'
         elif name1:
-            txt = f'Substituição: {name1}'
-        else:
-            txt = 'Substituição'
+            txt += f': {name1}'
         if team_name:
-            txt += f' [{team_name}]'
+            txt += f' ({team_name})'
+
     else:
         txt = label
+        if name1:
+            txt += f' — {name1}'
 
     return txt
 
