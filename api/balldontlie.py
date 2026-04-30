@@ -81,7 +81,11 @@ class handler(BaseHTTPRequestHandler):
         req_type = params.get("type", [""])[0]
 
         try:
-            if req_type == "gamelog_by_name":
+            if req_type == "debug_search":
+                name = params.get("name", [""])[0].strip()
+                raw = _fetch("players", {"search": name, "per_page": 10})
+                self._send(200, raw)
+            elif req_type == "gamelog_by_name":
                 name = params.get("name", [""])[0].strip()
                 if not name or len(name) > 60:
                     self._send(400, {"error": "invalid name"}); return
