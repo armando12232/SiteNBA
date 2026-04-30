@@ -2,6 +2,7 @@ from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 from urllib.request import Request, urlopen, ProxyHandler, build_opener
 import json, time, math, sys, os
+from datetime import datetime
 
 # ── Proxy residencial (Webshare ou similar) ──────────────────────────────────
 # Adicione no Vercel: PROXY_URL = http://user:pass@proxy.webshare.io:80
@@ -33,6 +34,18 @@ except ImportError:
 
 cache = {}
 CACHE_TTL = 300
+
+def _parse_nba_date(value):
+    """Converte formatos comuns da NBA API em datetime para ordenação correta."""
+    if not value:
+        return datetime.min
+    text = str(value).strip()
+    for fmt in ("%b %d, %Y", "%Y-%m-%d", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(text[:12] if fmt == "%b %d, %Y" else text[:10], fmt)
+        except ValueError:
+            continue
+    return datetime.min
 
 def _cache_get(key):
     if key in cache:
@@ -341,7 +354,7 @@ def get_pregame(player_id):
         game_rows, _errors = fetch_player_gamelog_rows(player_id, timeout=6)
 
     # Ordenar do mais recente
-    game_rows = sorted(game_rows, key=lambda r: r.get("GAME_DATE",""), reverse=True)
+    game_rows = sorted(game_rows, key=lambda r: _parse_nba_date(r.get("GAME_DATE","")), reverse=True)
 
     # ── Se não conseguimos game log, retorna apenas médias da temporada ──
     if len(game_rows) < 3:
