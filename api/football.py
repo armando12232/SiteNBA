@@ -36,12 +36,21 @@ def _build_event_text(e):
     """Monta descrição do evento em PT-BR a partir dos campos estruturados da ESPN."""
     etype = e.get('type', {}).get('text', '')
     athlete = e.get('athletesInvolved', [])
-    team = e.get('team', {}).get('displayName', '') or e.get('team', {}).get('abbreviation', '')
-    clock = e.get('clock', {}).get('displayValue', '')
+    team_name = (e.get('team') or {}).get('shortDisplayName', '') or (e.get('team') or {}).get('abbreviation', '')
+    raw_text = e.get('text', '')
 
-    # Nome do atleta principal
-    name1 = athlete[0].get('displayName', '') if athlete else ''
-    name2 = athlete[1].get('displayName', '') if len(athlete) > 1 else ''
+    # Nome do atleta: athletesInvolved ou extrair do texto (ex: "Eduardo(Mirassol)")
+    name1 = ''
+    name2 = ''
+    if athlete:
+        name1 = athlete[0].get('shortName') or athlete[0].get('displayName', '')
+        name2 = athlete[1].get('shortName') or athlete[1].get('displayName', '') if len(athlete) > 1 else ''
+    elif raw_text:
+        import re
+        # Padrão ESPN: "Goal - Player Name" ou "Player Name (Team)"
+        m = re.search(r'(?:Goal!?|Gol!?)[^.]*\.\s+(\w[\w\s]+?)\s*\(', raw_text)
+        if m:
+            name1 = m.group(1).strip()
 
     EVENT_PT = {
         'Goal':         'Gol',
@@ -57,12 +66,12 @@ def _build_event_text(e):
         txt = f'{label} — {name1}' if name1 else label
         if name2:
             txt += f' (ass. {name2})'
-        if team:
-            txt += f' [{team}]'
+        if team_name:
+            txt += f' [{team_name}]'
     elif etype in ('Yellow Card', 'Red Card'):
         txt = f'{label} — {name1}' if name1 else label
-        if team:
-            txt += f' [{team}]'
+        if team_name:
+            txt += f' [{team_name}]'
     elif etype == 'Substitution':
         if name1 and name2:
             txt = f'Substituição: {name2} ▶ {name1}'
@@ -70,8 +79,8 @@ def _build_event_text(e):
             txt = f'Substituição: {name1}'
         else:
             txt = 'Substituição'
-        if team:
-            txt += f' [{team}]'
+        if team_name:
+            txt += f' [{team_name}]'
     else:
         txt = label
 
