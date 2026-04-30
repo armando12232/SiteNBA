@@ -277,6 +277,31 @@ def get_player_id_by_name(player_name):
             return int(r[pid_i])
     return None
 
+def fetch_player_gamelog_rows(player_id, timeout=6):
+    """Busca game log real via stats.nba.com usando proxy quando configurado."""
+    if not PROXY_READY:
+        return [], ["PROXY_URL not configured"]
+
+    errors = []
+    seasons_to_try = ["2025-26", "2024-25"]
+    for season in seasons_to_try:
+        try:
+            from nba_api.stats.endpoints import playergamelog
+            log = playergamelog.PlayerGameLog(
+                player_id=str(player_id),
+                season=season,
+                season_type_all_star="Regular Season",
+                proxy=PROXY_URL,
+                timeout=timeout,
+            )
+            rows = log.get_data_frames()[0].to_dict('records')
+            if rows:
+                return rows, errors
+            errors.append(f"{season}: empty rows")
+        except Exception as e:
+            errors.append(f"{season}: {str(e)[:180]}")
+    return [], errors
+
 
 def get_pregame(player_id):
     """Busca L5/L10/hitRate. Otimizado para Vercel (10s timeout):
@@ -313,24 +338,7 @@ def get_pregame(player_id):
     # Sem PROXY_URL, retorna fallback rápido com médias para evitar 504.
     game_rows = []
     if PROXY_READY:
-        SEASONS_TO_TRY = ["2025-26", "2024-25"]  # tenta atual, fallback pra anterior
-        for season in SEASONS_TO_TRY:
-            if game_rows:
-                break
-            try:
-                from nba_api.stats.endpoints import playergamelog
-                proxy_dict = {"http": PROXY_URL, "https": PROXY_URL}
-                log = playergamelog.PlayerGameLog(
-                    player_id=str(player_id),
-                    season=season,
-                    season_type_all_star="Regular Season",
-                    proxy=proxy_dict,
-                    timeout=4,
-                )
-                rows = log.get_data_frames()[0].to_dict('records')
-                game_rows.extend(rows)
-            except Exception:
-                continue
+        game_rows, _errors = fetch_player_gamelog_rows(player_id, timeout=6)
 
     # Ordenar do mais recente
     game_rows = sorted(game_rows, key=lambda r: r.get("GAME_DATE",""), reverse=True)
@@ -673,7 +681,7 @@ class handler(BaseHTTPRequestHandler):
         req_type = params.get("type", [""])[0]
 
         # Valida tipo (whitelist)
-        VALID_TYPES = {"scoreboard","boxscore","season_avg","pregame","pregame_by_name","schedule","defense","team_info","team_last","roster"}
+        VALID_TYPES = {"scoreboard","boxscore","season_avg","pregame","pregame_by_name","schedule","defense","team_info","team_last","roster","debug_gamelog"}
         if req_type not in VALID_TYPES:
             self._send(400, {"error": "invalid type"}); return
 
@@ -698,6 +706,19 @@ class handler(BaseHTTPRequestHandler):
                 if not is_valid_id(player_id) or not player_id.isdigit():
                     self._send(400, {"error": "invalid playerId"}); return
                 self._send(200, get_pregame(int(player_id)))
+
+            elif req_type == "debug_gamelog":
+                player_id = params.get("playerId", [""])[0]
+                if not is_valid_id(player_id) or not player_id.isdigit():
+                    self._send(400, {"error": "invalid playerId"}); return
+                rows, errors = fetch_player_gamelog_rows(int(player_id), timeout=8)
+                self._send(200, {
+                    "proxy_ready": PROXY_READY,
+                    "proxy_host": PROXY_URL.split("@")[-1] if PROXY_URL else None,
+                    "row_count": len(rows),
+                    "sample": rows[:2],
+                    "errors": errors,
+                })
 
             elif req_type == "pregame_by_name":
                 player_name = params.get("name", [""])[0].strip()
