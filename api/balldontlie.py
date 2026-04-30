@@ -10,10 +10,11 @@ except ImportError:
     def rate_limit_check(ip): return True
     def get_client_ip(h): return '0.0.0.0'
 
-BLL_KEY = os.environ.get("BALLDONTLIE_KEY", "18fcde1c-d2bd-41dd-b2dc-7226bfb9c2b6")
+BLL_KEY = os.environ.get("BALLDONTLIE_KEY")
 BLL_BASE = "https://api.balldontlie.io/v1"
 
 _cache = {}
+
 def _cache_get(k):
     v = _cache.get(k)
     return v['data'] if v and time.time() < v['exp'] else None
@@ -21,7 +22,16 @@ def _cache_get(k):
 def _cache_set(k, data, ttl=3600):
     _cache[k] = {'data': data, 'exp': time.time() + ttl}
 
+def _normalize_name(s):
+    return " ".join((s or "").strip().lower().split())
+
+def _player_full_name(p):
+    return _normalize_name(f"{p.get('first_name', '')} {p.get('last_name', '')}")
+
 def _fetch(path, params=None):
+    if not BLL_KEY:
+        raise RuntimeError("BALLDONTLIE_KEY not configured")
+
     url = f"{BLL_BASE}/{path}"
     if params:
         from urllib.parse import urlencode
@@ -30,17 +40,43 @@ def _fetch(path, params=None):
     with urllib.request.urlopen(req, timeout=10) as r:
         return json.loads(r.read())
 
+def _search_player(name, per_page=10):
+    name = (name or "").strip()
+    parts = name.split()
+
+    if len(parts) >= 2:
+        data = _fetch("players", {
+            "first_name": parts[0],
+            "last_name": parts[-1],
+            "per_page": per_page,
+        })
+    else:
+        data = _fetch("players", {
+            "search": name,
+            "per_page": per_page,
+        })
+
+    players = data.get("data", [])
+    wanted = _normalize_name(name)
+    exact = next((p for p in players if _player_full_name(p) == wanted), None)
+
+    return exact, data
+
 def get_player_id(name):
     """Busca player_id pelo nome."""
-    cached = _cache_get(f"player_{name}")
-    if cached: return cached
-    data = _fetch("players", {"search": name, "per_page": 5})
+    cache_key = f"player_{_normalize_name(name)}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+
+    exact, data = _search_player(name, per_page=10)
     players = data.get("data", [])
-    if not players: return None
-    # Match exato ou o mais próximo
-    exact = next((p for p in players if p['first_name'] + ' ' + p['last_name'] == name), None)
-    pid = (exact or players[0])['id']
-    _cache_set(f"player_{name}", pid, ttl=86400)
+    if not players:
+        return None
+
+    player = exact or players[0]
+    pid = player["id"]
+    _cache_set(cache_key, pid, ttl=86400)
     return pid
 
 def get_game_log(player_id, season=2025):
@@ -53,7 +89,6 @@ def get_game_log(player_id, season=2025):
         "per_page": 15,
     })
     rows = data.get("data", [])
-    # Ordenar do mais recente para o mais antigo
     rows.sort(key=lambda r: r['game']['date'], reverse=True)
     result = [
         {
@@ -83,8 +118,12 @@ class handler(BaseHTTPRequestHandler):
         try:
             if req_type == "debug_search":
                 name = params.get("name", [""])[0].strip()
-                raw = _fetch("players", {"search": name, "per_page": 10})
-                self._send(200, raw)
+                exact, raw = _search_player(name, per_page=10)
+                self._send(200, {
+                    "query": name,
+                    "exact_match": exact,
+                    "raw": raw,
+                })
             elif req_type == "gamelog_by_name":
                 name = params.get("name", [""])[0].strip()
                 if not name or len(name) > 60:
