@@ -7,9 +7,10 @@ import json, time, math, sys, os
 # Adicione no Vercel: PROXY_URL = http://user:pass@proxy.webshare.io:80
 # Quando ausente, faz requests diretos (CDN NBA funciona sem proxy)
 PROXY_URL = os.environ.get("PROXY_URL", "")
+PROXY_READY = bool(PROXY_URL and "user:pass" not in PROXY_URL and "replace" not in PROXY_URL.lower())
 
 def _make_opener():
-    if PROXY_URL:
+    if PROXY_READY:
         handler = ProxyHandler({"http": PROXY_URL, "https": PROXY_URL})
         return build_opener(handler)
     return None
@@ -53,12 +54,12 @@ NBA_HEADERS = {
     'x-nba-stats-token': 'true',
 }
 
-def _nba_fetch(url, timeout=9):
+def _nba_fetch(url, timeout=9, use_proxy=True):
     """Fetch com proxy residencial se PROXY_URL estiver definido.
     CDN NBA funciona sem proxy. stats.nba.com requer proxy no Vercel.
     """
     req    = Request(url, headers=NBA_HEADERS)
-    opener = _make_opener()
+    opener = _make_opener() if use_proxy else None
     if opener:
         with opener.open(req, timeout=timeout) as r:
             return json.loads(r.read())
@@ -150,9 +151,9 @@ def get_season_avg(player_id):
                     return headers.index(name)
             return -1
 
-        pts_idx = _col("PTS", "POINTS")
-        reb_idx = _col("REB", "REB_TOTAL", "REBOUNDS")
-        ast_idx = _col("AST", "ASSISTS")
+        pts_idx = _col("PTS", "PTS_PG", "POINTS", "POINTS_PER_GAME")
+        reb_idx = _col("REB", "REB_PG", "REB_TOTAL", "REBOUNDS", "REBOUNDS_PER_GAME")
+        ast_idx = _col("AST", "AST_PG", "ASSISTS", "ASSISTS_PER_GAME")
         avg = {
             "pts": float(row[pts_idx] or 0) if pts_idx >= 0 else 0,
             "reb": float(row[reb_idx] or 0) if reb_idx >= 0 else 0,
@@ -198,7 +199,7 @@ def _get_player_index_cdn():
         return cached
     try:
         url = "https://cdn.nba.com/static/json/staticData/playerIndex.json"
-        data = _nba_fetch(url, timeout=8)
+        data = _nba_fetch(url, timeout=8, use_proxy=False)
         rs = data.get("resultSets", [{}])[0]
         headers = rs.get("headers", [])
         rows = rs.get("rowSet", [])
@@ -294,20 +295,24 @@ def get_pregame(player_id):
         row = idx.get("by_id", {}).get(player_id)
         hdrs = idx.get("headers", [])
         if row and hdrs:
-            def _h(key):
-                if key not in hdrs: return 0
-                i = hdrs.index(key)
-                try: return round(float(row[i] or 0), 1)
-                except: return 0
-            season_pts = _h("PTS"); season_reb = _h("REB")
-            season_ast = _h("AST"); season_3pm = _h("FG3M")
+            def _h(*keys):
+                for key in keys:
+                    if key in hdrs:
+                        i = hdrs.index(key)
+                        try: return round(float(row[i] or 0), 1)
+                        except: return 0
+                return 0
+            season_pts = _h("PTS", "PTS_PG", "POINTS", "POINTS_PER_GAME")
+            season_reb = _h("REB", "REB_PG", "REB_TOTAL", "REBOUNDS", "REBOUNDS_PER_GAME")
+            season_ast = _h("AST", "AST_PG", "ASSISTS", "ASSISTS_PER_GAME")
+            season_3pm = _h("FG3M", "FG3M_PG", "FG3_PG", "THREE_POINTERS_MADE")
     except Exception:
         pass
 
     # 2. Game log — stats.nba.com costuma bloquear Vercel sem proxy.
     # Sem PROXY_URL, retorna fallback rápido com médias para evitar 504.
     game_rows = []
-    if PROXY_URL:
+    if PROXY_READY:
         SEASONS_TO_TRY = ["2025-26", "2024-25"]  # tenta atual, fallback pra anterior
         for season in SEASONS_TO_TRY:
             if game_rows:
@@ -451,7 +456,7 @@ def get_upcoming_schedule(days_ahead=7):
         future_games = []
         try:
             url        = "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json"
-            sched_data = _nba_fetch(url, timeout=9)
+            sched_data = _nba_fetch(url, timeout=9, use_proxy=False)
             game_dates = sched_data.get("leagueSchedule", {}).get("gameDates", [])
 
             for gd in game_dates:
@@ -505,7 +510,7 @@ def get_team_last(team_abbr, limit=5):
 
     try:
         url = "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json"
-        sched_data = _nba_fetch(url, timeout=9)
+        sched_data = _nba_fetch(url, timeout=9, use_proxy=False)
         game_dates = sched_data.get("leagueSchedule", {}).get("gameDates", [])
         games = []
 
