@@ -291,29 +291,51 @@ def get_player_id_by_name(player_name):
     return None
 
 def fetch_player_gamelog_rows(player_id, timeout=6):
-    """Busca game log real via stats.nba.com usando proxy quando configurado."""
+    """Busca game log real via stats.nba.com usando proxy quando configurado.
+
+    Em abril/maio a NBA ja esta em Playoffs. Se buscarmos apenas Regular Season,
+    o L5/L10 fica preso em jogos antigos para jogadores ainda ativos no mata-mata.
+    """
     if not PROXY_READY:
         return [], ["PROXY_URL not configured"]
 
     errors = []
     seasons_to_try = ["2025-26", "2024-25"]
+    season_types = ["Playoffs", "Regular Season"]
+    all_rows = []
+    seen_games = set()
+
     for season in seasons_to_try:
-        try:
-            from nba_api.stats.endpoints import playergamelog
-            log = playergamelog.PlayerGameLog(
-                player_id=str(player_id),
-                season=season,
-                season_type_all_star="Regular Season",
-                proxy=PROXY_URL,
-                timeout=timeout,
-            )
-            rows = log.get_data_frames()[0].to_dict('records')
-            if rows:
-                return rows, errors
-            errors.append(f"{season}: empty rows")
-        except Exception as e:
-            errors.append(f"{season}: {str(e)[:180]}")
-    return [], errors
+        for season_type in season_types:
+            try:
+                from nba_api.stats.endpoints import playergamelog
+                log = playergamelog.PlayerGameLog(
+                    player_id=str(player_id),
+                    season=season,
+                    season_type_all_star=season_type,
+                    proxy=PROXY_URL,
+                    timeout=timeout,
+                )
+                rows = log.get_data_frames()[0].to_dict('records')
+                if not rows:
+                    errors.append(f"{season} {season_type}: empty rows")
+                    continue
+
+                for row in rows:
+                    game_key = row.get("Game_ID") or row.get("GAME_ID") or f"{row.get('GAME_DATE')}|{row.get('MATCHUP')}"
+                    if game_key in seen_games:
+                        continue
+                    seen_games.add(game_key)
+                    row["_SEASON"] = season
+                    row["_SEASON_TYPE"] = season_type
+                    all_rows.append(row)
+            except Exception as e:
+                errors.append(f"{season} {season_type}: {str(e)[:180]}")
+
+        if all_rows:
+            return all_rows, errors
+
+    return all_rows, errors
 
 
 def get_pregame(player_id):
@@ -427,6 +449,7 @@ def get_pregame(player_id):
                 "reb":  float(r.get("REB",0)),
                 "ast":  float(r.get("AST",0)),
                 "fg3m": float(r.get("FG3M",0)),
+                "season_type": r.get("_SEASON_TYPE", ""),
                 "hit":  float(r.get("PTS",0)) >= (pts_prop.get("line") or 0)
             }
             for r in game_rows[:10]

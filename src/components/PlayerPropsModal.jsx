@@ -32,7 +32,7 @@ export function PlayerPropsModal({ playerName, onClose }) {
   const best = activeProp?.line != null ? { stat: activeStat, ...activeProp } : getBestProp(data);
   const stat = best?.stat || activeStat || 'pts';
   const line = ensureHalfLine(best?.line ?? data?.synthetic_lines?.pts);
-  const games = data?.last5_games || [];
+  const games = sortRecentGames(data?.last5_games || []);
   const maxValue = Math.max(...games.map((game) => Number(game[stat] ?? game.pts ?? 0)), Number(line) || 20, 1);
   const photoUrl = data?.player_id
     ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${data.player_id}.png`
@@ -133,8 +133,44 @@ function ModalMetric({ label, value, hot = false }) {
 }
 
 function formatDate(value) {
-  if (!value) return '-';
-  const date = new Date(`${String(value).slice(0, 10)}T12:00:00`);
-  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+  const date = parseNbaDate(value);
+  if (!date) return value ? String(value).slice(0, 12) : '-';
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+}
+
+function sortRecentGames(games) {
+  return [...games].sort((a, b) => {
+    const dateA = parseNbaDate(a?.date)?.getTime() ?? 0;
+    const dateB = parseNbaDate(b?.date)?.getTime() ?? 0;
+    return dateB - dateA;
+  });
+}
+
+function parseNbaDate(value) {
+  if (!value) return null;
+  const text = String(value).trim();
+
+  const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+  }
+
+  const nbaMatch = text.match(/^([A-Za-z]{3})\s+(\d{1,2}),\s*(\d{4})$/);
+  if (nbaMatch) {
+    const month = monthIndex(nbaMatch[1]);
+    if (month >= 0) return new Date(Number(nbaMatch[3]), month, Number(nbaMatch[2]));
+  }
+
+  const slashMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) {
+    return new Date(Number(slashMatch[3]), Number(slashMatch[1]) - 1, Number(slashMatch[2]));
+  }
+
+  const fallback = new Date(text);
+  return Number.isNaN(fallback.getTime()) ? null : fallback;
+}
+
+function monthIndex(value) {
+  return ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+    .indexOf(String(value).toLowerCase());
 }
