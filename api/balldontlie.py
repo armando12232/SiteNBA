@@ -45,16 +45,22 @@ def _search_player(name, per_page=10):
     parts = name.split()
 
     if len(parts) >= 2:
-        data = _fetch("players", {
+        query = {
             "first_name": parts[0],
             "last_name": parts[-1],
             "per_page": per_page,
-        })
+        }
+        data = _fetch("players/active", query)
+        if not data.get("data"):
+            data = _fetch("players", query)
     else:
-        data = _fetch("players", {
+        query = {
             "search": name,
             "per_page": per_page,
-        })
+        }
+        data = _fetch("players/active", query)
+        if not data.get("data"):
+            data = _fetch("players", query)
 
     players = data.get("data", [])
     wanted = _normalize_name(name)
@@ -72,6 +78,11 @@ def get_player_id(name):
     exact, data = _search_player(name, per_page=10)
     players = data.get("data", [])
     if not players:
+        return None
+
+    # Para nome completo, nunca use players[0]; isso pode trocar Isaiah Joe
+    # por Isaiah Briscoe, por exemplo.
+    if len((name or "").split()) >= 2 and not exact:
         return None
 
     player = exact or players[0]
