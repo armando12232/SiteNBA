@@ -138,18 +138,21 @@ def get_season_avg(player_id):
     if cached:
         return cached
     try:
-        url = "https://cdn.nba.com/static/json/staticData/playerIndex.json"
-        data = _nba_fetch(url, timeout=8)
-        rs = data.get("resultSets", [{}])[0]
-        headers = rs.get("headers", [])
-        rows = rs.get("rowSet", [])
-        pid_idx = headers.index("PERSON_ID") if "PERSON_ID" in headers else 0
-        pts_idx = headers.index("PTS") if "PTS" in headers else -1
-        reb_idx = headers.index("REB") if "REB" in headers else -1
-        ast_idx = headers.index("AST") if "AST" in headers else -1
-        row = next((r for r in rows if r[pid_idx] == player_id), None)
+        idx = _get_player_index_cdn()
+        headers = idx.get("headers", [])
+        row = idx.get("by_id", {}).get(player_id)
         if not row:
             return None
+
+        def _col(*names):
+            for name in names:
+                if name in headers:
+                    return headers.index(name)
+            return -1
+
+        pts_idx = _col("PTS", "POINTS")
+        reb_idx = _col("REB", "REB_TOTAL", "REBOUNDS")
+        ast_idx = _col("AST", "ASSISTS")
         avg = {
             "pts": float(row[pts_idx] or 0) if pts_idx >= 0 else 0,
             "reb": float(row[reb_idx] or 0) if reb_idx >= 0 else 0,
@@ -185,27 +188,74 @@ def _calc_prop(game_rows, stat_key, season_avg, n5=5, n10=10):
 
 
 def _get_player_index_cdn():
-    """Mapa nome→id usando dados estáticos do nba_api (zero HTTP, instantâneo)."""
+    """Mapa nome/id a partir do playerIndex da CDN da NBA.
+
+    A CDN também pode trazer médias da temporada. Se ela falhar, cai para o
+    cadastro estático do nba_api apenas para resolver nome -> id.
+    """
     cached = _cache_get("player_index_cdn")
     if cached:
         return cached
     try:
-        from nba_api.stats.static import players as nba_static
-        all_players = nba_static.get_active_players()
+        url = "https://cdn.nba.com/static/json/staticData/playerIndex.json"
+        data = _nba_fetch(url, timeout=8)
+        rs = data.get("resultSets", [{}])[0]
+        headers = rs.get("headers", [])
+        rows = rs.get("rowSet", [])
+
         by_id   = {}
         by_name = {}
-        for p in all_players:
-            pid  = p['id']
-            name = p['full_name']
-            hdrs = ['PERSON_ID', 'PLAYER_FIRST_NAME', 'PLAYER_LAST_NAME']
-            row  = [pid, p['first_name'], p['last_name']]
-            by_id[pid]           = row
-            by_name[name.lower()] = row
-        result = {"by_id": by_id, "by_name": by_name, "headers": ['PERSON_ID', 'PLAYER_FIRST_NAME', 'PLAYER_LAST_NAME']}
+
+        def _idx(*names):
+            for n in names:
+                if n in headers:
+                    return headers.index(n)
+            return None
+
+        pid_i = _idx("PERSON_ID", "PLAYER_ID")
+        first_i = _idx("PLAYER_FIRST_NAME", "FIRST_NAME")
+        last_i = _idx("PLAYER_LAST_NAME", "LAST_NAME")
+        name_i = _idx("PLAYER_NAME", "DISPLAY_FIRST_LAST")
+
+        if pid_i is None:
+            raise ValueError("playerIndex missing PERSON_ID")
+
+        for row in rows:
+            try:
+                pid = int(row[pid_i])
+            except Exception:
+                continue
+
+            if first_i is not None and last_i is not None:
+                full_name = f"{row[first_i]} {row[last_i]}".strip()
+            elif name_i is not None:
+                full_name = str(row[name_i]).strip()
+            else:
+                continue
+
+            by_id[pid] = row
+            by_name[full_name.lower()] = row
+
+        result = {"by_id": by_id, "by_name": by_name, "headers": headers}
         _cache_set("player_index_cdn", result)
         return result
     except Exception as e:
-        return {"by_id": {}, "by_name": {}, "headers": []}
+        try:
+            from nba_api.stats.static import players as nba_static
+            all_players = nba_static.get_active_players()
+            headers = ['PERSON_ID', 'PLAYER_FIRST_NAME', 'PLAYER_LAST_NAME']
+            by_id = {}
+            by_name = {}
+            for p in all_players:
+                pid = p['id']
+                row = [pid, p['first_name'], p['last_name']]
+                by_id[pid] = row
+                by_name[p['full_name'].lower()] = row
+            result = {"by_id": by_id, "by_name": by_name, "headers": headers}
+            _cache_set("player_index_cdn", result)
+            return result
+        except Exception:
+            return {"by_id": {}, "by_name": {}, "headers": []}
 
 
 def get_player_id_by_name(player_name):
@@ -214,14 +264,16 @@ def get_player_id_by_name(player_name):
         return None
     idx    = _get_player_index_cdn()
     by_name = idx.get("by_name", {})
+    hdrs = idx.get("headers", [])
+    pid_i = hdrs.index("PERSON_ID") if "PERSON_ID" in hdrs else hdrs.index("PLAYER_ID") if "PLAYER_ID" in hdrs else 0
     key    = player_name.strip().lower()
     row    = by_name.get(key)
     if row:
-        return int(row[0])  # PERSON_ID é índice 0
+        return int(row[pid_i])
     # Fallback: match parcial
     for name, r in by_name.items():
         if key.startswith(name) or name.startswith(key):
-            return int(r[0])
+            return int(r[pid_i])
     return None
 
 
@@ -252,26 +304,28 @@ def get_pregame(player_id):
     except Exception:
         pass
 
-    # 2. Game log — apenas Regular Season da temporada atual, timeout curto
+    # 2. Game log — stats.nba.com costuma bloquear Vercel sem proxy.
+    # Sem PROXY_URL, retorna fallback rápido com médias para evitar 504.
     game_rows = []
-    SEASONS_TO_TRY = ["2025-26", "2024-25"]  # tenta atual, fallback pra anterior
-    for season in SEASONS_TO_TRY:
-        if game_rows:
-            break
-        try:
-            from nba_api.stats.endpoints import playergamelog
-            proxy_dict = {"http": PROXY_URL, "https": PROXY_URL} if PROXY_URL else None
-            log = playergamelog.PlayerGameLog(
-                player_id=str(player_id),
-                season=season,
-                season_type_all_star="Regular Season",
-                proxy=proxy_dict,
-                timeout=9,
-            )
-            rows = log.get_data_frames()[0].to_dict('records')
-            game_rows.extend(rows)
-        except Exception:
-            continue
+    if PROXY_URL:
+        SEASONS_TO_TRY = ["2025-26", "2024-25"]  # tenta atual, fallback pra anterior
+        for season in SEASONS_TO_TRY:
+            if game_rows:
+                break
+            try:
+                from nba_api.stats.endpoints import playergamelog
+                proxy_dict = {"http": PROXY_URL, "https": PROXY_URL}
+                log = playergamelog.PlayerGameLog(
+                    player_id=str(player_id),
+                    season=season,
+                    season_type_all_star="Regular Season",
+                    proxy=proxy_dict,
+                    timeout=4,
+                )
+                rows = log.get_data_frames()[0].to_dict('records')
+                game_rows.extend(rows)
+            except Exception:
+                continue
 
     # Ordenar do mais recente
     game_rows = sorted(game_rows, key=lambda r: r.get("GAME_DATE",""), reverse=True)
@@ -441,6 +495,78 @@ def get_upcoming_schedule(days_ahead=7):
     except Exception as e:
         return {"error": str(e)}
 
+def get_team_last(team_abbr, limit=5):
+    """Forma recente do time via schedule da CDN NBA."""
+    team_abbr = (team_abbr or "").upper()
+    cache_key = f"team_last_{team_abbr}_{limit}"
+    cached = _cache_get(cache_key)
+    if cached:
+        return cached
+
+    try:
+        url = "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json"
+        sched_data = _nba_fetch(url, timeout=9)
+        game_dates = sched_data.get("leagueSchedule", {}).get("gameDates", [])
+        games = []
+
+        def _abbr(team):
+            return (
+                team.get("teamTricode")
+                or team.get("teamAbbreviation")
+                or team.get("teamCode")
+                or ""
+            ).upper()
+
+        def _score(team):
+            for key in ("score", "points", "teamScore"):
+                try:
+                    return int(team.get(key) or 0)
+                except Exception:
+                    pass
+            return 0
+
+        for gd in game_dates:
+            for g in gd.get("games", []):
+                status = g.get("gameStatus")
+                status_text = str(g.get("gameStatusText", "")).lower()
+                if status not in (3, "3") and "final" not in status_text:
+                    continue
+
+                home = g.get("homeTeam", {})
+                away = g.get("awayTeam", {})
+                home_abbr = _abbr(home)
+                away_abbr = _abbr(away)
+                if team_abbr not in (home_abbr, away_abbr):
+                    continue
+
+                is_home = team_abbr == home_abbr
+                own_score = _score(home if is_home else away)
+                opp_score = _score(away if is_home else home)
+                if own_score == 0 and opp_score == 0:
+                    continue
+
+                games.append({
+                    "gameId": g.get("gameId"),
+                    "date": (g.get("gameDateTimeUTC") or g.get("gameDateUTC") or gd.get("gameDate") or "")[:10],
+                    "sortDate": g.get("gameDateTimeUTC") or g.get("gameDateUTC") or gd.get("gameDate") or "",
+                    "opp": away_abbr if is_home else home_abbr,
+                    "homeAway": "home" if is_home else "away",
+                    "score": f"{own_score}-{opp_score}",
+                    "result": "W" if own_score > opp_score else "L",
+                })
+
+        games.sort(key=lambda g: g.get("sortDate", ""), reverse=True)
+        clean_games = [{k: v for k, v in g.items() if k != "sortDate"} for g in games[:limit]]
+        result = {
+            "abbr": team_abbr,
+            "form": "".join(g["result"] for g in clean_games),
+            "games": clean_games,
+        }
+        _cache_set(cache_key, result)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
 
 def get_defense_ranking(team_abbr, position, stat="pts"):
     cache_key = f"defense_{team_abbr}_{position}_{stat}"
@@ -581,6 +707,12 @@ class handler(BaseHTTPRequestHandler):
                 result = get_upcoming_schedule()
                 self._send(200, {"games": result} if isinstance(result, list) else result)
 
+            elif req_type == "team_last":
+                team_abbr = params.get("abbr", [""])[0].upper()
+                if not is_valid_abbr(team_abbr):
+                    self._send(400, {"error": "invalid abbr"}); return
+                self._send(200, get_team_last(team_abbr))
+
             elif req_type == "defense":
                 team_abbr = params.get("teamAbbr", [""])[0].upper()
                 position  = params.get("position", ["G"])[0].upper()
@@ -608,6 +740,7 @@ class handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Cache-Control", "no-store" if status >= 400 else "public, max-age=60")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
