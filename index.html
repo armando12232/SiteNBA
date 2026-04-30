@@ -2172,10 +2172,10 @@ function openPlayerPropsModal(playerName, gameLabel) {
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
 
-  // Buscar last5_games em background — funciona com proxy residencial no Vercel
+  // Buscar last5_games em background via nba_api/stats.nba.com no backend
   if (_last5GamesCache[playerName] === undefined) {
     _last5GamesCache[playerName] = null; // lock anti-duplo
-    fetch(`/api/balldontlie?type=gamelog_by_name&name=${encodeURIComponent(playerName)}&season=2025`)
+    fetch(`/api/nba?type=pregame_by_name&name=${encodeURIComponent(playerName)}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         const games = data?.last5_games;
@@ -2330,7 +2330,7 @@ function _renderPPModalBody(bp) {
     </div>` : '';
 
   // ── Gráfico de barras estilo Props.Cash ───────────────────────────────────
-  // Modo 1: dados reais (last5_games do backend via proxy residencial)
+  // Modo 1: dados reais (last5_games do backend via nba_api)
   // Modo 2: fallback aproximado usando hit rate L10 do BettingPros
   const COLOR_OVER  = '#2d8659';
   const COLOR_UNDER = '#c53030';

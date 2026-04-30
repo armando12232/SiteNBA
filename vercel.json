@@ -23,9 +23,6 @@
     },
     "api/injuries.py": {
       "maxDuration": 15
-    },
-    "api/balldontlie.py": {
-      "maxDuration": 10
     }
   },
   "headers": [
