@@ -2175,7 +2175,7 @@ function openPlayerPropsModal(playerName, gameLabel) {
   // Buscar last5_games em background — funciona com proxy residencial no Vercel
   if (_last5GamesCache[playerName] === undefined) {
     _last5GamesCache[playerName] = null; // lock anti-duplo
-    fetch(`/api/nba?type=pregame_by_name&name=${encodeURIComponent(playerName)}`)
+    fetch(`/api/balldontlie?type=gamelog_by_name&name=${encodeURIComponent(playerName)}&season=2025`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         const games = data?.last5_games;
