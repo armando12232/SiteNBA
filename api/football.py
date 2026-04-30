@@ -238,7 +238,6 @@ def get_stats(game_id, league_key):
         'Penalty': 'Pênalti', 'Substitution': 'Substituição',
     }
     key_events = data.get('keyEvents', [])
-    result['_debug_first_event'] = key_events[0] if key_events else None
     result['events'] = [
         {
             'type':  e.get('type', {}).get('text', ''),

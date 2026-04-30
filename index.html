@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StatCast BR — Monitor de Props NBA e Futebol</title>
-<meta name="description" content="Monitore player props da NBA em tempo real. Hit rates, EV Score, DVP e alertas ao vivo para apostas esportivas. Dados de futebol com xG, estatísticas e classificação.">
+<meta name="description" content="Monitore player props da NBA em tempo real. Hit rates, PropScore, DVP e alertas ao vivo para apostas esportivas. Dados de futebol com xG, estatísticas e classificação.">
 <meta name="keywords" content="NBA props, player props NBA, apostas NBA, hit rate NBA, futebol ao vivo, estatísticas NBA, BasketBall props Brasil">
 <meta name="author" content="StatCast BR">
 <meta name="robots" content="index, follow">
@@ -14,7 +14,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://site-nba-ten.vercel.app">
 <meta property="og:title" content="StatCast BR — Monitor de Props NBA e Futebol">
-<meta property="og:description" content="Hit rates em tempo real, DVP, EV Score e alertas ao vivo para player props NBA. Dados de futebol com xG e estatísticas completas.">
+<meta property="og:description" content="Hit rates em tempo real, DVP, PropScore e alertas ao vivo para player props NBA. Dados de futebol com xG e estatísticas completas.">
 <meta property="og:image" content="https://site-nba-ten.vercel.app/og-image.png">
 
 <!-- Twitter Card -->
@@ -1150,7 +1150,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
             <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(253,185,39,.1),transparent 70%);pointer-events:none"></div>
             <div style="font-size:32px;margin-bottom:12px">📊</div>
             <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:6px">Player Props</div>
-            <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:14px">Hit rates L5→L20, DVP, EV Score e streak dos jogadores NBA.</div>
+            <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:14px">Hit rates L5→L20, DVP, PropScore e streak dos jogadores NBA.</div>
             <div style="font-family:var(--display);font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.06em;text-transform:uppercase">🏀 Abrir →</div>
           </div>
 
@@ -1285,7 +1285,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
           <button class="period-filter-btn" data-period="l10" onclick="setPeriodFilter('l10',this)">L10</button>
           <button class="period-filter-btn" data-period="h2h" onclick="setPeriodFilter('h2h',this)">H2H</button>
           <button class="period-filter-btn" data-period="season" onclick="setPeriodFilter('season',this)">Temporada</button>
-          <button class="period-filter-btn" data-period="edge" onclick="setPeriodFilter('edge',this)">EV Score</button>
+          <button class="period-filter-btn" data-period="edge" onclick="setPeriodFilter('edge',this)">PropScore</button>
         </div>
         <div id="today-loading" style="text-align:center;padding:40px;color:var(--text3)">Carregando jogos...</div>
         <div id="props-table" style="display:none"></div>
@@ -1459,7 +1459,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 <div class="game-modal-overlay" id="game-modal-overlay" onclick="closeGameModal(event)">
   <div class="game-modal" id="game-modal">
     <div class="game-modal-hero">
-      <div class="game-modal-close" onclick="closeGameModal(event)">✕</div>
+      <div class="game-modal-close" onclick="closeGameModalDirect()">✕</div>
       <div class="game-modal-teams" id="gm-teams"></div>
       <div class="game-modal-status" id="gm-status"></div>
     </div>
@@ -2741,13 +2741,13 @@ function closePPModalDirect() {
   document.body.style.overflow = '';
 }
 function closeGameModal(e) {
-  if (e.target === document.getElementById('game-modal-overlay')) closeGameModal(null);
+  if (e.target === document.getElementById('game-modal-overlay')) closeGameModalDirect();
 }
 function closeGameModalDirect() {
   document.getElementById('game-modal-overlay').classList.remove('open');
   document.body.style.overflow = '';
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePPModalDirect(); closeGameModal(null); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePPModalDirect(); closeGameModalDirect(); } });
 
 function calcH2H(p, stat, oppAbbr) {
   // Calcular hit rate nos últimos jogos vs esse adversário específico
@@ -4666,7 +4666,7 @@ function loadFtStats(gameId, leagueKey, homeName, awayName) {
           <div style="flex:1;display:flex;flex-direction:column;gap:3px">
             <span class="ft-stat-label">${label}</span>
             <div style="display:flex;gap:3px;align-items:center">
-              <div class="ft-stat-bar-bg"><div class="ft-stat-bar-fill" style="width:${hPct}%;background:var(--accent);margin-left:auto"></div></div>
+              <div class="ft-stat-bar-bg" style="direction:rtl"><div class="ft-stat-bar-fill" style="width:${hPct}%;background:var(--accent)"></div></div>
               <div class="ft-stat-bar-bg"><div class="ft-stat-bar-fill" style="width:${aPct}%;background:var(--red2)"></div></div>
             </div>
           </div>
