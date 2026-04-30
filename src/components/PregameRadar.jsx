@@ -11,7 +11,7 @@ const statLabels = {
   fg3m: '3PT',
 };
 
-export function PregameRadar() {
+export function PregameRadar({ onSelectPlayer }) {
   const [state, setState] = useState({
     loading: true,
     error: null,
@@ -47,10 +47,19 @@ export function PregameRadar() {
 
   return (
     <section className="panel radarPanel">
+      <div className="brandHeader">
+        <div className="brandMark">SC</div>
+        <div>
+          <strong>StatCast BR</strong>
+          <span>NBA Player Props</span>
+        </div>
+      </div>
+
       <div className="panelHeader">
         <div>
-          <div className="eyebrow">Pregame Radar</div>
-          <h2>Props antes do jogo</h2>
+          <div className="eyebrow">Radar pre-game</div>
+          <h2>Player props NBA</h2>
+          <p className="sectionLead">Linhas sintéticas, L5/L10, hit rate e edge calculados com dados reais da NBA API.</p>
         </div>
         <span className="statusPill">{state.loading ? 'Carregando' : `${state.players.length} jogadores`}</span>
       </div>
@@ -61,7 +70,7 @@ export function PregameRadar() {
       {!state.loading && !state.error ? (
         <div className="pregameGrid">
           {state.players.map((player) => (
-            <PregameCard key={player.player_id} player={player} />
+            <PregameCard key={player.player_id} player={player} onSelectPlayer={onSelectPlayer} />
           ))}
         </div>
       ) : null}
@@ -69,7 +78,7 @@ export function PregameRadar() {
   );
 }
 
-function PregameCard({ player }) {
+function PregameCard({ player, onSelectPlayer }) {
   const best = getBestProp(player);
   const edge = Number(best?.edge ?? player.edge_points ?? 0);
   const confidence = confidenceFromEdge(edge);
@@ -80,8 +89,9 @@ function PregameCard({ player }) {
   const photoUrl = `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.player_id}.png`;
 
   return (
-    <article className="pregameCard">
+    <article className="pregameCard" onClick={() => onSelectPlayer?.(player.player_name)}>
       <div className={`cardStripe ${confidence.className}`} />
+      <div className="cardGlow" />
       <div className="playerTopline">
         <img src={photoUrl} alt="" className="playerPhoto" />
         <div>

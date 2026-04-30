@@ -14,7 +14,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': 'http://localhost:3000',
+      '/api': {
+        target: 'https://site-nba-ten.vercel.app',
+        changeOrigin: true,
+        secure: true,
+      },
     },
   },
 });
