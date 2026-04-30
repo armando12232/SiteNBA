@@ -15,6 +15,10 @@ export function getTeamLast(abbr) {
   return fetchJson(`/api/nba?type=team_last&abbr=${encodeURIComponent(abbr)}`);
 }
 
+export function getBoxscore(gameId) {
+  return fetchJson(`/api/nba?type=boxscore&gameId=${encodeURIComponent(gameId)}`);
+}
+
 export function getPregame(playerId) {
   if (pregameCache.has(playerId)) return Promise.resolve(pregameCache.get(playerId));
   if (pregameInflight.has(playerId)) return pregameInflight.get(playerId);
