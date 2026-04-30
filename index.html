@@ -33,7 +33,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://js.stripe.com/v3/"></script>
-<script defer src="/_vercel/insights/script.js"></script>
 <style>
 :root {
   --bg: #080808;
@@ -2739,6 +2738,13 @@ function closePPModal(e) {
 }
 function closePPModalDirect() {
   document.getElementById('pp-modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function closeGameModal(e) {
+  if (e.target === document.getElementById('game-modal-overlay')) closeGameModalDirect();
+}
+function closeGameModalDirect() {
+  document.getElementById('game-modal-overlay').classList.remove('open');
   document.body.style.overflow = '';
 }
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePPModalDirect(); closeGameModalDirect(); } });
