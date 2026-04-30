@@ -7,6 +7,7 @@ export default defineConfig({
     outDir: 'dist',
     rollupOptions: {
       input: {
+        main: 'index.html',
         react: 'react.html',
       },
     },
