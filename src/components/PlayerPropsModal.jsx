@@ -37,64 +37,80 @@ export function PlayerPropsModal({ playerName, onClose }) {
   const photoUrl = data?.player_id
     ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${data.player_id}.png`
     : '';
+  const hitRate = best?.hit_rate;
 
   return (
-    <div className="modalBackdrop" onMouseDown={onClose}>
-      <section className="propsModal" onMouseDown={(event) => event.stopPropagation()}>
-        <button type="button" className="modalClose" onClick={onClose}>x</button>
-
-        <div className="modalHero">
-          {photoUrl ? <img src={photoUrl} alt="" className="modalPhoto" /> : null}
-          <div>
-            <div className="eyebrow">Detalhe da prop</div>
-            <h2>{playerName}</h2>
-            <p>{state.loading ? 'Carregando historico...' : `Linha ${line ?? '-'} · Hit ${best?.hit_rate ?? '-'}%`}</p>
+    <div className="pp-modal-overlay open" onMouseDown={onClose}>
+      <section className="pp-modal" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="pp-modal-hero">
+          <button type="button" className="pp-modal-close" onClick={onClose}>x</button>
+          <div className="pp-hero-inner">
+            {photoUrl ? <img src={photoUrl} alt="" className="pp-player-photo" /> : null}
+            <div className="pp-player-meta">
+              <div className="pp-player-name">{playerName}</div>
+              <div className="pp-player-team">
+                {state.loading ? 'Carregando historico...' : `${statLabels[stat]} / Linha ${line ?? '-'}`}
+              </div>
+              {!state.loading && !state.error ? (
+                <div className={`pp-rec-badge ${(best?.edge ?? 0) >= 0 ? 'over' : 'under'}`}>
+                  {(best?.edge ?? 0) >= 0 ? 'OVER recomendado' : 'UNDER recomendado'}
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
 
-        {state.error ? <div className="alertBox">{state.error.message}</div> : null}
+        <div className="pp-modal-body">
+          {state.error ? <div className="alertBox">{state.error.message}</div> : null}
 
-        {!state.loading && !state.error ? (
-          <>
-            <div className="modalTabs">
-              {Object.entries(statLabels).map(([key, label]) => (
-                <button
-                  type="button"
-                  key={key}
-                  className={stat === key ? 'active' : ''}
-                  onClick={() => setActiveStat(key)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+          {!state.loading && !state.error ? (
+            <>
+              <div className="pp-section-title">Prop</div>
+              <div className="pp-prop-tabs">
+                {Object.entries(statLabels).map(([key, label]) => (
+                  <button
+                    type="button"
+                    key={key}
+                    className={`pp-prop-tab ${stat === key ? 'active' : ''}`}
+                    onClick={() => setActiveStat(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
 
-            <div className="propSummary modalSummary">
-              <ModalMetric label="Temp" value={data?.season_avg?.[stat] ?? '-'} />
-              <ModalMetric label="L5" value={data?.last5_avg?.[stat] ?? '-'} />
-              <ModalMetric label="L10" value={data?.last10_avg?.[stat] ?? '-'} />
-              <ModalMetric label="Edge" value={best?.edge ?? data?.edge_points ?? '-'} accent />
-            </div>
+              <div className="pp-stats-grid">
+                <ModalMetric label="Temp" value={data?.season_avg?.[stat] ?? '-'} />
+                <ModalMetric label="L5" value={data?.last5_avg?.[stat] ?? '-'} />
+                <ModalMetric label="L10" value={data?.last10_avg?.[stat] ?? '-'} />
+                <ModalMetric label="Linha" value={line ?? '-'} />
+                <ModalMetric label="Hit" value={hitRate != null ? `${hitRate}%` : '-'} />
+                <ModalMetric label="Edge" value={best?.edge ?? data?.edge_points ?? '-'} hot />
+              </div>
 
-            <div className="modalGameList">
-              {games.length ? games.map((game) => {
-                const value = Number(game[stat] ?? game.pts ?? 0);
-                const pct = Math.max(4, Math.round((value / maxValue) * 100));
-                const hit = line != null ? value >= line : false;
-                return (
-                  <div className="gameRow" key={`${game.date}-${game.opp}`}>
-                    <span>{game.date}</span>
-                    <strong>{game.opp}</strong>
-                    <div className="gameBar">
-                      <div className={hit ? 'gameBarFill hit' : 'gameBarFill miss'} style={{ width: `${pct}%` }} />
+              <div className="pp-section-title">Ultimos jogos</div>
+              <div className="modalGameList">
+                {games.length ? games.map((game) => {
+                  const value = Number(game[stat] ?? game.pts ?? 0);
+                  const pct = Math.max(4, Math.round((value / maxValue) * 100));
+                  const hit = line != null ? value >= line : false;
+                  return (
+                    <div className="gameRow" key={`${game.date}-${game.opp}`}>
+                      <span>{formatDate(game.date)}</span>
+                      <strong>{game.opp}</strong>
+                      <div className="gameBar">
+                        <div className={hit ? 'gameBarFill hit' : 'gameBarFill miss'} style={{ width: `${pct}%` }} />
+                      </div>
+                      <b>{value}</b>
                     </div>
-                    <b>{value}</b>
-                  </div>
-                );
-              }) : <div className="emptyChart">Sem historico real para este jogador.</div>}
-            </div>
-          </>
-        ) : null}
+                  );
+                }) : <div className="state-box compact">Sem historico real para este jogador.</div>}
+              </div>
+            </>
+          ) : (
+            <div className="state-box compact">Carregando...</div>
+          )}
+        </div>
       </section>
     </div>
   );
@@ -103,15 +119,22 @@ export function PlayerPropsModal({ playerName, onClose }) {
 const statLabels = {
   pts: 'Pontos',
   reb: 'Rebotes',
-  ast: 'Assists',
+  ast: 'Assistencias',
   fg3m: '3PT',
 };
 
-function ModalMetric({ label, value, accent = false }) {
+function ModalMetric({ label, value, hot = false }) {
   return (
-    <div className="miniMetric">
-      <span>{label}</span>
-      <strong className={accent ? 'accent' : ''}>{value}</strong>
+    <div className={`pp-stat-card ${hot ? 'hot' : ''}`}>
+      <div className="pp-stat-label">{label}</div>
+      <div className="pp-stat-val">{value}</div>
     </div>
   );
+}
+
+function formatDate(value) {
+  if (!value) return '-';
+  const date = new Date(`${String(value).slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 }
