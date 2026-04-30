@@ -1459,7 +1459,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); min-
 <div class="game-modal-overlay" id="game-modal-overlay" onclick="closeGameModal(event)">
   <div class="game-modal" id="game-modal">
     <div class="game-modal-hero">
-      <div class="game-modal-close" onclick="closeGameModalDirect()">✕</div>
+      <div class="game-modal-close" onclick="closeGameModal(event)">✕</div>
       <div class="game-modal-teams" id="gm-teams"></div>
       <div class="game-modal-status" id="gm-status"></div>
     </div>
@@ -2741,13 +2741,13 @@ function closePPModalDirect() {
   document.body.style.overflow = '';
 }
 function closeGameModal(e) {
-  if (e.target === document.getElementById('game-modal-overlay')) closeGameModalDirect();
+  if (e.target === document.getElementById('game-modal-overlay')) closeGameModal(null);
 }
 function closeGameModalDirect() {
   document.getElementById('game-modal-overlay').classList.remove('open');
   document.body.style.overflow = '';
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePPModalDirect(); closeGameModalDirect(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closePPModalDirect(); closeGameModal(null); } });
 
 function calcH2H(p, stat, oppAbbr) {
   // Calcular hit rate nos últimos jogos vs esse adversário específico
@@ -4666,7 +4666,7 @@ function loadFtStats(gameId, leagueKey, homeName, awayName) {
           <div style="flex:1;display:flex;flex-direction:column;gap:3px">
             <span class="ft-stat-label">${label}</span>
             <div style="display:flex;gap:3px;align-items:center">
-              <div class="ft-stat-bar-bg" style="direction:rtl"><div class="ft-stat-bar-fill" style="width:${hPct}%;background:var(--accent)"></div></div>
+              <div class="ft-stat-bar-bg"><div class="ft-stat-bar-fill" style="width:${hPct}%;background:var(--accent);margin-left:auto"></div></div>
               <div class="ft-stat-bar-bg"><div class="ft-stat-bar-fill" style="width:${aPct}%;background:var(--red2)"></div></div>
             </div>
           </div>
