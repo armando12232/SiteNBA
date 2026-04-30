@@ -10,11 +10,12 @@ except ImportError:
     def rate_limit_check(ip): return True
     def get_client_ip(h): return '0.0.0.0'
 
-BLL_KEY = (
-    os.environ.get("BALLDONTLIE_KEY")
-    or os.environ.get("balldontlie_key")
-    or os.environ.get("BALLDONTLIE_API_KEY")
-)
+_KEY_CANDIDATES = [
+    ("BALLDONTLIE_KEY", os.environ.get("BALLDONTLIE_KEY")),
+    ("balldontlie_key", os.environ.get("balldontlie_key")),
+    ("BALLDONTLIE_API_KEY", os.environ.get("BALLDONTLIE_API_KEY")),
+]
+BLL_KEY_SOURCE, BLL_KEY = next(((name, value) for name, value in _KEY_CANDIDATES if value), (None, None))
 if BLL_KEY:
     BLL_KEY = BLL_KEY.strip().strip('"').strip("'")
 BLL_BASE = "https://api.balldontlie.io/v1"
@@ -143,6 +144,9 @@ class handler(BaseHTTPRequestHandler):
                 self._send(200, {
                     "ok": True,
                     "key_configured": bool(BLL_KEY),
+                    "key_source": BLL_KEY_SOURCE,
+                    "key_last4": BLL_KEY[-4:] if BLL_KEY and len(BLL_KEY) >= 4 else None,
+                    "key_length": len(BLL_KEY) if BLL_KEY else 0,
                     "base": BLL_BASE,
                 })
             elif req_type == "debug_search":
