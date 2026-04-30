@@ -1,4 +1,6 @@
 {
+  "buildCommand": "echo \"Static legacy deploy\"",
+  "outputDirectory": ".",
   "functions": {
     "api/nba.py": {
       "maxDuration": 10
