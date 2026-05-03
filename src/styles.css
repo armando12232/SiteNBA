@@ -464,6 +464,10 @@ select {
   background: var(--bg2);
 }
 
+.adminMain {
+  max-width: 1180px;
+}
+
 .adminLogin span,
 .adminLogin p {
   color: var(--text3);
@@ -539,7 +543,7 @@ select {
 
 .adminMetrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 12px;
 }
@@ -608,8 +612,25 @@ select {
   margin: 12px 0;
 }
 
-.adminToolbar input {
+.adminFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.adminToolbar input,
+.adminFilters select {
   min-width: min(360px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  padding: 10px;
+  background: var(--bg3);
+  color: var(--text);
+}
+
+.adminFilters select {
+  min-width: 130px;
 }
 
 .adminTableWrap {
@@ -646,6 +667,18 @@ select {
   color: var(--gold);
   font-size: 10px;
   font-weight: 900;
+}
+
+.adminPlanPill.pro,
+.adminPlanPill.premium {
+  border-color: rgba(0,230,118,.28);
+  color: var(--green);
+}
+
+.adminUserId {
+  color: var(--text3);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
 }
 
 .adminRole {
@@ -4118,6 +4151,18 @@ h2 {
 
   .pricingGrid {
     grid-template-columns: 1fr;
+  }
+
+  .adminMetrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .adminToolbar,
+  .adminActions,
+  .adminFilters,
+  .adminPlanEdit {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .subModal h3 {

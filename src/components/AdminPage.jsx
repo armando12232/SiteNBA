@@ -11,6 +11,7 @@ export function AdminPage() {
   const [auth, setAuth] = useState({ email: '', password: '', loading: true, error: null });
   const [state, setState] = useState({ loading: false, error: null, data: null });
   const [query, setQuery] = useState('');
+  const [filters, setFilters] = useState({ plan: 'all', status: 'all', role: 'all' });
   const [saving, setSaving] = useState(null);
 
   useEffect(() => {
@@ -77,39 +78,46 @@ export function AdminPage() {
   const users = useMemo(() => {
     const rows = state.data?.users || [];
     const cleaned = query.trim().toLowerCase();
-    return cleaned
-      ? rows.filter((user) => `${user.email || ''} ${user.plan || ''} ${user.role || ''}`.toLowerCase().includes(cleaned))
-      : rows;
-  }, [query, state.data?.users]);
+    return rows.filter((user) => {
+      const matchesSearch = !cleaned || `${user.email || ''} ${user.user_id || ''} ${user.plan || ''} ${user.role || ''}`.toLowerCase().includes(cleaned);
+      const matchesPlan = filters.plan === 'all' || user.plan === filters.plan;
+      const matchesStatus = filters.status === 'all' || user.status === filters.status;
+      const matchesRole = filters.role === 'all' || (user.role || 'user') === filters.role;
+      return matchesSearch && matchesPlan && matchesStatus && matchesRole;
+    });
+  }, [filters.plan, filters.role, filters.status, query, state.data?.users]);
 
-  if (auth.loading && !session) return <section className="panel"><div className="loadingGrid">Carregando admin...</div></section>;
+  if (auth.loading && !session) return <main className="main adminMain"><section className="panel"><div className="loadingGrid">Carregando admin...</div></section></main>;
   if (!session) {
     return (
-      <section className="adminLogin panel">
-        <div>
-          <span>Admin</span>
-          <h2>Entrar no painel</h2>
-          <p>Use uma conta com `role=admin` na tabela `subscriptions`.</p>
-        </div>
-        <form onSubmit={login}>
-          <label>
-            Email
-            <input value={auth.email} onChange={(event) => setAuth((current) => ({ ...current, email: event.target.value }))} type="email" autoComplete="email" />
-          </label>
-          <label>
-            Senha
-            <input value={auth.password} onChange={(event) => setAuth((current) => ({ ...current, password: event.target.value }))} type="password" autoComplete="current-password" />
-          </label>
-          {auth.error ? <div className="alertBox">{auth.error}</div> : null}
-          <button type="submit" disabled={auth.loading}>{auth.loading ? 'Entrando...' : 'Entrar'}</button>
-        </form>
-      </section>
+      <main className="main adminMain">
+        <section className="adminLogin panel">
+          <div>
+            <span>Admin</span>
+            <h2>Entrar no painel</h2>
+            <p>Use uma conta com `role=admin` na tabela `subscriptions`.</p>
+          </div>
+          <form onSubmit={login}>
+            <label>
+              Email
+              <input value={auth.email} onChange={(event) => setAuth((current) => ({ ...current, email: event.target.value }))} type="email" autoComplete="email" />
+            </label>
+            <label>
+              Senha
+              <input value={auth.password} onChange={(event) => setAuth((current) => ({ ...current, password: event.target.value }))} type="password" autoComplete="current-password" />
+            </label>
+            {auth.error ? <div className="alertBox">{auth.error}</div> : null}
+            <button type="submit" disabled={auth.loading}>{auth.loading ? 'Entrando...' : 'Entrar'}</button>
+          </form>
+        </section>
+      </main>
     );
   }
 
   const metrics = state.data?.metrics || {};
 
   return (
+    <main className="main adminMain">
     <section className="adminPage panel">
       <div className="panelHeader">
         <div>
@@ -129,9 +137,12 @@ export function AdminPage() {
       {state.data ? (
         <>
           <div className="adminMetrics">
-            <AdminMetric label="Usuarios" value={metrics.total ?? 0} />
+            <AdminMetric label="Usuários" value={metrics.total ?? 0} />
             <AdminMetric label="Pagantes" value={metrics.paid ?? 0} />
             <AdminMetric label="Free" value={metrics.free ?? 0} />
+            <AdminMetric label="Ativos" value={metrics.active ?? 0} />
+            <AdminMetric label="Pendentes" value={metrics.past_due ?? 0} />
+            <AdminMetric label="Admins" value={metrics.admins ?? 0} />
             <AdminMetric label="MRR" value={`R$${metrics.mrr ?? 0}`} />
           </div>
 
@@ -139,7 +150,21 @@ export function AdminPage() {
 
           <div className="adminToolbar">
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar email, plano ou role..." />
-            <span>{users.length} usuarios</span>
+            <div className="adminFilters">
+              <select value={filters.plan} onChange={(event) => setFilters((current) => ({ ...current, plan: event.target.value }))}>
+                <option value="all">Todos planos</option>
+                {PLANS.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+              <select value={filters.status} onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}>
+                <option value="all">Todos status</option>
+                {STATUSES.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+              <select value={filters.role} onChange={(event) => setFilters((current) => ({ ...current, role: event.target.value }))}>
+                <option value="all">Todas roles</option>
+                {ROLES.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </div>
+            <span>{users.length} usuários</span>
           </div>
 
           <div className="adminTableWrap">
@@ -147,6 +172,7 @@ export function AdminPage() {
               <thead>
                 <tr>
                   <th>Email</th>
+                  <th>ID</th>
                   <th>Plano</th>
                   <th>Status</th>
                   <th>Role</th>
@@ -165,6 +191,7 @@ export function AdminPage() {
         </>
       ) : null}
     </section>
+    </main>
   );
 }
 
@@ -201,10 +228,16 @@ function AdminUserRow({ user, saving, onSave }) {
   const [plan, setPlan] = useState(user.plan || 'free');
   const [status, setStatus] = useState(user.status || 'active');
   const [role, setRole] = useState(user.role || 'user');
+  useEffect(() => {
+    setPlan(user.plan || 'free');
+    setStatus(user.status || 'active');
+    setRole(user.role || 'user');
+  }, [user.plan, user.role, user.status]);
   const changed = plan !== user.plan || status !== user.status || role !== (user.role || 'user');
   return (
     <tr>
       <td>{user.email}</td>
+      <td><code className="adminUserId">{shortId(user.user_id)}</code></td>
       <td><span className={`adminPlanPill ${user.plan || 'free'}`}>{user.plan || 'free'}</span></td>
       <td>{user.status || '-'}</td>
       <td className={user.role === 'admin' ? 'adminRole' : ''}>{user.role || 'user'}</td>
@@ -227,6 +260,10 @@ function AdminUserRow({ user, saving, onSave }) {
       </td>
     </tr>
   );
+}
+
+function shortId(value) {
+  return value ? `${String(value).slice(0, 8)}...` : '-';
 }
 
 function formatDate(value) {

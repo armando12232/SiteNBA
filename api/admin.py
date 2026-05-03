@@ -51,7 +51,9 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            self._require_admin()
+            admin = self._require_admin()
+            if not admin:
+                return
             length = int(self.headers.get('Content-Length', '0') or '0')
             body = self.rfile.read(length)
             try:
@@ -127,32 +129,51 @@ class handler(BaseHTTPRequestHandler):
             '/rest/v1/subscriptions?select=user_id,plan,status,role,created_at&order=created_at.desc',
             headers=self._service_headers(),
         )
-        email_map = self._load_email_map()
+        auth_map = self._load_auth_user_map()
+        sub_map = {row.get('user_id'): row for row in subs if isinstance(subs, list) and row.get('user_id')}
+        ids = list(dict.fromkeys([*sub_map.keys(), *auth_map.keys()]))
         users = []
-        for row in subs if isinstance(subs, list) else []:
-            user_id = row.get('user_id') or ''
+        for user_id in ids:
+            row = sub_map.get(user_id) or {}
+            auth_user = auth_map.get(user_id) or {}
+            created_at = row.get('created_at') or auth_user.get('created_at')
             users.append({
-                **row,
-                'email': email_map.get(user_id) or f'{user_id[:8]}...',
+                'user_id': user_id,
+                'email': auth_user.get('email') or f'{user_id[:8]}...',
+                'plan': row.get('plan') or 'free',
+                'status': row.get('status') or 'active',
+                'role': row.get('role') or 'user',
+                'created_at': created_at,
+                'has_subscription': bool(row),
             })
+        users.sort(key=lambda item: item.get('created_at') or '', reverse=True)
         return users
 
-    def _load_email_map(self):
+    def _load_auth_user_map(self):
         try:
             data = self._supabase_json('/auth/v1/admin/users?page=1&per_page=1000', headers=self._service_headers())
         except Exception:
             return {}
-        return {item.get('id'): item.get('email') for item in data.get('users', []) if item.get('id')}
+        return {
+            item.get('id'): {'email': item.get('email'), 'created_at': item.get('created_at')}
+            for item in data.get('users', [])
+            if item.get('id')
+        }
 
     def _metrics(self, users):
         total = len(users)
         paid = len([u for u in users if u.get('plan') != 'free'])
         free = len([u for u in users if u.get('plan') == 'free'])
         admins = len([u for u in users if u.get('role') == 'admin'])
+        active = len([u for u in users if u.get('status') == 'active'])
+        past_due = len([u for u in users if u.get('status') == 'past_due'])
         mrr = sum(PLAN_PRICES.get(u.get('plan'), 0) for u in users)
-        return {'total': total, 'paid': paid, 'free': free, 'admins': admins, 'mrr': mrr}
+        return {'total': total, 'paid': paid, 'free': free, 'admins': admins, 'active': active, 'past_due': past_due, 'mrr': mrr}
 
     def _update_plan(self, user_id, plan):
+        if not self._subscription_exists(user_id):
+            self._create_subscription(user_id, plan, 'active', 'user')
+            return
         body = json.dumps({'plan': plan, 'status': 'active'}).encode()
         url = f'/rest/v1/subscriptions?user_id=eq.{urllib.parse.quote(user_id)}'
         self._supabase_json(url, method='PATCH', body=body, headers={
@@ -162,9 +183,27 @@ class handler(BaseHTTPRequestHandler):
         }, allow_empty=True)
 
     def _update_user(self, user_id, plan, status, role):
+        if not self._subscription_exists(user_id):
+            self._create_subscription(user_id, plan, status, role)
+            return
         body = json.dumps({'plan': plan, 'status': status, 'role': role}).encode()
         url = f'/rest/v1/subscriptions?user_id=eq.{urllib.parse.quote(user_id)}'
         self._supabase_json(url, method='PATCH', body=body, headers={
+            **self._service_headers(),
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+        }, allow_empty=True)
+
+    def _subscription_exists(self, user_id):
+        rows = self._supabase_json(
+            f'/rest/v1/subscriptions?select=user_id&user_id=eq.{urllib.parse.quote(user_id)}&limit=1',
+            headers=self._service_headers(),
+        )
+        return bool(rows)
+
+    def _create_subscription(self, user_id, plan, status, role):
+        body = json.dumps({'user_id': user_id, 'plan': plan, 'status': status, 'role': role}).encode()
+        self._supabase_json('/rest/v1/subscriptions', method='POST', body=body, headers={
             **self._service_headers(),
             'Content-Type': 'application/json',
             'Prefer': 'return=minimal',
