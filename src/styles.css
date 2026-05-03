@@ -444,7 +444,7 @@ select {
   transform: translateY(-2px);
 }
 
-.moduleIcon {
+.moduleCard .moduleIcon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -486,7 +486,7 @@ select {
   font-size: 24px;
 }
 
-.moduleCard span {
+.moduleCard > span:not(.moduleIcon) {
   display: block;
   min-height: 46px;
   color: var(--text3);
