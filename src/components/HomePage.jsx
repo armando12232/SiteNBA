@@ -1,19 +1,19 @@
 import { PREGAME_PLAYERS } from '../data/pregamePlayers.js';
 
 const MODULES = [
-  { key: 'nba', title: 'Player Props', text: 'Hit rates L5-L20, linhas, edge e modal com historico real.', action: 'Abrir NBA', status: 'Core' },
-  { key: 'football', title: 'Futebol', text: 'Jogos do dia, ao vivo, odds, estatisticas, pregame e leitura por score.', action: 'Abrir Futebol', status: 'Novo' },
-  { key: 'nfl', title: 'NFL', text: 'Placar e agenda via ESPN para expandir depois.', action: 'Abrir NFL', status: 'Base' },
-  { key: 'nhl', title: 'NHL', text: 'Hockey ao vivo, placares e calendario.', action: 'Abrir NHL', status: 'Base' },
-  { key: 'mlb', title: 'MLB', text: 'Baseball, scores do dia e classificacao.', action: 'Abrir MLB', status: 'Base' },
-  { key: 'injuries', title: 'Lesoes NBA', text: 'Jogadores fora, questionaveis e provaveis.', action: 'Ver lesoes', status: 'NBA' },
+  { key: 'nba', icon: '📊', title: 'Player Props', text: 'Hit rates L5-L20, linhas, edge e modal com historico real.', action: 'Abrir NBA', status: 'Core' },
+  { key: 'football', icon: '⚽', title: 'Futebol', text: 'Jogos do dia, ao vivo, odds, estatisticas, pregame e leitura por score.', action: 'Abrir Futebol', status: 'Novo' },
+  { key: 'nfl', icon: '🏈', title: 'NFL', text: 'Placar e agenda via ESPN para expandir depois.', action: 'Abrir NFL', status: 'Base' },
+  { key: 'nhl', icon: '🏒', title: 'NHL', text: 'Hockey ao vivo, placares e calendario.', action: 'Abrir NHL', status: 'Base' },
+  { key: 'mlb', icon: '⚾', title: 'MLB', text: 'Baseball, scores do dia e classificacao.', action: 'Abrir MLB', status: 'Base' },
+  { key: 'injuries', icon: '🩹', title: 'Lesoes NBA', text: 'Jogadores fora, questionaveis e provaveis.', action: 'Ver lesoes', status: 'NBA' },
 ];
 
 const QUICK_ACTIONS = [
-  { label: 'NBA Props', target: 'nba', text: 'Radar de props pre-game' },
-  { label: 'NBA Lesoes', target: 'nba-injuries', text: 'Disponibilidade dos jogadores' },
-  { label: 'Futebol', target: 'football', text: 'Jogos, odds e score' },
-  { label: 'NFL', target: 'nfl', text: 'Placar ESPN' },
+  { icon: '📊', label: 'NBA Props', target: 'nba', text: 'Radar de props pre-game' },
+  { icon: '🩹', label: 'NBA Lesoes', target: 'nba-injuries', text: 'Disponibilidade dos jogadores' },
+  { icon: '⚽', label: 'Futebol', target: 'football', text: 'Jogos, odds e score' },
+  { icon: '🏈', label: 'NFL', target: 'nfl', text: 'Placar ESPN' },
 ];
 
 export function HomePage({ onNavigate }) {
@@ -40,6 +40,7 @@ export function HomePage({ onNavigate }) {
         <div className="quickActionGrid">
           {QUICK_ACTIONS.map((item) => (
             <button key={item.label} type="button" onClick={() => onNavigate(item.target)}>
+              <span className="quickIcon">{item.icon}</span>
               <strong>{item.label}</strong>
               <em>{item.text}</em>
             </button>
@@ -54,6 +55,7 @@ export function HomePage({ onNavigate }) {
             type="button"
             onClick={() => onNavigate(item.key === 'injuries' ? 'nba-injuries' : item.key)}
           >
+            <span className="moduleIcon">{item.icon}</span>
             <small>{item.status}</small>
             <strong>{item.title}</strong>
             <span>{item.text}</span>

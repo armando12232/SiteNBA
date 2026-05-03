@@ -79,7 +79,7 @@ export function FootballPage() {
     <section className="panel">
       <div className="panelHeader">
         <div>
-          <h2>Futebol</h2>
+          <h2><span className="titleIcon">⚽</span> Futebol</h2>
           <p className="sectionLead visible">Jogos do dia e partidas ao vivo usando a API de futebol atual.</p>
         </div>
         <div className="footballHeaderActions">
@@ -98,8 +98,8 @@ export function FootballPage() {
       <FootballBoard summary={summary} activeTab={activeTab} />
 
       <div className="subTabs">
-        <button className={activeTab === 'fixtures' ? 'active' : ''} type="button" onClick={() => { setActiveTab('fixtures'); setStatusFilter('all'); }}>Jogos</button>
-        <button className={activeTab === 'live' ? 'active' : ''} type="button" onClick={() => { setActiveTab('live'); setStatusFilter('all'); }}>Ao Vivo</button>
+        <button className={activeTab === 'fixtures' ? 'active' : ''} type="button" onClick={() => { setActiveTab('fixtures'); setStatusFilter('all'); }}><span className="navIcon">⚽</span>Jogos</button>
+        <button className={activeTab === 'live' ? 'active' : ''} type="button" onClick={() => { setActiveTab('live'); setStatusFilter('all'); }}><span className="navIcon">🔴</span>Ao Vivo</button>
       </div>
 
       <div className="filter-row">
@@ -110,6 +110,7 @@ export function FootballPage() {
             type="button"
             onClick={() => setLeague(item.key)}
           >
+            <span className="chipIcon">{item.icon}</span>
             {item.label}
           </button>
         ))}
@@ -123,7 +124,7 @@ export function FootballPage() {
 
       <div className="footballTools">
         <div className="footballSearch">
-          <span>⌕</span>
+          <span>🔎</span>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -134,17 +135,18 @@ export function FootballPage() {
         </div>
         <div className="footballStatusFilters">
           {[
-            ['all', 'Todos'],
-            ['live', 'Ao vivo'],
-            ['upcoming', 'Agendados'],
-            ['finished', 'Encerrados'],
-          ].map(([key, label]) => (
+            ['all', '🌐', 'Todos'],
+            ['live', '🔴', 'Ao vivo'],
+            ['upcoming', '🕒', 'Agendados'],
+            ['finished', '✅', 'Encerrados'],
+          ].map(([key, icon, label]) => (
             <button
               type="button"
               key={key}
               className={statusFilter === key ? 'active' : ''}
               onClick={() => setStatusFilter(key)}
             >
+              <span className="chipIcon">{icon}</span>
               {label}
             </button>
           ))}
