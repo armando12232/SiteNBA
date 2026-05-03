@@ -24,6 +24,7 @@ export default function App() {
 
   return (
     <>
+      <div className={`field-bg field-bg-${page}`} aria-hidden="true" />
       <header className="header">
         <div className="header-left">
           <div className="logo-icon">
@@ -36,7 +37,7 @@ export default function App() {
           <span className="header-date">{new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
         </div>
       </header>
-      <main className="main">
+      <main className={`main page-${page}`}>
         <nav className="page-nav main-nav">
           {['home', 'nba', 'nfl', 'nhl', 'mlb', 'football'].map((item) => (
             <button

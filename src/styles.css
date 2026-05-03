@@ -32,25 +32,89 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 12% 8%, rgba(253,185,39,.10), transparent 26%),
-    radial-gradient(circle at 90% 18%, rgba(232,25,46,.10), transparent 24%),
-    linear-gradient(115deg, rgba(253,185,39,.05) 0 1px, transparent 1px 100%),
+    radial-gradient(circle at 12% 8%, rgba(253,185,39,.08), transparent 28%),
+    radial-gradient(circle at 90% 18%, rgba(232,25,46,.08), transparent 26%),
     var(--bg);
-  background-size: auto, auto, 72px 72px, auto;
   color: var(--text);
   font-family: var(--body);
 }
 
-body::before {
+.field-bg {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   background:
-    linear-gradient(90deg, transparent 0 48%, rgba(253,185,39,.08) 48% 48.3%, transparent 48.3% 100%),
-    radial-gradient(ellipse at left center, transparent 0 43%, rgba(253,185,39,.08) 43.2% 43.7%, transparent 43.9%),
-    radial-gradient(ellipse at right center, transparent 0 43%, rgba(253,185,39,.08) 43.2% 43.7%, transparent 43.9%);
-  opacity: .55;
+    radial-gradient(circle at 50% 50%, transparent 0 8.7%, rgba(253,185,39,.10) 8.9% 9.2%, transparent 9.4%),
+    linear-gradient(90deg, transparent 0 49.86%, rgba(253,185,39,.11) 49.9% 50.1%, transparent 50.14%),
+    radial-gradient(ellipse 26% 44% at 0 50%, transparent 0 70%, rgba(253,185,39,.11) 70.4% 71.2%, transparent 71.6%),
+    radial-gradient(ellipse 26% 44% at 100% 50%, transparent 0 70%, rgba(253,185,39,.11) 70.4% 71.2%, transparent 71.6%),
+    linear-gradient(90deg, transparent 0 16.2%, rgba(253,185,39,.08) 16.25% 16.45%, transparent 16.5% 83.5%, rgba(253,185,39,.08) 83.55% 83.75%, transparent 83.8%),
+    linear-gradient(0deg, transparent 0 10%, rgba(253,185,39,.055) 10.05% 10.2%, transparent 10.25% 89.75%, rgba(253,185,39,.055) 89.8% 89.95%, transparent 90%),
+    radial-gradient(circle at 12% 22%, rgba(253,185,39,.10), transparent 22%),
+    radial-gradient(circle at 88% 72%, rgba(232,25,46,.08), transparent 24%);
+  opacity: .72;
+  pointer-events: none;
+}
+
+.field-bg::before,
+.field-bg::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 190px;
+  height: 190px;
+  border: 2px dashed rgba(253,185,39,.09);
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.field-bg::before {
+  left: max(-115px, calc(50vw - 760px));
+}
+
+.field-bg::after {
+  right: max(-115px, calc(50vw - 760px));
+}
+
+.field-bg-football {
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0 8.7%, rgba(0,230,118,.14) 9% 9.3%, transparent 9.6%),
+    linear-gradient(90deg, transparent 0 49.86%, rgba(0,230,118,.15) 49.9% 50.1%, transparent 50.14%),
+    linear-gradient(90deg, rgba(0,230,118,.12) 0 .18%, transparent .22% 99.78%, rgba(0,230,118,.12) 99.82%),
+    linear-gradient(0deg, rgba(0,230,118,.12) 0 .22%, transparent .26% 99.74%, rgba(0,230,118,.12) 99.78%),
+    linear-gradient(90deg, transparent 0 14%, rgba(0,230,118,.11) 14.08% 14.28%, transparent 14.36% 85.64%, rgba(0,230,118,.11) 85.72% 85.92%, transparent 86%),
+    linear-gradient(0deg, transparent 0 28%, rgba(0,230,118,.075) 28.08% 28.22%, transparent 28.3% 71.7%, rgba(0,230,118,.075) 71.78% 71.92%, transparent 72%),
+    radial-gradient(ellipse 20% 32% at 0 50%, transparent 0 76%, rgba(0,230,118,.11) 76.4% 77.2%, transparent 77.6%),
+    radial-gradient(ellipse 20% 32% at 100% 50%, transparent 0 76%, rgba(0,230,118,.11) 76.4% 77.2%, transparent 77.6%),
+    radial-gradient(circle at 12% 18%, rgba(0,230,118,.11), transparent 26%),
+    radial-gradient(circle at 88% 78%, rgba(77,216,255,.07), transparent 26%);
+}
+
+.field-bg-football::before,
+.field-bg-football::after {
+  width: 230px;
+  height: 360px;
+  border: 2px solid rgba(0,230,118,.10);
+  border-radius: 0;
+}
+
+.field-bg-football::before {
+  left: max(-130px, calc(50vw - 780px));
+}
+
+.field-bg-football::after {
+  right: max(-130px, calc(50vw - 780px));
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 50% 0, rgba(255,255,255,.035), transparent 34%),
+    linear-gradient(180deg, rgba(0,0,0,.18), rgba(0,0,0,.52));
   pointer-events: none;
 }
 
@@ -166,6 +230,8 @@ select {
 }
 
 .main {
+  position: relative;
+  z-index: 1;
   max-width: 1000px;
   margin: 0 auto;
   padding: 24px 16px 80px;
