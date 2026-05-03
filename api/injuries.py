@@ -1,6 +1,6 @@
 import json, os, time, urllib.request, urllib.parse, sys
 from http.server import BaseHTTPRequestHandler
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 try:
@@ -73,7 +73,7 @@ def _categorize_status(s):
     return STATUS_CATEGORIES.get(key, {'label': s, 'color': '#6b7280', 'priority': 1})
 
 # ── Fetch ESPN ────────────────────────────────────────────────────────────────
-def _espn_fetch(url, timeout=8):
+def _espn_fetch(url, timeout=4):
     try:
         req = urllib.request.Request(url, headers={
             'User-Agent': 'Mozilla/5.0',
@@ -91,7 +91,7 @@ def _translate_batch(texts):
     import urllib.request as ur, json as js
 
     key = os.environ.get("ANTHROPIC_API_KEY","")
-    if not key:
+    if not key or os.environ.get("INJURIES_TRANSLATE", "").lower() not in ("1", "true", "yes"):
         return texts  # sem key, retorna original
 
     # Só traduzir os que ainda não estão em cache
@@ -149,7 +149,7 @@ def _fetch_team_injuries(team):
     team_id, abbr, full_name, color = team
     url = (f'https://sports.core.api.espn.com/v2/sports/basketball/'
            f'leagues/nba/teams/{team_id}/injuries')
-    data = _espn_fetch(url)
+    data = _espn_fetch(url, timeout=3)
     if not data or 'items' not in data:
         return []
 
@@ -159,13 +159,13 @@ def _fetch_team_injuries(team):
         ref_url = ref_item.get('$ref') if isinstance(ref_item, dict) else None
         if not ref_url:
             continue
-        detail = _espn_fetch(ref_url, timeout=5)
+        detail = _espn_fetch(ref_url, timeout=3)
         if not detail:
             continue
 
         # Extrair athlete info via $ref
         athlete_ref = detail.get('athlete', {}).get('$ref')
-        athlete_data = _espn_fetch(athlete_ref, timeout=5) if athlete_ref else None
+        athlete_data = _espn_fetch(athlete_ref, timeout=3) if athlete_ref else None
 
         athlete_name = athlete_data.get('displayName', '—') if athlete_data else '—'
         athlete_pos  = (athlete_data.get('position', {}) or {}).get('abbreviation', '') if athlete_data else ''
@@ -192,7 +192,7 @@ def _fetch_team_injuries(team):
             'status_color': cat['color'],
             'priority':     cat['priority'],
             'return_date':  return_date,
-            'description':  _translate_injury_desc(short_desc[:500]),
+            'description':  short_desc[:500],
         })
     return injuries
 
@@ -204,23 +204,35 @@ def get_all_injuries():
         return cached
 
     all_injuries = []
-    # Paralelo: 8 workers — ESPN aguenta tranquilo
-    with ThreadPoolExecutor(max_workers=8) as ex:
-        futures = {ex.submit(_fetch_team_injuries, team): team for team in NBA_TEAMS}
-        for fut in as_completed(futures, timeout=8):
+    completed_teams = 0
+    partial = False
+    max_workers = int(os.environ.get('INJURIES_WORKERS', '6') or 6)
+    deadline = float(os.environ.get('INJURIES_DEADLINE_SECONDS', '7.5') or 7.5)
+
+    ex = ThreadPoolExecutor(max_workers=max_workers)
+    futures = {ex.submit(_fetch_team_injuries, team): team for team in NBA_TEAMS}
+    try:
+        for fut in as_completed(futures, timeout=deadline):
             try:
                 all_injuries.extend(fut.result())
+                completed_teams += 1
             except Exception:
                 pass
+    except TimeoutError:
+        partial = True
+    finally:
+        for fut in futures:
+            fut.cancel()
+        ex.shutdown(wait=False, cancel_futures=True)
 
     # Ordenar: prioridade alta primeiro
     all_injuries.sort(key=lambda x: (-x['priority'], x['team'], x['athlete_name']))
 
-    # Traduzir todas as descrições em batch (1 chamada API pra tudo)
-    descs = [i['description'] for i in all_injuries]
-    translated = _translate_batch(descs)
-    for i, inj in enumerate(all_injuries):
-        inj['description'] = translated[i]
+    if all_injuries and os.environ.get("INJURIES_TRANSLATE", "").lower() in ("1", "true", "yes"):
+        descs = [i['description'] for i in all_injuries]
+        translated = _translate_batch(descs)
+        for i, inj in enumerate(all_injuries):
+            inj['description'] = translated[i]
 
     # Stats por categoria
     by_cat = {}
@@ -233,9 +245,12 @@ def get_all_injuries():
         'by_status':   by_cat,
         'by_team':     _group_by_team(all_injuries),
         'injuries':    all_injuries,
+        'partial':     partial or completed_teams < len(NBA_TEAMS),
+        'teams_done':  completed_teams,
+        'teams_total': len(NBA_TEAMS),
         'updated_at':  int(time.time()),
     }
-    _cache_set('all_injuries', result, ttl=600)
+    _cache_set('all_injuries', result, ttl=600 if all_injuries else 120)
     return result
 
 

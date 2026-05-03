@@ -34,14 +34,14 @@ export function InjuriesPage() {
     <section className="panel">
       <div className="panelHeader">
         <div>
-          <h2>Lesoes NBA</h2>
+          <h2>Lesões NBA</h2>
           <p className="sectionLead visible">Relatorio ESPN com status por jogador e filtro por time.</p>
         </div>
         <span className="statusPill">{state.data?.total ?? 0} jogadores</span>
       </div>
 
       {state.error ? <div className="alertBox">{state.error.message}</div> : null}
-      {state.loading ? <div className="loadingGrid">Carregando lesoes...</div> : null}
+      {state.loading ? <div className="loadingGrid">Carregando lesões...</div> : null}
 
       {!state.loading && state.data ? (
         <>
@@ -50,6 +50,11 @@ export function InjuriesPage() {
               <span key={status}>{status} <strong>{count}</strong></span>
             ))}
           </div>
+          {state.data.partial ? (
+            <div className="state-box compact">
+              Lista parcial carregada: {state.data.teams_done || 0}/{state.data.teams_total || 30} times responderam antes do limite.
+            </div>
+          ) : null}
 
           <div className="filter-row">
             {teams.map((value) => (
@@ -76,7 +81,7 @@ export function InjuriesPage() {
                 <em style={{ color: item.status_color || 'var(--text2)' }}>{item.status}</em>
               </div>
             ))}
-            {!injuries.length ? <div className="emptyState">Nenhuma lesao encontrada.</div> : null}
+            {!injuries.length ? <div className="emptyState">Nenhuma lesão encontrada.</div> : null}
           </div>
         </>
       ) : null}

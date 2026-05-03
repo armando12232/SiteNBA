@@ -58,7 +58,7 @@ export default function App() {
             <nav className="page-nav nba-tabs">
               <button className={`page-nav-btn ${nbaTab === 'pregame' ? 'active' : ''}`} onClick={() => setNbaTab('pregame')}><span className="navIcon">PP</span>Player Props</button>
               <button className={`page-nav-btn ${nbaTab === 'live' ? 'active' : ''}`} onClick={() => setNbaTab('live')}><span className="navIcon liveMark">ON</span>Ao Vivo</button>
-              <button className={`page-nav-btn ${nbaTab === 'injuries' ? 'active' : ''}`} onClick={() => setNbaTab('injuries')}><span className="navIcon">INJ</span>Lesoes</button>
+              <button className={`page-nav-btn ${nbaTab === 'injuries' ? 'active' : ''}`} onClick={() => setNbaTab('injuries')}><span className="navIcon">INJ</span>Lesões</button>
             </nav>
             {nbaTab === 'pregame' ? <PregameRadar onSelectPlayer={setSelectedPlayer} /> : null}
             {nbaTab === 'live' ? <LiveMonitor /> : null}
@@ -98,6 +98,6 @@ function navIcon(page) {
 }
 
 function pageLabel(page, nbaTab) {
-  if (page === 'nba') return nbaTab === 'live' ? 'NBA Live' : nbaTab === 'injuries' ? 'Lesoes' : 'NBA';
+  if (page === 'nba') return nbaTab === 'live' ? 'NBA Live' : nbaTab === 'injuries' ? 'Lesões' : 'NBA';
   return navLabel(page);
 }

@@ -8,7 +8,7 @@ import { buildPregameScore } from '../utils/statcastScore.js';
 const statLabels = {
   pts: 'Pontos',
   reb: 'Rebotes',
-  ast: 'Assistencias',
+  ast: 'Assistências',
   fg3m: 'Cestas de 3',
 };
 
@@ -193,7 +193,7 @@ export function PregameRadar({ onSelectPlayer }) {
           Atualizar
         </button>
         <div className="table-summary">
-          BP {bpCount || '-'} {state.bpDate ? `(${state.bpDate})` : ''} / Edge {topEdge ?? '-'} / Hit medio {avgHit != null ? `${avgHit}%` : '-'}
+          BP {bpCount || '-'} {state.bpDate ? `(${state.bpDate})` : ''} / Edge {topEdge ?? '-'} / Hit médio {avgHit != null ? `${avgHit}%` : '-'}
         </div>
       </div>
 
@@ -313,7 +313,7 @@ function StatCastBoard({ activeStat, scoreFilter, summary, onExplain, onFilter, 
           <BoardMetric label="Top SC" value={top?.score.score ?? '-'} tier={top?.score.tier} />
           <BoardMetric label="Elite" value={summary.elite} />
           <BoardMetric label="Fortes" value={summary.strong} />
-          <BoardMetric label="Media" value={summary.average} />
+          <BoardMetric label="Média" value={summary.average} />
         </div>
         <div className="statcast-board-actions">
           <button type="button" onClick={onSort}>Ordenar SC</button>
@@ -345,7 +345,7 @@ function StatCastBoard({ activeStat, scoreFilter, summary, onExplain, onFilter, 
               type="button"
               key={`${entry.player.player_id || entry.player.player_name}-${entry.stat}`}
               className={`statcast-pick-card ${entry.score.tier}`}
-              onClick={() => onPick?.(entry.player.player_name)}
+              onClick={() => onPick?.(entry.player)}
             >
               <b>{entry.score.score}</b>
               <span>{entry.player.player_name}</span>
@@ -375,18 +375,18 @@ function ScoreInfoModal({ onClose }) {
         <div className="score-info-kicker">StatCast Score</div>
         <h3>Como calculamos a leitura</h3>
         <p>
-          O score vai de 1 a 99 e resume a qualidade da prop. Ele nao garante resultado;
+          O score vai de 1 a 99 e resume a qualidade da prop. Ele não garante resultado;
           ele organiza as melhores leituras usando dados recentes, linha e contexto.
         </p>
         <div className="score-info-grid">
           <InfoFactor weight="28%" title="Forma recente" text="L5 e L10 pesam mais para capturar momento atual." />
-          <InfoFactor weight="22%" title="Consistencia" text="Hit rate recente e amostra real reduzem picks aleatorios." />
-          <InfoFactor weight="22%" title="Edge" text="Diferenca entre projecao/media e linha da casa." />
-          <InfoFactor weight="18%" title="Projecao" text="Compara a projecao do jogador contra a linha selecionada." />
-          <InfoFactor weight="10%" title="Confianca" text="Premia jogadores com amostra maior de jogos recentes." />
+          <InfoFactor weight="22%" title="Consistência" text="Hit rate recente e amostra real reduzem picks aleatórios." />
+          <InfoFactor weight="22%" title="Edge" text="Diferença entre projeção/média e linha da casa." />
+          <InfoFactor weight="18%" title="Projeção" text="Compara a projeção do jogador contra a linha selecionada." />
+          <InfoFactor weight="10%" title="Confiança" text="Premia jogadores com amostra maior de jogos recentes." />
         </div>
         <div className="score-info-note">
-          Regra pratica: 78+ = elite, 64+ = forte, 50+ = monitorar, abaixo disso tem baixa prioridade.
+          Regra prática: 78+ = elite, 64+ = forte, 50+ = monitorar, abaixo disso tem baixa prioridade.
         </div>
       </section>
     </div>
@@ -425,7 +425,7 @@ function PregameRow({ player, activeStat, onSelectPlayer }) {
   });
 
   return (
-    <div className="props-table-row" onClick={() => onSelectPlayer?.(player.player_name)}>
+    <div className="props-table-row" onClick={() => onSelectPlayer?.(player)}>
       <div className="props-player-cell">
         <img src={photoUrl} alt="" className="player-img-mobile props-player-img" />
         <div className="props-player-meta">

@@ -19,7 +19,7 @@ export function buildPregameScore({ player, stat, prop, line, games = [] }) {
     },
     {
       id: 'hit',
-      label: 'Consistencia',
+      label: 'Consistência',
       value: normalizePct(l10Hit ?? l20Hit ?? 50),
       note: l10Hit != null ? `L10 ${l10Hit}%` : l20Hit != null ? `L20 ${l20Hit}%` : 'neutro',
       weight: 0.22,
@@ -33,14 +33,14 @@ export function buildPregameScore({ player, stat, prop, line, games = [] }) {
     },
     {
       id: 'projection',
-      label: 'Projecao',
+      label: 'Projeção',
       value: scoreProjection(projection, numericLine),
-      note: projection != null && Number.isFinite(numericLine) ? `${projection.toFixed(1)} vs ${numericLine}` : 'sem projecao',
+      note: projection != null && Number.isFinite(numericLine) ? `${projection.toFixed(1)} vs ${numericLine}` : 'sem projeção',
       weight: 0.18,
     },
     {
       id: 'sample',
-      label: 'Confianca',
+      label: 'Confiança',
       value: Math.min(100, Math.round((sample / 20) * 100)),
       note: `${sample}/20 jogos`,
       weight: 0.10,
@@ -150,7 +150,7 @@ function pregameSummary(score, side, edge, l5Hit, l10Hit, projection, line) {
   if (edge != null) parts.push(`Edge ${edge > 0 ? '+' : ''}${edge}.`);
   if (l5Hit != null) parts.push(`L5 bateu ${l5Hit}%.`);
   if (l10Hit != null) parts.push(`L10 bateu ${l10Hit}%.`);
-  if (projection != null && Number.isFinite(line)) parts.push(`Projecao ${projection.toFixed(1)} contra linha ${line}.`);
+  if (projection != null && Number.isFinite(line)) parts.push(`Projeção ${projection.toFixed(1)} contra linha ${line}.`);
   return parts.join(' ');
 }
 

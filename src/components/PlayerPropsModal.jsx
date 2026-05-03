@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { getPregameByName } from '../api/nba.js';
+import { getPregame, getPregameByName } from '../api/nba.js';
 import { ensureHalfLine, getBestProp } from '../utils/props.js';
 import { buildPregameScore } from '../utils/statcastScore.js';
 
 export function PlayerPropsModal({ playerName, onClose }) {
+  const tableData = typeof playerName === 'object' && playerName ? playerName : null;
+  const displayName = tableData?.player_name || String(playerName || '');
   const [activeStat, setActiveStat] = useState('pts');
   const [state, setState] = useState({ loading: true, error: null, data: null });
 
@@ -11,20 +13,27 @@ export function PlayerPropsModal({ playerName, onClose }) {
     if (!playerName) return;
     let alive = true;
     setActiveStat('pts');
-    setState({ loading: true, error: null, data: null });
+    setState({ loading: !tableData, error: null, data: tableData });
 
-    getPregameByName(playerName)
+    const request = tableData?.player_id ? getPregame(tableData.player_id) : getPregameByName(displayName);
+    request
       .then((data) => {
-        if (alive) setState({ loading: false, error: null, data });
+        if (!alive) return;
+        setState({
+          loading: false,
+          error: null,
+          data: mergeModalData(tableData, data),
+        });
       })
       .catch((error) => {
-        if (alive) setState({ loading: false, error, data: null });
+        if (!alive) return;
+        setState({ loading: false, error: tableData ? null : error, data: tableData });
       });
 
     return () => {
       alive = false;
     };
-  }, [playerName]);
+  }, [displayName, playerName, tableData]);
 
   if (!playerName) return null;
 
@@ -48,11 +57,12 @@ export function PlayerPropsModal({ playerName, onClose }) {
     : 0;
   const metricHits = {
     h2h: null,
-    l5: hitPercent(games, stat, lineNumber, 5),
-    l10: hitPercent(games, stat, lineNumber, 10),
+    l5: activeProp?.l5 ?? hitPercent(games, stat, lineNumber, 5),
+    l10: activeProp?.l10 ?? hitPercent(games, stat, lineNumber, 10),
     l15: hitPercent(games, stat, lineNumber, 15),
     l20: hitPercent(games, stat, lineNumber, 20),
   };
+  const seasonHit = activeProp?.hit_rate ?? hitPercent(games, stat, lineNumber, games.length);
   const currentStreak = streakOver(games, stat, lineNumber);
   const score = data && !state.loading && !state.error
     ? buildPregameScore({ player: data, stat, prop: best, line, games })
@@ -66,9 +76,9 @@ export function PlayerPropsModal({ playerName, onClose }) {
           <div className="pp-hero-inner">
             {photoUrl ? <img src={photoUrl} alt="" className="pp-player-photo" /> : null}
             <div className="pp-player-meta">
-              <div className="pp-player-name">{playerName}</div>
+              <div className="pp-player-name">{displayName}</div>
               <div className="pp-player-team">
-                {state.loading ? 'Carregando historico...' : `${teamAbbr || '-'} / ${statLabels[stat]} / Linha ${line ?? '-'}`}
+                {state.loading ? 'Carregando histórico...' : `${teamAbbr || '-'} / ${statLabels[stat]} / Linha ${line ?? '-'}`}
               </div>
               {!state.loading && !state.error ? (
                 <div className={`pp-rec-badge ${(best?.edge ?? 0) >= 0 ? 'over' : 'under'}`}>
@@ -99,9 +109,9 @@ export function PlayerPropsModal({ playerName, onClose }) {
               </div>
 
               <div className="pp-stats-grid">
-                <ModalMetric label="Temp" value={data?.season_avg?.[stat] ?? '-'} />
-                <ModalMetric label="L5" value={data?.last5_avg?.[stat] ?? '-'} />
-                <ModalMetric label="L10" value={data?.last10_avg?.[stat] ?? '-'} />
+                <ModalMetric label="Temp" value={formatPercentOrNumber(seasonHit, data?.season_avg?.[stat])} />
+                <ModalMetric label="L5" value={formatPercentOrNumber(metricHits.l5, data?.last5_avg?.[stat])} />
+                <ModalMetric label="L10" value={formatPercentOrNumber(metricHits.l10, data?.last10_avg?.[stat])} />
                 <ModalMetric label="Linha" value={line ?? '-'} />
                 <ModalMetric label="Hit" value={hitRate != null ? `${hitRate}%` : '-'} />
                 <ModalMetric label="SC" value={score?.score ?? '-'} hot />
@@ -113,7 +123,7 @@ export function PlayerPropsModal({ playerName, onClose }) {
 
               <div className="pp-section-title">Performance recente</div>
               <div className="performance-strip">
-                <MetricInline label="Temp" value={data?.season_avg?.[stat] ?? '-'} suffix="" green />
+                <MetricInline label="Temp" value={seasonHit} />
                 <MetricInline label="H2H" value={metricHits.h2h} />
                 <MetricInline label="L5" value={metricHits.l5} />
                 <MetricInline label="L10" value={metricHits.l10} />
@@ -155,7 +165,7 @@ export function PlayerPropsModal({ playerName, onClose }) {
                     <span>{currentStreak ? `Streak: ${currentStreak}x OVER` : 'Streak: -'}</span>
                   </div>
                 </div>
-              ) : <div className="state-box compact">Sem historico real para este jogador.</div>}
+              ) : <EstimatedHistory player={data} stat={stat} line={lineNumber} />}
             </>
           ) : (
             <div className="state-box compact">Carregando...</div>
@@ -166,10 +176,36 @@ export function PlayerPropsModal({ playerName, onClose }) {
   );
 }
 
+function mergeModalData(tableData, fetchedData) {
+  if (!tableData) return fetchedData;
+  if (!fetchedData || fetchedData.error) return tableData;
+  return {
+    ...fetchedData,
+    ...tableData,
+    season_avg: { ...(fetchedData.season_avg || {}), ...(tableData.season_avg || {}) },
+    last5_avg: { ...(fetchedData.last5_avg || {}), ...(tableData.last5_avg || {}) },
+    last10_avg: { ...(fetchedData.last10_avg || {}), ...(tableData.last10_avg || {}) },
+    synthetic_lines: { ...(fetchedData.synthetic_lines || {}), ...(tableData.synthetic_lines || {}) },
+    props: mergePropMaps(fetchedData.props, tableData.props),
+    last5_games: tableData.last5_games?.length ? tableData.last5_games : fetchedData.last5_games,
+  };
+}
+
+function mergePropMaps(fetchedProps = {}, tableProps = {}) {
+  const result = { ...fetchedProps };
+  for (const [stat, tableProp] of Object.entries(tableProps || {})) {
+    result[stat] = {
+      ...(fetchedProps?.[stat] || {}),
+      ...tableProp,
+    };
+  }
+  return result;
+}
+
 const statLabels = {
   pts: 'Pontos',
   reb: 'Rebotes',
-  ast: 'Assistencias',
+  ast: 'Assistências',
   fg3m: '3PT',
 };
 
@@ -180,6 +216,78 @@ function ModalMetric({ label, value, hot = false }) {
       <div className="pp-stat-val">{value}</div>
     </div>
   );
+}
+
+function formatPercentOrNumber(percentValue, fallbackValue) {
+  if (percentValue != null && percentValue !== '-' && !Number.isNaN(Number(percentValue))) {
+    return `${Number(percentValue)}%`;
+  }
+  const fallbackNumber = Number(fallbackValue);
+  if (Number.isFinite(fallbackNumber)) {
+    return formatNumber(fallbackNumber);
+  }
+  return '-';
+}
+
+function EstimatedHistory({ player, stat, line }) {
+  const prop = player?.props?.[stat] || {};
+  const values = buildEstimatedValues(prop, player, stat);
+  if (!values.length) {
+    return <div className="state-box compact">Histórico real indisponível. Mantendo leitura pela linha e hit rate da tabela.</div>;
+  }
+
+  const chartMax = Math.max(Math.ceil(Math.max(...values, Number(line) || 1) / 2) * 2, 2);
+  const chartLinePct = Number.isFinite(line)
+    ? Math.min(95, Math.max(5, (line / chartMax) * 100))
+    : 0;
+
+  return (
+    <div className="performance-chart estimated">
+      <div className="chart-grid">
+        {[1, 0.8, 0.6, 0.4, 0.2, 0].map((ratio) => (
+          <div className="chart-grid-line" key={ratio}>
+            <span>{Math.round(chartMax * ratio)}</span>
+          </div>
+        ))}
+      </div>
+      <div
+        className="chart-line"
+        style={{ bottom: `${chartLinePct}%`, display: Number.isFinite(line) ? undefined : 'none' }}
+      >
+        <span>Linha {line ?? '-'}</span>
+      </div>
+      <div className="chart-bars">
+        {values.map((value, index) => {
+          const pct = Math.max(7, Math.round((value / chartMax) * 100));
+          const hit = Number.isFinite(line) ? value >= line : false;
+          return (
+            <div className="chart-bar-item" key={`${value}-${index}`}>
+              <strong>{formatNumber(value)}</strong>
+              <div className={`chart-bar ${hit ? 'hit' : 'miss'}`} style={{ height: `${pct}%` }} />
+              <span>EST</span>
+              <small>L{index + 1}</small>
+            </div>
+          );
+        })}
+      </div>
+      <div className="chart-footer">
+        <span>Histórico estimado pela linha da casa</span>
+        <span>{prop.source || player?.source || 'Fallback'}</span>
+      </div>
+    </div>
+  );
+}
+
+function buildEstimatedValues(prop, player, stat) {
+  const base = Number(prop.projection ?? player?.last5_avg?.[stat] ?? player?.season_avg?.[stat] ?? prop.line);
+  if (!Number.isFinite(base)) return [];
+  const l5 = Number(prop.l5 ?? prop.hit_rate ?? 50);
+  const swing = Math.max(1, base * 0.18);
+  return Array.from({ length: 10 }, (_, index) => {
+    const direction = index < Math.round(l5 / 10) ? 1 : -1;
+    const wave = ((index % 4) - 1.5) * 0.25;
+    return Number(Math.max(0, base + direction * swing * (0.5 + Math.abs(wave))).toFixed(1));
+  });
 }
 
 function ScoreDiagnostic({ score }) {

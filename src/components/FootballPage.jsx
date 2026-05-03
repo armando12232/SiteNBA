@@ -156,7 +156,7 @@ export function FootballPage() {
       <div className="footballSortBar">
         <span>Ordenar</span>
         {[
-          ['time', 'Horario'],
+          ['time', 'Horário'],
           ['read', 'Score'],
           ['league', 'Liga'],
         ].map(([key, label]) => (
@@ -528,11 +528,11 @@ function StatsPanel({ data, home, away }) {
     ['passPct', 'Passes'],
   ];
 
-  if (!homeStats || !awayStats || data?.error) return <EmptyModalState text="Sem estatisticas disponiveis." />;
+  if (!homeStats || !awayStats || data?.error) return <EmptyModalState text="Sem estatísticas disponíveis." />;
 
   return (
     <section className="ftModalSection">
-      <div className="ftModalTitle">Estatisticas</div>
+      <div className="ftModalTitle">Estatísticas</div>
       <div className="ftStatsHeader"><span>{home}</span><span>{away}</span></div>
       {rows.map(([key, label]) => (
         <StatCompare key={key} label={label} home={homeStats.stats?.[key]} away={awayStats.stats?.[key]} />
@@ -560,7 +560,7 @@ function EventsPanel({ events }) {
 
 function PlayersPanel({ rosters }) {
   const [teamIndex, setTeamIndex] = useState(0);
-  if (!rosters.length) return <EmptyModalState text="Escalacao/jogadores indisponiveis." />;
+  if (!rosters.length) return <EmptyModalState text="Escalação/jogadores indisponíveis." />;
   const roster = rosters[teamIndex] || rosters[0];
   const starters = (roster.players || []).filter((player) => player.starter);
   const bench = (roster.players || []).filter((player) => !player.starter);
@@ -583,7 +583,7 @@ function PlayersPanel({ rosters }) {
 }
 
 function PregamePanel({ data, home, away }) {
-  if (!data || data.error) return <EmptyModalState text="Pre-jogo indisponivel." />;
+  if (!data || data.error) return <EmptyModalState text="Pré-jogo indisponível." />;
   return (
     <section className="ftModalSection">
       <div className="ftModalTitle">Pre-jogo</div>
@@ -606,7 +606,7 @@ function PregamePanel({ data, home, away }) {
 function OddsPanel({ draftKings, bet365, fixture }) {
   const hasDraftKings = draftKings && (draftKings.homeML || draftKings.awayML || draftKings.overUnder);
   const hasBet365 = bet365 && !bet365.error && (bet365.homeML || bet365.awayML || bet365.over25 || bet365.bttsYes);
-  if (!hasDraftKings && !hasBet365) return <EmptyModalState text="Odds indisponiveis para esse jogo." />;
+  if (!hasDraftKings && !hasBet365) return <EmptyModalState text="Odds indisponíveis para esse jogo." />;
 
   return (
     <section className="ftModalSection">
@@ -625,7 +625,7 @@ function OddsPanel({ draftKings, bet365, fixture }) {
             {bet365.over25 ? <OddsBox label="Over 2.5" value={formatOdd(bet365.over25)} /> : null}
             {bet365.under25 ? <OddsBox label="Under 2.5" value={formatOdd(bet365.under25)} /> : null}
             {bet365.bttsYes ? <OddsBox label="Ambos marcam" value={formatOdd(bet365.bttsYes)} /> : null}
-            {bet365.bttsNo ? <OddsBox label="Nao marcam" value={formatOdd(bet365.bttsNo)} /> : null}
+            {bet365.bttsNo ? <OddsBox label="Não marcam" value={formatOdd(bet365.bttsNo)} /> : null}
           </div>
         </>
       ) : null}
@@ -634,13 +634,13 @@ function OddsPanel({ draftKings, bet365, fixture }) {
 }
 
 function RefereePanel({ data, fixture }) {
-  if (!data || data.error) return <EmptyModalState text="Dados do arbitro nao encontrados." />;
+  if (!data || data.error) return <EmptyModalState text="Dados do árbitro não encontrados." />;
   const ref = data.referee_stats || {};
   return (
     <section className="ftModalSection">
       <div className="ftModalTitle">Arbitro</div>
       <div className="refereeCard">
-        <strong>{data.referee || 'Nao divulgado'}</strong>
+        <strong>{data.referee || 'Não divulgado'}</strong>
         <InfoRow label="Cartoes/jogo" value={ref.avg_cards ?? '-'} />
         <InfoRow label="Amarelos/jogo" value={ref.avg_yellow ?? '-'} />
         <InfoRow label="Vermelhos/jogo" value={ref.avg_red ?? '-'} />

@@ -295,7 +295,7 @@ function LiveGameModal({ game, players, alerts, onClose, onPlayer }) {
           <div className="liveModalMetrics">
             <LiveModalMetric label="Periodo" value={`Q${game.period || '-'}`} />
             <LiveModalMetric label="Clock" value={formatClock(game.gameClock) || game.gameStatusText || '-'} />
-            <LiveModalMetric label="Diferenca" value={Math.abs(teamScore(away) - teamScore(home))} />
+            <LiveModalMetric label="Diferença" value={Math.abs(teamScore(away) - teamScore(home))} />
             <LiveModalMetric label="Alertas" value={alerts.length} />
           </div>
 
@@ -378,7 +378,7 @@ function LivePlayerModal({ alert, onClose }) {
           <section className="liveModalAnalysis">
             <div className="liveModalSectionTitle">Leitura do alerta</div>
             <p>
-              {alert.name} esta com {alert.pts || 0} pontos, {alert.reb || 0} rebotes e {alert.ast || 0} assistencias em {alert.mins || 0} minutos.
+              {alert.name} está com {alert.pts || 0} pontos, {alert.reb || 0} rebotes e {alert.ast || 0} assistências em {alert.mins || 0} minutos.
               O impacto bruto e {Math.round(impact)}, com leitura {alert.label || 'ao vivo'}.
             </p>
           </section>

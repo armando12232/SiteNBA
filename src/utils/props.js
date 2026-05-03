@@ -7,7 +7,7 @@ export function ensureHalfLine(line) {
 
 export function confidenceFromEdge(edge) {
   if (edge >= 5) return { text: 'Alta', className: 'high' };
-  if (edge >= 2.5) return { text: 'Media', className: 'medium' };
+  if (edge >= 2.5) return { text: 'Média', className: 'medium' };
   return { text: 'Baixa', className: 'low' };
 }
 
