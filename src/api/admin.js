@@ -10,6 +10,14 @@ export async function updateAdminPlan(accessToken, userId, plan) {
   });
 }
 
+export async function updateAdminUser(accessToken, userId, data) {
+  return adminFetch('/api/admin', {
+    accessToken,
+    method: 'POST',
+    body: { action: 'update_user', user_id: userId, ...data },
+  });
+}
+
 async function adminFetch(url, { accessToken, method = 'GET', body } = {}) {
   const response = await fetch(url, {
     method,

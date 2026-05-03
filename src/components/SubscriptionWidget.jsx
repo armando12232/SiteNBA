@@ -10,7 +10,7 @@ import {
 } from '../api/subscriptions.js';
 import { supabase } from '../api/supabase.js';
 
-export function SubscriptionWidget() {
+export function SubscriptionWidget({ onSubscriptionChange }) {
   const [session, setSession] = useState(null);
   const [subscription, setSubscription] = useState({ plan: 'free', status: 'active', role: 'guest', label: 'Free' });
   const [modal, setModal] = useState(null);
@@ -35,6 +35,10 @@ export function SubscriptionWidget() {
       data.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    onSubscriptionChange?.({ session, subscription });
+  }, [onSubscriptionChange, session, subscription]);
 
   const plan = PLANS[subscription.plan] || PLANS.free;
 

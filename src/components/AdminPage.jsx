@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getAdminSummary, updateAdminPlan } from '../api/admin.js';
+import { getAdminSummary, updateAdminUser } from '../api/admin.js';
 import { supabase } from '../api/supabase.js';
 
 const PLANS = ['free', 'basic', 'pro', 'premium'];
+const STATUSES = ['active', 'trialing', 'past_due', 'cancelled'];
+const ROLES = ['user', 'admin'];
 
 export function AdminPage() {
   const [session, setSession] = useState(null);
@@ -60,10 +62,10 @@ export function AdminPage() {
     }
   }
 
-  async function savePlan(userId, plan) {
+  async function saveUser(userId, data) {
     setSaving(userId);
     try {
-      await updateAdminPlan(session.access_token, userId, plan);
+      await updateAdminUser(session.access_token, userId, data);
       await loadSummary();
     } catch (error) {
       setState((current) => ({ ...current, error }));
@@ -149,12 +151,12 @@ export function AdminPage() {
                   <th>Status</th>
                   <th>Role</th>
                   <th>Desde</th>
-                  <th>Alterar</th>
+                  <th>Controle</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <AdminUserRow key={user.user_id} user={user} saving={saving === user.user_id} onSave={savePlan} />
+                  <AdminUserRow key={user.user_id} user={user} saving={saving === user.user_id} onSave={saveUser} />
                 ))}
               </tbody>
             </table>
@@ -197,7 +199,9 @@ function PlanDistribution({ users }) {
 
 function AdminUserRow({ user, saving, onSave }) {
   const [plan, setPlan] = useState(user.plan || 'free');
-  const changed = plan !== user.plan;
+  const [status, setStatus] = useState(user.status || 'active');
+  const [role, setRole] = useState(user.role || 'user');
+  const changed = plan !== user.plan || status !== user.status || role !== (user.role || 'user');
   return (
     <tr>
       <td>{user.email}</td>
@@ -210,7 +214,13 @@ function AdminUserRow({ user, saving, onSave }) {
           <select value={plan} onChange={(event) => setPlan(event.target.value)}>
             {PLANS.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
-          <button type="button" disabled={!changed || saving} onClick={() => onSave(user.user_id, plan)}>
+          <select value={status} onChange={(event) => setStatus(event.target.value)}>
+            {STATUSES.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+          <select value={role} onChange={(event) => setRole(event.target.value)}>
+            {ROLES.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+          <button type="button" disabled={!changed || saving} onClick={() => onSave(user.user_id, { plan, status, role })}>
             {saving ? '...' : 'Salvar'}
           </button>
         </div>

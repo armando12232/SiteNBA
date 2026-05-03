@@ -29,6 +29,45 @@ export const PLANS = {
   },
 };
 
+export const PLAN_ACCESS = {
+  free: {
+    maxProps: 8,
+    modal: false,
+    live: false,
+    injuries: false,
+    football: false,
+    sports: false,
+  },
+  basic: {
+    maxProps: 25,
+    modal: true,
+    live: false,
+    injuries: false,
+    football: false,
+    sports: false,
+  },
+  pro: {
+    maxProps: -1,
+    modal: true,
+    live: true,
+    injuries: true,
+    football: true,
+    sports: true,
+  },
+  premium: {
+    maxProps: -1,
+    modal: true,
+    live: true,
+    injuries: true,
+    football: true,
+    sports: true,
+  },
+};
+
+export function getPlanAccess(plan) {
+  return PLAN_ACCESS[plan] || PLAN_ACCESS.free;
+}
+
 export async function getCurrentSession() {
   const { data } = await supabase.auth.getSession();
   return data.session || null;

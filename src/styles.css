@@ -455,6 +455,208 @@ select {
   font-weight: 900;
 }
 
+.adminLogin {
+  display: grid;
+  gap: 18px;
+  border: 1px solid var(--border2);
+  border-radius: 22px;
+  padding: 24px;
+  background: var(--bg2);
+}
+
+.adminLogin span,
+.adminLogin p {
+  color: var(--text3);
+  font-size: 12px;
+}
+
+.adminLogin h2,
+.adminPage h2 {
+  font-family: var(--display);
+  font-size: 40px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.adminLogin form {
+  display: grid;
+  gap: 12px;
+}
+
+.adminLogin label {
+  display: grid;
+  gap: 6px;
+  color: var(--text3);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.adminLogin input,
+.adminToolbar input,
+.adminPlanEdit select {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: 0;
+  padding: 10px;
+  background: var(--bg3);
+  color: var(--text);
+}
+
+.adminLogin button,
+.adminActions button,
+.adminPlanEdit button {
+  border: 1px solid rgba(253,185,39,.28);
+  border-radius: 10px;
+  padding: 9px 12px;
+  background: rgba(253,185,39,.10);
+  color: var(--gold);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.adminActions,
+.adminToolbar,
+.adminPlanEdit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.adminActions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.adminActions span,
+.adminToolbar span {
+  color: var(--text3);
+  font-size: 12px;
+}
+
+.adminMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.adminMetric,
+.adminPlanBox,
+.adminTableWrap {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg2);
+}
+
+.adminMetric {
+  padding: 14px;
+  text-align: center;
+}
+
+.adminMetric strong {
+  display: block;
+  color: var(--gold);
+  font-family: var(--display);
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.adminMetric span {
+  color: var(--text3);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.adminPlanBox {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 14px;
+}
+
+.adminPlanRow {
+  display: grid;
+  grid-template-columns: 80px 1fr 34px;
+  gap: 10px;
+  align-items: center;
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.adminPlanRow div {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--bg4);
+}
+
+.adminPlanRow i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--gold), var(--green));
+}
+
+.adminToolbar {
+  justify-content: space-between;
+  margin: 12px 0;
+}
+
+.adminToolbar input {
+  min-width: min(360px, 100%);
+}
+
+.adminTableWrap {
+  overflow-x: auto;
+}
+
+.adminTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+.adminTable th,
+.adminTable td {
+  border-bottom: 1px solid var(--border);
+  padding: 10px;
+  color: var(--text2);
+  font-size: 12px;
+  text-align: left;
+}
+
+.adminTable th {
+  color: var(--text3);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.adminPlanPill {
+  border: 1px solid var(--border2);
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.adminRole {
+  color: var(--green) !important;
+  font-weight: 900;
+}
+
+.adminPlanEdit {
+  min-width: 360px;
+}
+
 .main {
   position: relative;
   z-index: 1;
@@ -551,6 +753,46 @@ select {
 
 .page-nav-btn.disabled:hover {
   color: var(--text3);
+}
+
+.page-nav-btn.locked {
+  opacity: .62;
+}
+
+.paywallBox,
+.planLimitBox {
+  margin-bottom: 14px;
+  border: 1px solid rgba(253,185,39,.24);
+  border-radius: 18px;
+  padding: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(253,185,39,.12), transparent 34%),
+    rgba(13,15,16,.86);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.paywallBox span {
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.paywallBox strong {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--display);
+  font-size: 32px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.paywallBox p,
+.planLimitBox {
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .page-nav-pill {

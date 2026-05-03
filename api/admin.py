@@ -18,6 +18,8 @@ PLAN_PRICES = {
 }
 
 VALID_PLANS = set(PLAN_PRICES.keys())
+VALID_STATUS = {'active', 'past_due', 'cancelled', 'trialing'}
+VALID_ROLES = {'user', 'admin'}
 
 
 class handler(BaseHTTPRequestHandler):
@@ -67,6 +69,18 @@ class handler(BaseHTTPRequestHandler):
                     return
                 self._update_plan(user_id, plan)
                 self._send(200, {'ok': True, 'user_id': user_id, 'plan': plan})
+                return
+
+            if action == 'update_user':
+                user_id = str(data.get('user_id') or '').strip()
+                plan = str(data.get('plan') or '').strip().lower()
+                status = str(data.get('status') or '').strip().lower()
+                role = str(data.get('role') or '').strip().lower()
+                if not user_id or plan not in VALID_PLANS or status not in VALID_STATUS or role not in VALID_ROLES:
+                    self._send(400, {'error': 'invalid user update'})
+                    return
+                self._update_user(user_id, plan, status, role)
+                self._send(200, {'ok': True, 'user_id': user_id, 'plan': plan, 'status': status, 'role': role})
                 return
 
             self._send(400, {'error': 'invalid action'})
@@ -140,6 +154,15 @@ class handler(BaseHTTPRequestHandler):
 
     def _update_plan(self, user_id, plan):
         body = json.dumps({'plan': plan, 'status': 'active'}).encode()
+        url = f'/rest/v1/subscriptions?user_id=eq.{urllib.parse.quote(user_id)}'
+        self._supabase_json(url, method='PATCH', body=body, headers={
+            **self._service_headers(),
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+        }, allow_empty=True)
+
+    def _update_user(self, user_id, plan, status, role):
+        body = json.dumps({'plan': plan, 'status': status, 'role': role}).encode()
         url = f'/rest/v1/subscriptions?user_id=eq.{urllib.parse.quote(user_id)}'
         self._supabase_json(url, method='PATCH', body=body, headers={
             **self._service_headers(),

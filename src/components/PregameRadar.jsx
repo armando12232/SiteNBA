@@ -14,7 +14,7 @@ const statLabels = {
 
 const PREFS_KEY = 'statcast:nba:pregame:prefs:v1';
 
-export function PregameRadar({ onSelectPlayer }) {
+export function PregameRadar({ access, onSelectPlayer }) {
   const savedPrefs = readPrefs();
   const [activeStat, setActiveStat] = useState(savedPrefs.activeStat || 'pts');
   const [sortBy, setSortBy] = useState(savedPrefs.sortBy || 'l5');
@@ -100,8 +100,9 @@ export function PregameRadar({ onSelectPlayer }) {
 
   const visiblePlayers = useMemo(() => {
     const filtered = filterByScoreTier(basePlayers, activeStat, scoreFilter);
-    return sortPlayers(filtered, activeStat, sortBy);
-  }, [activeStat, basePlayers, scoreFilter, sortBy]);
+    const sorted = sortPlayers(filtered, activeStat, sortBy);
+    return access?.maxProps > 0 ? sorted.slice(0, access.maxProps) : sorted;
+  }, [access?.maxProps, activeStat, basePlayers, scoreFilter, sortBy]);
 
   useEffect(() => {
     if (!state.loading && scoreFilter !== 'all' && basePlayers.length && !visiblePlayers.length) {
@@ -211,6 +212,11 @@ export function PregameRadar({ onSelectPlayer }) {
 
       {state.error ? <div className="alertBox">{state.error.message}</div> : null}
       {state.loading && !state.players.length ? <div className="state-box compact">Buscando dados NBA...</div> : null}
+      {access?.maxProps > 0 && basePlayers.length > access.maxProps ? (
+        <div className="planLimitBox">
+          Plano atual mostra {access.maxProps} jogadores. Upgrade libera lista completa e recursos avançados.
+        </div>
+      ) : null}
 
       {!state.error ? (
         visiblePlayers.length ? (
