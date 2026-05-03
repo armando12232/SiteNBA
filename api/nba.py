@@ -336,8 +336,6 @@ def fetch_player_gamelog_rows(player_id, timeout=6):
             return all_rows, errors
 
     return all_rows, errors
-
-
 def _team_from_matchup(matchup):
     text = str(matchup or "").strip()
     if not text:
