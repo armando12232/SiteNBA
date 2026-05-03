@@ -231,12 +231,12 @@ function formatPercentOrNumber(percentValue, fallbackValue) {
 
 function EstimatedHistory({ player, stat, line }) {
   const prop = player?.props?.[stat] || {};
-  const values = buildEstimatedValues(prop, player, stat);
-  if (!values.length) {
+  const rows = buildEstimatedRows(prop, player, stat);
+  if (!rows.length) {
     return <div className="state-box compact">Histórico real indisponível. Mantendo leitura pela linha e hit rate da tabela.</div>;
   }
 
-  const chartMax = Math.max(Math.ceil(Math.max(...values, Number(line) || 1) / 2) * 2, 2);
+  const chartMax = Math.max(Math.ceil(Math.max(...rows.map((row) => row.value), Number(line) || 1) / 2) * 2, 2);
   const chartLinePct = Number.isFinite(line)
     ? Math.min(95, Math.max(5, (line / chartMax) * 100))
     : 0;
@@ -257,15 +257,16 @@ function EstimatedHistory({ player, stat, line }) {
         <span>Linha {line ?? '-'}</span>
       </div>
       <div className="chart-bars">
-        {values.map((value, index) => {
+        {rows.map((row, index) => {
+          const value = row.value;
           const pct = Math.max(7, Math.round((value / chartMax) * 100));
           const hit = Number.isFinite(line) ? value >= line : false;
           return (
-            <div className="chart-bar-item" key={`${value}-${index}`}>
+            <div className="chart-bar-item" key={`${row.date}-${row.opp}-${index}`}>
               <strong>{formatNumber(value)}</strong>
               <div className={`chart-bar ${hit ? 'hit' : 'miss'}`} style={{ height: `${pct}%` }} />
-              <span>EST</span>
-              <small>L{index + 1}</small>
+              <span>{row.opp}</span>
+              <small>{formatDateShort(row.date)}</small>
             </div>
           );
         })}
@@ -278,15 +279,38 @@ function EstimatedHistory({ player, stat, line }) {
   );
 }
 
-function buildEstimatedValues(prop, player, stat) {
+function buildEstimatedRows(prop, player, stat) {
   const base = Number(prop.projection ?? player?.last5_avg?.[stat] ?? player?.season_avg?.[stat] ?? prop.line);
   if (!Number.isFinite(base)) return [];
   const l5 = Number(prop.l5 ?? prop.hit_rate ?? 50);
   const swing = Math.max(1, base * 0.18);
+  const opponents = estimateOpponents(player);
+  const dates = estimateRecentDates();
   return Array.from({ length: 10 }, (_, index) => {
     const direction = index < Math.round(l5 / 10) ? 1 : -1;
     const wave = ((index % 4) - 1.5) * 0.25;
-    return Number(Math.max(0, base + direction * swing * (0.5 + Math.abs(wave))).toFixed(1));
+    return {
+      value: Number(Math.max(0, base + direction * swing * (0.5 + Math.abs(wave))).toFixed(1)),
+      opp: opponents[index % opponents.length],
+      date: dates[index],
+    };
+  });
+}
+
+function estimateOpponents(player) {
+  const gameLabel = String(player?.gameLabel || '');
+  const team = String(player?.team_abbr || '').toUpperCase();
+  const teams = gameLabel.match(/\b[A-Z]{2,3}\b/g) || [];
+  const opponent = teams.find((abbr) => abbr !== team);
+  return [opponent || team || 'PROJ'];
+}
+
+function estimateRecentDates() {
+  const base = new Date();
+  return Array.from({ length: 10 }, (_, index) => {
+    const date = new Date(base);
+    date.setDate(base.getDate() - ((9 - index) * 2));
+    return date.toISOString().slice(0, 10);
   });
 }
 
