@@ -3,7 +3,7 @@ from http.server import BaseHTTPRequestHandler
 
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
 SUPABASE_URL      = os.environ.get('SUPABASE_URL', 'https://dhirxfoxcswctxcjzvhf.supabase.co')
-SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRoaXJ4Zm94Y3N3Y3R4Y2p6dmhmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTQxMjk2MCwiZXhwIjoyMDkwOTg4OTYwfQ.2v0U5_IXg9oQrFc-LI4Ke4D5wPhb6Wzs70_PE8PIpuY')
+SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
 SITE_URL          = os.environ.get('SITE_URL', 'https://site-nba-ten.vercel.app')
 
 # Preços dos planos em centavos (BRL)

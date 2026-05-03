@@ -336,6 +336,11 @@ def fetch_player_gamelog_rows(player_id, timeout=6):
             return all_rows, errors
 
     return all_rows, errors
+def _team_from_matchup(matchup):
+    text = str(matchup or "").strip()
+    if not text:
+        return ""
+    return text.split()[0].upper()
 
 
 def get_pregame(player_id):
@@ -393,6 +398,7 @@ def get_pregame(player_id):
                 }
         result = {
             "player_id": player_id,
+            "team_abbr": "",
             "season_avg": {"pts": season_pts, "reb": season_reb, "ast": season_ast, "fg3m": season_3pm},
             "props": props_fallback,
             "last5_avg":  {"pts": None, "reb": None, "ast": None, "fg3m": None},
@@ -407,6 +413,7 @@ def get_pregame(player_id):
 
     last5  = game_rows[:5]
     last10 = game_rows[:10] if len(game_rows) >= 10 else game_rows
+    current_team = _team_from_matchup(game_rows[0].get("MATCHUP", "")) if game_rows else ""
 
     # Calcular props para cada categoria
     props = {}
@@ -433,6 +440,7 @@ def get_pregame(player_id):
 
     result = {
         "player_id": player_id,
+        "team_abbr": current_team,
         "season_avg": {"pts": season_pts, "reb": season_reb, "ast": season_ast, "fg3m": season_3pm},
         "props": props,
         "last5_avg":  {"pts": round(sum(float(r.get("PTS",0)) for r in last5)/len(last5), 1)} if last5 else {},
@@ -452,7 +460,7 @@ def get_pregame(player_id):
                 "season_type": r.get("_SEASON_TYPE", ""),
                 "hit":  float(r.get("PTS",0)) >= (pts_prop.get("line") or 0)
             }
-            for r in game_rows[:10]
+            for r in game_rows[:20]
         ],
         "summary": f"L5 {pts_prop.get('l5','—')}pts"
     }
