@@ -6,6 +6,7 @@ import { LiveMonitor } from './components/LiveMonitor.jsx';
 import { PregameRadar } from './components/PregameRadar.jsx';
 import { PlayerPropsModal } from './components/PlayerPropsModal.jsx';
 import { SportsPage } from './components/SportsPage.jsx';
+import { SubscriptionWidget } from './components/SubscriptionWidget.jsx';
 
 export default function App() {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
@@ -35,6 +36,7 @@ export default function App() {
         </div>
         <div className="header-right">
           <span className="header-date">{new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
+          <SubscriptionWidget />
         </div>
       </header>
       <main className={`main page-${page}`}>

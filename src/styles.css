@@ -229,6 +229,232 @@ select {
   font-size: 12px;
 }
 
+.subWidget {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.planBadge,
+.subBtn {
+  border: 1px solid rgba(253,185,39,.28);
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: rgba(253,185,39,.08);
+  color: var(--gold);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.planBadge.plan-pro,
+.planBadge.plan-premium {
+  border-color: rgba(0,230,118,.32);
+  background: rgba(0,230,118,.10);
+  color: var(--green);
+}
+
+.subBtn {
+  border-color: var(--border2);
+  background: var(--bg3);
+  color: var(--text2);
+}
+
+.subBtn.ghost {
+  color: var(--text3);
+}
+
+.subEmail {
+  max-width: 150px;
+  overflow: hidden;
+  color: var(--text3);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 240;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0,0,0,.74);
+  backdrop-filter: blur(10px);
+}
+
+.subModal {
+  position: relative;
+  width: min(780px, 100%);
+  border: 1px solid var(--border2);
+  border-radius: 24px;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 85% 10%, rgba(253,185,39,.12), transparent 30%),
+    var(--bg2);
+  box-shadow: 0 30px 90px rgba(0,0,0,.55);
+}
+
+.subModal.auth {
+  width: min(420px, 100%);
+}
+
+.subClose {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border2);
+  border-radius: 50%;
+  background: var(--bg3);
+  color: var(--text2);
+  cursor: pointer;
+}
+
+.subKicker {
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.subModal h3 {
+  margin: 8px 0 18px;
+  font-family: var(--display);
+  font-size: 40px;
+  font-weight: 900;
+  line-height: .95;
+  text-transform: uppercase;
+}
+
+.authForm {
+  display: grid;
+  gap: 10px;
+}
+
+.authForm input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  outline: 0;
+  padding: 12px;
+  background: var(--bg3);
+  color: var(--text);
+}
+
+.authForm button,
+.pricingCard button {
+  border: 0;
+  border-radius: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, var(--gold), var(--orange));
+  color: #070707;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.authForm button:disabled,
+.pricingCard button:disabled {
+  cursor: default;
+  filter: grayscale(.8);
+  opacity: .65;
+}
+
+.authMessage {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  background: var(--bg3);
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.linkBtn {
+  margin-top: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--gold);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.pricingGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pricingCard {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(253,185,39,.10), transparent 36%),
+    var(--bg3);
+}
+
+.pricingCard.popular {
+  border-color: rgba(0,230,118,.35);
+}
+
+.pricingCard.current {
+  border-color: var(--gold);
+}
+
+.popularTag {
+  width: fit-content;
+  border: 1px solid rgba(0,230,118,.28);
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--green);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.pricingCard strong {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.planPrice {
+  color: var(--gold);
+  font-family: var(--display);
+  font-size: 34px;
+  font-weight: 900;
+}
+
+.pricingCard ul {
+  display: grid;
+  gap: 7px;
+  min-height: 100px;
+  color: var(--text2);
+  font-size: 12px;
+  list-style: none;
+}
+
+.pricingCard li::before {
+  content: "+";
+  margin-right: 7px;
+  color: var(--green);
+  font-weight: 900;
+}
+
 .main {
   position: relative;
   z-index: 1;
@@ -3628,9 +3854,32 @@ h2 {
   }
 
   .live-pill,
-  .header-date,
   .table-summary {
     display: none;
+  }
+
+  .header-right {
+    gap: 6px;
+  }
+
+  .header-date,
+  .subEmail,
+  .subBtn.ghost {
+    display: none;
+  }
+
+  .planBadge,
+  .subBtn {
+    padding: 6px 8px;
+    font-size: 9px;
+  }
+
+  .pricingGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .subModal h3 {
+    font-size: 32px;
   }
 
   .page-nav,
