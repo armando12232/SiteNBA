@@ -6,15 +6,15 @@ const FOOTBALL_LIVE_TTL_MS = 20 * 1000;
 const FOOTBALL_STATS_TTL_MS = 90 * 1000;
 
 export const FOOTBALL_LEAGUES = [
-  { key: 'all', label: 'Todas', icon: '🌐' },
-  { key: 'brasileirao', label: 'Brasileirao', icon: '🇧🇷' },
-  { key: 'champions', label: 'Champions', icon: '🏆' },
-  { key: 'premier', label: 'Premier', icon: '🏴' },
-  { key: 'laliga', label: 'La Liga', icon: '🇪🇸' },
-  { key: 'bundesliga', label: 'Bundesliga', icon: '🇩🇪' },
-  { key: 'seriea', label: 'Serie A', icon: '🇮🇹' },
-  { key: 'ligue1', label: 'Ligue 1', icon: '🇫🇷' },
-  { key: 'libertadores', label: 'Libertadores', icon: '🌎' },
+  { key: 'all', label: 'Todas', icon: 'ALL' },
+  { key: 'brasileirao', label: 'Brasileirao', icon: 'BR' },
+  { key: 'champions', label: 'Champions', icon: 'UCL' },
+  { key: 'premier', label: 'Premier', icon: 'EPL' },
+  { key: 'laliga', label: 'La Liga', icon: 'ESP' },
+  { key: 'bundesliga', label: 'Bundesliga', icon: 'GER' },
+  { key: 'seriea', label: 'Serie A', icon: 'ITA' },
+  { key: 'ligue1', label: 'Ligue 1', icon: 'FRA' },
+  { key: 'libertadores', label: 'Libertadores', icon: 'LIB' },
 ];
 
 export function getFootballFixtures() {

@@ -79,7 +79,7 @@ export function FootballPage() {
     <section className="panel">
       <div className="panelHeader">
         <div>
-          <h2><span className="titleIcon">⚽</span> Futebol</h2>
+          <h2><span className="titleIcon">FT</span> Futebol</h2>
           <p className="sectionLead visible">Jogos do dia e partidas ao vivo usando a API de futebol atual.</p>
         </div>
         <div className="footballHeaderActions">
@@ -98,8 +98,8 @@ export function FootballPage() {
       <FootballBoard summary={summary} activeTab={activeTab} />
 
       <div className="subTabs">
-        <button className={activeTab === 'fixtures' ? 'active' : ''} type="button" onClick={() => { setActiveTab('fixtures'); setStatusFilter('all'); }}><span className="navIcon">⚽</span>Jogos</button>
-        <button className={activeTab === 'live' ? 'active' : ''} type="button" onClick={() => { setActiveTab('live'); setStatusFilter('all'); }}><span className="navIcon">🔴</span>Ao Vivo</button>
+        <button className={activeTab === 'fixtures' ? 'active' : ''} type="button" onClick={() => { setActiveTab('fixtures'); setStatusFilter('all'); }}><span className="navIcon">FT</span>Jogos</button>
+        <button className={activeTab === 'live' ? 'active' : ''} type="button" onClick={() => { setActiveTab('live'); setStatusFilter('all'); }}><span className="navIcon liveMark">ON</span>Ao Vivo</button>
       </div>
 
       <div className="filter-row">
@@ -124,7 +124,7 @@ export function FootballPage() {
 
       <div className="footballTools">
         <div className="footballSearch">
-          <span>🔎</span>
+          <span>BUS</span>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -135,10 +135,10 @@ export function FootballPage() {
         </div>
         <div className="footballStatusFilters">
           {[
-            ['all', '🌐', 'Todos'],
-            ['live', '🔴', 'Ao vivo'],
-            ['upcoming', '🕒', 'Agendados'],
-            ['finished', '✅', 'Encerrados'],
+            ['all', 'ALL', 'Todos'],
+            ['live', 'ON', 'Ao vivo'],
+            ['upcoming', 'NEXT', 'Agendados'],
+            ['finished', 'END', 'Encerrados'],
           ].map(([key, icon, label]) => (
             <button
               type="button"

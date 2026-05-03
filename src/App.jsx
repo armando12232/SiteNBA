@@ -56,9 +56,9 @@ export default function App() {
         {page === 'nba' ? (
           <>
             <nav className="page-nav nba-tabs">
-              <button className={`page-nav-btn ${nbaTab === 'pregame' ? 'active' : ''}`} onClick={() => setNbaTab('pregame')}><span className="navIcon">📊</span>Player Props</button>
-              <button className={`page-nav-btn ${nbaTab === 'live' ? 'active' : ''}`} onClick={() => setNbaTab('live')}><span className="navIcon">🔴</span>Ao Vivo</button>
-              <button className={`page-nav-btn ${nbaTab === 'injuries' ? 'active' : ''}`} onClick={() => setNbaTab('injuries')}><span className="navIcon">🩹</span>Lesoes</button>
+              <button className={`page-nav-btn ${nbaTab === 'pregame' ? 'active' : ''}`} onClick={() => setNbaTab('pregame')}><span className="navIcon">PP</span>Player Props</button>
+              <button className={`page-nav-btn ${nbaTab === 'live' ? 'active' : ''}`} onClick={() => setNbaTab('live')}><span className="navIcon liveMark">ON</span>Ao Vivo</button>
+              <button className={`page-nav-btn ${nbaTab === 'injuries' ? 'active' : ''}`} onClick={() => setNbaTab('injuries')}><span className="navIcon">INJ</span>Lesoes</button>
             </nav>
             {nbaTab === 'pregame' ? <PregameRadar onSelectPlayer={setSelectedPlayer} /> : null}
             {nbaTab === 'live' ? <LiveMonitor /> : null}
@@ -88,12 +88,12 @@ function navLabel(page) {
 
 function navIcon(page) {
   return {
-    home: '🏠',
-    nba: '🏀',
-    nfl: '🏈',
-    nhl: '🏒',
-    mlb: '⚾',
-    football: '⚽',
+    home: 'SC',
+    nba: 'NBA',
+    nfl: 'NFL',
+    nhl: 'NHL',
+    mlb: 'MLB',
+    football: 'FT',
   }[page];
 }
 
