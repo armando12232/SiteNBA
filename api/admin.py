@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -213,21 +214,33 @@ class handler(BaseHTTPRequestHandler):
         return {'apikey': SUPABASE_SERVICE_KEY, 'Authorization': f'Bearer {SUPABASE_SERVICE_KEY}'}
 
     def _supabase_json(self, path, method='GET', body=None, headers=None, allow_empty=False):
+        merged_headers = {
+            'Accept': 'application/json',
+            'Connection': 'close',
+            'User-Agent': 'StatCastBR-Admin/1.0',
+            **(headers or {}),
+        }
         req = urllib.request.Request(
             f'{SUPABASE_URL}{path}',
             data=body,
             method=method,
-            headers=headers or {},
+            headers=merged_headers,
         )
-        try:
-            with urllib.request.urlopen(req, timeout=15) as response:
-                raw = response.read()
-                if allow_empty and not raw:
-                    return None
-                return json.loads(raw or b'{}')
-        except urllib.error.HTTPError as exc:
-            raw = exc.read().decode('utf-8', errors='ignore')
-            raise Exception(raw or f'Supabase HTTP {exc.code}')
+        last_error = None
+        for attempt in range(3):
+            try:
+                with urllib.request.urlopen(req, timeout=15) as response:
+                    raw = response.read()
+                    if allow_empty and not raw:
+                        return None
+                    return json.loads(raw or b'{}')
+            except urllib.error.HTTPError as exc:
+                raw = exc.read().decode('utf-8', errors='ignore')
+                raise Exception(raw or f'Supabase HTTP {exc.code}')
+            except Exception as exc:
+                last_error = exc
+                time.sleep(0.25 * (attempt + 1))
+        raise Exception(str(last_error)[:200])
 
     def _send(self, status, data):
         body = json.dumps(data).encode()
