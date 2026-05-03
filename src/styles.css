@@ -178,9 +178,14 @@ select {
 
 .navIcon,
 .chipIcon {
-  display: inline-grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1em;
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
   line-height: 1;
+  text-align: center;
+  transform: translateY(-.02em);
 }
 
 .titleIcon {
@@ -367,14 +372,17 @@ select {
 }
 
 .quickIcon {
-  display: grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 34px;
   height: 34px;
   margin-bottom: 10px;
   border-radius: 50%;
   background: rgba(255,255,255,.06);
   font-size: 20px;
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+  line-height: 1;
 }
 
 .quickActionGrid button:hover {
@@ -436,14 +444,18 @@ select {
 }
 
 .moduleIcon {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
   margin-bottom: 14px;
   border-radius: 50%;
   background: rgba(255,255,255,.06);
-  font-size: 24px;
+  font-size: 25px;
+  font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+  line-height: 1;
+  text-align: center;
 }
 
 .moduleCard strong,
