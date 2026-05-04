@@ -1,15 +1,17 @@
 import json
+import http.client
 import os
 import time
-import urllib.error
 import urllib.parse
-import urllib.request
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
 SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://dhirxfoxcswctxcjzvhf.supabase.co')
 SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY', 'sb_publishable_DC3I02jLVjM013WrODpgCg_xiPl1rsl')
 SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
+SUPABASE_PARSED = urlparse(SUPABASE_URL)
+SUPABASE_HOST = SUPABASE_PARSED.netloc
+SUPABASE_BASE_PATH = SUPABASE_PARSED.path.rstrip('/')
 
 PLAN_PRICES = {
     'free': 0,
@@ -220,26 +222,27 @@ class handler(BaseHTTPRequestHandler):
             'User-Agent': 'StatCastBR-Admin/1.0',
             **(headers or {}),
         }
-        req = urllib.request.Request(
-            f'{SUPABASE_URL}{path}',
-            data=body,
-            method=method,
-            headers=merged_headers,
-        )
+        request_path = f'{SUPABASE_BASE_PATH}{path}' if SUPABASE_BASE_PATH else path
         last_error = None
         for attempt in range(3):
+            conn = None
             try:
-                with urllib.request.urlopen(req, timeout=15) as response:
-                    raw = response.read()
-                    if allow_empty and not raw:
-                        return None
-                    return json.loads(raw or b'{}')
-            except urllib.error.HTTPError as exc:
-                raw = exc.read().decode('utf-8', errors='ignore')
-                raise Exception(raw or f'Supabase HTTP {exc.code}')
+                conn = http.client.HTTPSConnection(SUPABASE_HOST, timeout=15)
+                conn.request(method, request_path, body=body, headers=merged_headers)
+                response = conn.getresponse()
+                raw = response.read()
+                if response.status >= 400:
+                    message = raw.decode('utf-8', errors='ignore') or f'Supabase HTTP {response.status}'
+                    raise Exception(message)
+                if allow_empty and not raw:
+                    return None
+                return json.loads(raw or b'{}')
             except Exception as exc:
                 last_error = exc
                 time.sleep(0.25 * (attempt + 1))
+            finally:
+                if conn:
+                    conn.close()
         raise Exception(str(last_error)[:200])
 
     def _send(self, status, data):
