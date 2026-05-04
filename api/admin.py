@@ -6,6 +6,11 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
+try:
+    import requests
+except Exception:
+    requests = None
+
 SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://dhirxfoxcswctxcjzvhf.supabase.co')
 SUPABASE_ANON_KEY = os.environ.get('SUPABASE_ANON_KEY', 'sb_publishable_DC3I02jLVjM013WrODpgCg_xiPl1rsl')
 SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY', '')
@@ -225,25 +230,47 @@ class handler(BaseHTTPRequestHandler):
         request_path = f'{SUPABASE_BASE_PATH}{path}' if SUPABASE_BASE_PATH else path
         last_error = None
         for attempt in range(3):
-            conn = None
             try:
-                conn = http.client.HTTPSConnection(SUPABASE_HOST, timeout=15)
-                conn.request(method, request_path, body=body, headers=merged_headers)
-                response = conn.getresponse()
-                raw = response.read()
-                if response.status >= 400:
-                    message = raw.decode('utf-8', errors='ignore') or f'Supabase HTTP {response.status}'
-                    raise Exception(message)
-                if allow_empty and not raw:
-                    return None
-                return json.loads(raw or b'{}')
+                return self._supabase_json_requests(path, method, body, merged_headers, allow_empty)
             except Exception as exc:
                 last_error = exc
+                try:
+                    return self._supabase_json_http_client(request_path, method, body, merged_headers, allow_empty)
+                except Exception as fallback_exc:
+                    last_error = fallback_exc
                 time.sleep(0.25 * (attempt + 1))
-            finally:
-                if conn:
-                    conn.close()
         raise Exception(str(last_error)[:200])
+
+    def _supabase_json_requests(self, path, method, body, headers, allow_empty):
+        if requests is None:
+            raise Exception('requests unavailable')
+        response = requests.request(
+            method,
+            f'{SUPABASE_URL}{path}',
+            data=body,
+            headers=headers,
+            timeout=15,
+        )
+        if response.status_code >= 400:
+            raise Exception(response.text or f'Supabase HTTP {response.status_code}')
+        if allow_empty and not response.content:
+            return None
+        return response.json() if response.content else {}
+
+    def _supabase_json_http_client(self, request_path, method, body, headers, allow_empty):
+        conn = http.client.HTTPSConnection(SUPABASE_HOST, timeout=15)
+        try:
+            conn.request(method, request_path, body=body, headers=headers)
+            response = conn.getresponse()
+            raw = response.read()
+            if response.status >= 400:
+                message = raw.decode('utf-8', errors='ignore') or f'Supabase HTTP {response.status}'
+                raise Exception(message)
+            if allow_empty and not raw:
+                return None
+            return json.loads(raw or b'{}')
+        finally:
+            conn.close()
 
     def _send(self, status, data):
         body = json.dumps(data).encode()

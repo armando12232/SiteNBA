@@ -1,3 +1,4 @@
 nba_api
 fastapi
 uvicorn
+requests
