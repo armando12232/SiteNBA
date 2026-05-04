@@ -14,9 +14,6 @@
     "api/checkout.py": {
       "maxDuration": 10
     },
-    "api/admin.py": {
-      "maxDuration": 10
-    },
     "api/analyze.py": {
       "maxDuration": 10
     },
