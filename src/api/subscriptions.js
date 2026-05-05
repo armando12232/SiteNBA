@@ -75,14 +75,13 @@ export async function getCurrentSession() {
 
 export async function loadSubscription(userId) {
   if (!userId) return freeSubscription();
-  const { data, error } = await supabase
-    .from('subscriptions')
-    .select('plan,status,role')
-    .eq('user_id', userId)
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
+  const session = await getCurrentSession();
+  if (!session?.access_token) return freeSubscription();
+  const data = await fetchJson('/api/subscription', {
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  }, 15000);
   return normalizeSubscription(data);
 }
 
