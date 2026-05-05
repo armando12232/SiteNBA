@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getAdminSummary, updateAdminUser } from '../api/admin.js';
+import { getAdminHealth, getAdminMe, getAdminSummary, updateAdminUser } from '../api/admin.js';
 import { supabase } from '../api/supabase.js';
 
 const PLANS = ['free', 'basic', 'pro', 'premium'];
@@ -10,6 +10,7 @@ export function AdminPage() {
   const [session, setSession] = useState(null);
   const [auth, setAuth] = useState({ email: '', password: '', loading: true, error: null });
   const [state, setState] = useState({ loading: false, error: null, data: null });
+  const [diagnostic, setDiagnostic] = useState({ health: null, me: null });
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState({ plan: 'all', status: 'all', role: 'all' });
   const [saving, setSaving] = useState(null);
@@ -56,6 +57,14 @@ export function AdminPage() {
     if (!token) return;
     setState((current) => ({ ...current, loading: true, error: null }));
     try {
+      const [health, me] = await Promise.all([
+        getAdminHealth().catch((error) => ({ error: error.message })),
+        getAdminMe(token).catch((error) => ({ error: error.message })),
+      ]);
+      setDiagnostic({ health, me });
+      if (me?.subscription?.role !== 'admin') {
+        throw new Error(`Conta sem admin. role atual: ${me?.subscription?.role || 'desconhecida'} / plano: ${me?.subscription?.plan || 'desconhecido'}`);
+      }
       const data = await getAdminSummary(token);
       setState({ loading: false, error: null, data });
     } catch (error) {
@@ -132,6 +141,15 @@ export function AdminPage() {
       </div>
 
       {state.error ? <div className="alertBox">{state.error.message}</div> : null}
+      {diagnostic.health || diagnostic.me ? (
+        <div className="adminDiag">
+          <span>Runtime: {diagnostic.health?.runtime || diagnostic.me?.runtime || '-'}</span>
+          <span>Service key: {diagnostic.health?.service_key_configured === false ? 'faltando' : 'ok'}</span>
+          <span>UID: {diagnostic.me?.user?.id ? shortId(diagnostic.me.user.id) : '-'}</span>
+          <span>Plano: {diagnostic.me?.subscription?.plan || '-'}</span>
+          <span>Role: {diagnostic.me?.subscription?.role || '-'}</span>
+        </div>
+      ) : null}
       {state.loading && !state.data ? <div className="loadingGrid">Carregando painel...</div> : null}
 
       {state.data ? (

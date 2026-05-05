@@ -18,6 +18,26 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).json({ ok: true });
 
   try {
+    if (req.method === 'GET' && req.query?.type === 'health') {
+      return res.status(200).json({
+        ok: true,
+        runtime: 'node-admin',
+        service_key_configured: Boolean(SUPABASE_SERVICE_KEY),
+        supabase_url_configured: Boolean(SUPABASE_URL),
+      });
+    }
+
+    if (req.method === 'GET' && req.query?.type === 'me') {
+      const user = await requireUser(req, res);
+      if (!user) return;
+      const subscription = await loadSubscriptionForUser(user.id);
+      return res.status(200).json({
+        user: { id: user.id, email: user.email },
+        subscription,
+        runtime: 'node-admin',
+      });
+    }
+
     const admin = await requireAdmin(req, res);
     if (!admin) return;
 
@@ -35,7 +55,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const data = typeof req.body === 'object' && req.body ? req.body : {};
+      const data = parseBody(req.body);
       if (data.action === 'update_plan') {
         const userId = String(data.user_id || '').trim();
         const plan = String(data.plan || '').trim().toLowerCase();
@@ -61,7 +81,7 @@ export default async function handler(req, res) {
 
     return res.status(405).json({ error: 'method not allowed' });
   } catch (error) {
-    return res.status(500).json({ error: String(error.message || error).slice(0, 300), runtime: 'node-admin' });
+    return res.status(500).json({ error: formatError(error), runtime: 'node-admin' });
   }
 }
 
@@ -72,7 +92,7 @@ function setCors(res) {
   res.setHeader('Cache-Control', 'no-store');
 }
 
-async function requireAdmin(req, res) {
+async function requireUser(req, res) {
   if (!SUPABASE_SERVICE_KEY) {
     res.status(500).json({ error: 'SUPABASE_SERVICE_KEY is not configured', runtime: 'node-admin' });
     return null;
@@ -93,10 +113,14 @@ async function requireAdmin(req, res) {
     return null;
   }
 
-  const rows = await supabaseFetch(`/rest/v1/subscriptions?select=role,plan,status&user_id=eq.${encodeURIComponent(user.id)}&limit=1`, {
-    headers: serviceHeaders(),
-  });
-  const subscription = Array.isArray(rows) && rows.length ? rows[0] : {};
+  return user;
+}
+
+async function requireAdmin(req, res) {
+  const user = await requireUser(req, res);
+  if (!user) return null;
+
+  const subscription = await loadSubscriptionForUser(user.id);
   if (subscription.role !== 'admin') {
     res.status(403).json({ error: 'admin role required', runtime: 'node-admin' });
     return null;
@@ -107,6 +131,18 @@ async function requireAdmin(req, res) {
     email: user.email,
     plan: subscription.plan,
     status: subscription.status,
+  };
+}
+
+async function loadSubscriptionForUser(userId) {
+  const rows = await supabaseFetch(`/rest/v1/subscriptions?select=role,plan,status&user_id=eq.${encodeURIComponent(userId)}&limit=1`, {
+    headers: serviceHeaders(),
+  });
+  const row = Array.isArray(rows) && rows.length ? rows[0] : {};
+  return {
+    plan: row.plan || 'free',
+    status: row.status || 'active',
+    role: row.role || 'user',
   };
 }
 
@@ -208,4 +244,19 @@ async function supabaseFetch(path, options = {}) {
   if (!response.ok) throw new Error(text || `Supabase HTTP ${response.status}`);
   if (options.allowEmpty && !text) return null;
   return text ? JSON.parse(text) : {};
+}
+
+function parseBody(body) {
+  if (!body) return {};
+  if (typeof body === 'object') return body;
+  try {
+    return JSON.parse(body);
+  } catch {
+    return {};
+  }
+}
+
+function formatError(error) {
+  const message = String(error?.message || error || 'unknown error');
+  return message.slice(0, 500);
 }

@@ -541,6 +541,22 @@ select {
   font-size: 12px;
 }
 
+.adminDiag {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.adminDiag span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: var(--bg3);
+  color: var(--text2);
+  font-size: 11px;
+}
+
 .adminMetrics {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
