@@ -77,12 +77,17 @@ export async function loadSubscription(userId) {
   if (!userId) return freeSubscription();
   const session = await getCurrentSession();
   if (!session?.access_token) return freeSubscription();
-  const data = await fetchJson('/api/subscription', {
+  const data = await loadSubscriptionDetails(session.access_token);
+  return normalizeSubscription(data);
+}
+
+export async function loadSubscriptionDetails(accessToken) {
+  if (!accessToken) throw new Error('missing access token');
+  return fetchJson('/api/subscription', {
     headers: {
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${accessToken}`,
     },
   }, 15000);
-  return normalizeSubscription(data);
 }
 
 export async function signIn(email, password) {

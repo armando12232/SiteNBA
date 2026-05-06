@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getAdminHealth, getAdminMe, getAdminSummary, updateAdminUser } from '../api/admin.js';
+import { getAdminHealth, getAdminSummary, updateAdminUser } from '../api/admin.js';
+import { loadSubscriptionDetails } from '../api/subscriptions.js';
 import { supabase } from '../api/supabase.js';
 
 const PLANS = ['free', 'basic', 'pro', 'premium'];
@@ -59,14 +60,14 @@ export function AdminPage() {
     try {
       const [health, me] = await Promise.all([
         getAdminHealth().catch((error) => ({ error: error.message })),
-        getAdminMe(token).catch((error) => ({ error: error.message })),
+        loadSubscriptionDetails(token).catch((error) => ({ error: error.message })),
       ]);
       setDiagnostic({ health, me });
       if (me?.error || me?.subscription_error) {
-        throw new Error(`Falha no /api/admin?type=me: ${me.error || me.subscription_error}`);
+        throw new Error(`Falha no /api/subscription: ${me.error || me.subscription_error}`);
       }
-      if (me?.subscription?.role !== 'admin') {
-        throw new Error(`Conta sem admin. role atual: ${me?.subscription?.role || 'desconhecida'} / plano: ${me?.subscription?.plan || 'desconhecido'}`);
+      if (me?.role !== 'admin') {
+        throw new Error(`Conta sem admin. role atual: ${me?.role || 'desconhecida'} / plano: ${me?.plan || 'desconhecido'}`);
       }
       const data = await getAdminSummary(token);
       setState({ loading: false, error: null, data });
@@ -148,9 +149,9 @@ export function AdminPage() {
         <div className="adminDiag">
           <span>Runtime: {diagnostic.health?.runtime || diagnostic.me?.runtime || '-'}</span>
           <span>Service key: {diagnostic.health?.service_key_configured === false ? 'faltando' : 'ok'}</span>
-          <span>UID: {diagnostic.me?.user?.id ? shortId(diagnostic.me.user.id) : '-'}</span>
-          <span>Plano: {diagnostic.me?.subscription?.plan || '-'}</span>
-          <span>Role: {diagnostic.me?.subscription?.role || '-'}</span>
+          <span>UID: {diagnostic.me?.user_id ? shortId(diagnostic.me.user_id) : '-'}</span>
+          <span>Plano: {diagnostic.me?.plan || '-'}</span>
+          <span>Role: {diagnostic.me?.role || '-'}</span>
           {diagnostic.me?.error || diagnostic.me?.subscription_error ? <span>ME erro: {diagnostic.me.error || diagnostic.me.subscription_error}</span> : null}
         </div>
       ) : null}
