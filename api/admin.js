@@ -30,10 +30,17 @@ export default async function handler(req, res) {
     if (req.method === 'GET' && req.query?.type === 'me') {
       const user = await requireUser(req, res);
       if (!user) return;
-      const subscription = await loadSubscriptionForUser(user.id);
+      let subscription = null;
+      let subscription_error = null;
+      try {
+        subscription = await loadSubscriptionForUser(user.id);
+      } catch (error) {
+        subscription_error = formatError(error);
+      }
       return res.status(200).json({
         user: { id: user.id, email: user.email },
         subscription,
+        subscription_error,
         runtime: 'node-admin',
       });
     }

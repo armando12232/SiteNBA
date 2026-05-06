@@ -62,6 +62,9 @@ export function AdminPage() {
         getAdminMe(token).catch((error) => ({ error: error.message })),
       ]);
       setDiagnostic({ health, me });
+      if (me?.error || me?.subscription_error) {
+        throw new Error(`Falha no /api/admin?type=me: ${me.error || me.subscription_error}`);
+      }
       if (me?.subscription?.role !== 'admin') {
         throw new Error(`Conta sem admin. role atual: ${me?.subscription?.role || 'desconhecida'} / plano: ${me?.subscription?.plan || 'desconhecido'}`);
       }
@@ -148,6 +151,7 @@ export function AdminPage() {
           <span>UID: {diagnostic.me?.user?.id ? shortId(diagnostic.me.user.id) : '-'}</span>
           <span>Plano: {diagnostic.me?.subscription?.plan || '-'}</span>
           <span>Role: {diagnostic.me?.subscription?.role || '-'}</span>
+          {diagnostic.me?.error || diagnostic.me?.subscription_error ? <span>ME erro: {diagnostic.me.error || diagnostic.me.subscription_error}</span> : null}
         </div>
       ) : null}
       {state.loading && !state.data ? <div className="loadingGrid">Carregando painel...</div> : null}
