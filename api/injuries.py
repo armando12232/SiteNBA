@@ -1,6 +1,7 @@
 import json, os, time, urllib.request, urllib.parse, sys
 from http.server import BaseHTTPRequestHandler
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
+SITE_URL = os.environ.get('SITE_URL', 'https://site-nba-ten.vercel.app').rstrip('/')
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 try:
@@ -281,18 +282,21 @@ class handler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
         self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self._cors()
         self.end_headers()
 
     def _send(self, status, data):
         self.send_response(status)
         self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
+        self._cors()
         self.send_header('Cache-Control', 'public, max-age=300')
         self.end_headers()
         self.wfile.write(json.dumps(data).encode('utf-8'))
+
+    def _cors(self):
+        self.send_header('Access-Control-Allow-Origin', SITE_URL)
+        self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
 
     def log_message(self, f, *a):
         pass

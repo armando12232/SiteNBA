@@ -2,9 +2,11 @@ from http.server import BaseHTTPRequestHandler
 from urllib.request import Request, urlopen
 from urllib.parse import parse_qs, urlparse
 import json, time
+import os
 
 cache = {}
 CACHE_TTL = 300  # 5 min
+SITE_URL = os.environ.get('SITE_URL', 'https://site-nba-ten.vercel.app').rstrip('/')
 
 def _cache_get(key):
     if key in cache:
@@ -136,18 +138,23 @@ class handler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
         self.send_response(200)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET,OPTIONS')
+        self._cors()
         self.end_headers()
 
     def _send(self, status, data):
         body = json.dumps(data).encode()
         self.send_response(status)
         self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
+        self._cors()
         self.send_header('Content-Length', str(len(body)))
+        self.send_header('Cache-Control', 'no-store' if status >= 400 else 'public, max-age=300')
         self.end_headers()
         self.wfile.write(body)
+
+    def _cors(self):
+        self.send_header('Access-Control-Allow-Origin', SITE_URL)
+        self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
 
     def log_message(self, f, *a):
         pass

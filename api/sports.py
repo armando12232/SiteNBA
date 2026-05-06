@@ -179,8 +179,8 @@ VALID_TYPES   = {'scoreboard', 'game', 'standings', 'news'}
 class handler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
-        self._cors()
         self.send_response(204)
+        self._cors()
         self.end_headers()
 
     def do_GET(self):
