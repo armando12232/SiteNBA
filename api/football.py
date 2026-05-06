@@ -16,6 +16,7 @@ except ImportError:
     def sanitize_team_name(s): return str(s or '')[:60]
 
 ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer'
+SITE_URL = os.environ.get('SITE_URL', 'https://site-nba-ten.vercel.app').rstrip('/')
 
 _STATUS_PT = {
     'Half Time': 'Intervalo', 'HT': 'Intervalo',
@@ -490,7 +491,7 @@ def get_league_form(league_key):
 
 
 # ─── API-Football (árbitro + cartões + faltas) ────────────────────────────────
-APIFOOTBALL_KEY  = '225f99518f22050258f44c558fab250b'
+APIFOOTBALL_KEY  = os.environ.get('API_FOOTBALL_KEY', '').strip()
 APIFOOTBALL_BASE = 'https://v3.football.api-sports.io'
 
 APIFOOTBALL_LEAGUE_IDS = {
@@ -505,6 +506,8 @@ APIFOOTBALL_LEAGUE_IDS = {
 }
 
 def apifootball_fetch(path):
+    if not APIFOOTBALL_KEY:
+        return {'error': 'API_FOOTBALL_KEY is not configured'}
     cache_key = f"apifb_{path}"
     cached = _cache_get(cache_key)
     if cached is not None:
@@ -519,8 +522,8 @@ def apifootball_fetch(path):
             data = json.loads(r.read())
         _cache_set(cache_key, data)
         return data
-    except Exception:
-        return None
+    except Exception as e:
+        return {'error': str(e)}
 
 
 def _norm(s):
@@ -531,6 +534,8 @@ def _norm(s):
 
 def get_fixture_referee(home_name, away_name, league_key, game_date):
     """Árbitro + stats de cartões/faltas via API-Football."""
+    if not APIFOOTBALL_KEY:
+        return {'error': 'API_FOOTBALL_KEY is not configured'}
     league_id = APIFOOTBALL_LEAGUE_IDS.get(league_key)
     if not league_id or not game_date:
         return None
@@ -609,6 +614,8 @@ def get_fixture_referee(home_name, away_name, league_key, game_date):
 
 def get_referee_avg(referee_name, league_id):
     """Média de cartões/faltas do árbitro nos últimos 15 jogos."""
+    if not APIFOOTBALL_KEY:
+        return None
     cache_key = f"ref_{_norm(referee_name)}_{league_id}"
     cached = _cache_get(cache_key)
     if cached:
@@ -656,6 +663,8 @@ def get_referee_avg(referee_name, league_id):
 
 def get_team_season_stats(team_id, league_id, season='2024'):
     """Médias de cartões e faltas do time na temporada."""
+    if not APIFOOTBALL_KEY:
+        return None
     cache_key = f"tmstats_{team_id}_{league_id}_{season}"
     cached = _cache_get(cache_key)
     if cached:
@@ -692,8 +701,8 @@ def get_team_season_stats(team_id, league_id, season='2024'):
 
 
 # ─── Bet365 API (via RapidAPI) ────────────────────────────────────────────────
-BET365_KEY  = '8916f08b53msh9e0258a756f7e96p12c1d5jsn125e17bdbb2d'
-BET365_HOST = 'bet36528.p.rapidapi.com'
+BET365_KEY  = os.environ.get('RAPIDAPI_BET365_KEY', '').strip()
+BET365_HOST = os.environ.get('RAPIDAPI_BET365_HOST', 'bet36528.p.rapidapi.com').strip() or 'bet36528.p.rapidapi.com'
 BET365_BASE = 'https://bet36528.p.rapidapi.com'
 
 BET365_TOURNAMENT_IDS = {
@@ -708,6 +717,8 @@ BET365_TOURNAMENT_IDS = {
 }
 
 def bet365_fetch(path):
+    if not BET365_KEY:
+        return {'error': 'RAPIDAPI_BET365_KEY is not configured'}
     cache_key = f"bet365_{path}"
     cached = _cache_get(cache_key)
     if cached is not None:
@@ -723,8 +734,8 @@ def bet365_fetch(path):
             data = json.loads(r.read())
         _cache_set(cache_key, data)
         return data
-    except Exception:
-        return None
+    except Exception as e:
+        return {'error': str(e)}
 
 
 def get_bet365_fixtures(league_key):
@@ -732,6 +743,8 @@ def get_bet365_fixtures(league_key):
     if not tid:
         return []
     data = bet365_fetch(f"fixtures?tournamentId={tid}&hasOdds=true")
+    if isinstance(data, dict) and data.get('error'):
+        return data
     if not data or not isinstance(data, list):
         return data if data else []
     return data
@@ -747,6 +760,8 @@ def get_bet365_odds(fixture_id):
 
     # Endpoint correto: fixtures com fixtureId específico retorna bookmakerOdds
     data = bet365_fetch(f"fixtures?fixtureId={fixture_id}")
+    if isinstance(data, dict) and data.get('error'):
+        return data
     if not data:
         return None
 
@@ -799,6 +814,8 @@ def get_bet365_odds(fixture_id):
 
 def match_bet365_fixture(home_name, away_name, league_key):
     fixtures = get_bet365_fixtures(league_key)
+    if isinstance(fixtures, dict) and fixtures.get('error'):
+        return fixtures
     if not fixtures or not isinstance(fixtures, list):
         return None
 
@@ -824,12 +841,18 @@ def match_bet365_fixture(home_name, away_name, league_key):
 
 
 def get_bet365_match_odds(home_name, away_name, league_key):
+    if not BET365_KEY:
+        return {'error': 'RAPIDAPI_BET365_KEY is not configured'}
     cache_key = f"bet365_match_{league_key}_{_norm(home_name)}_{_norm(away_name)}"
     cached = _cache_get(cache_key)
     if cached is not None:
         return cached
 
     fix = match_bet365_fixture(home_name, away_name, league_key)
+    if isinstance(fix, dict) and fix.get('error'):
+        result = fix
+        _cache_set(cache_key, result)
+        return result
     if not fix:
         result = {'error': 'fixture not found'}
         _cache_set(cache_key, result)
@@ -848,6 +871,11 @@ def get_bet365_match_odds(home_name, away_name, league_key):
 
 class handler(BaseHTTPRequestHandler):
     def log_message(self, *a): pass
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self._cors()
+        self.end_headers()
 
     def do_GET(self):
         from urllib.parse import urlparse, parse_qs
@@ -957,7 +985,14 @@ class handler(BaseHTTPRequestHandler):
 
     def _json(self, body, status=200):
         self.send_response(status)
+        self._cors()
         self.send_header('Content-Type', 'application/json')
         self.send_header('X-Content-Type-Options', 'nosniff')
+        self.send_header('Cache-Control', 'no-store')
         self.end_headers()
         self.wfile.write(body)
+
+    def _cors(self):
+        self.send_header('Access-Control-Allow-Origin', SITE_URL)
+        self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
