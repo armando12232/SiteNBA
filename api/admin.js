@@ -1,6 +1,6 @@
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://dhirxfoxcswctxcjzvhf.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable_DC3I02jLVjM013WrODpgCg_xiPl1rsl';
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
+const DEFAULT_SUPABASE_URL = 'https://dhirxfoxcswctxcjzvhf.supabase.co';
+const SUPABASE_URL = normalizeSupabaseUrl(process.env.SUPABASE_URL);
+const SUPABASE_SERVICE_KEY = String(process.env.SUPABASE_SERVICE_KEY || '').trim();
 
 const PLAN_PRICES = {
   free: 0,
@@ -24,6 +24,7 @@ export default async function handler(req, res) {
         runtime: 'node-admin',
         service_key_configured: Boolean(SUPABASE_SERVICE_KEY),
         supabase_url_configured: Boolean(SUPABASE_URL),
+        supabase_host: safeHost(SUPABASE_URL),
       });
     }
 
@@ -111,12 +112,9 @@ async function requireUser(req, res) {
     return null;
   }
 
-  const user = await supabaseFetch('/auth/v1/user', {
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` },
-  });
-
+  const user = decodeSupabaseJwt(token);
   if (!user?.id) {
-    res.status(401).json({ error: 'invalid token', runtime: 'node-admin' });
+    res.status(401).json({ error: 'invalid token payload', runtime: 'node-admin' });
     return null;
   }
 
@@ -239,7 +237,8 @@ function serviceHeaders() {
 }
 
 async function supabaseFetch(path, options = {}) {
-  const response = await fetch(`${SUPABASE_URL}${path}`, {
+  const url = `${SUPABASE_URL}${path}`;
+  const response = await fetch(url, {
     method: options.method || 'GET',
     headers: {
       Accept: 'application/json',
@@ -264,6 +263,32 @@ function parseBody(body) {
 }
 
 function formatError(error) {
-  const message = String(error?.message || error || 'unknown error');
+  const message = String(error?.cause?.message || error?.message || error || 'unknown error');
   return message.slice(0, 500);
+}
+
+function decodeSupabaseJwt(token) {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const json = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+    const data = JSON.parse(json);
+    return { id: data.sub, email: data.email };
+  } catch {
+    return null;
+  }
+}
+
+function normalizeSupabaseUrl(value) {
+  const raw = String(value || '').trim().replace(/\/+$/, '');
+  if (!raw || !/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(raw)) return DEFAULT_SUPABASE_URL;
+  return raw;
+}
+
+function safeHost(value) {
+  try {
+    return new URL(value).host;
+  } catch {
+    return 'invalid';
+  }
 }
