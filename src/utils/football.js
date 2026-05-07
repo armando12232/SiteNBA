@@ -136,7 +136,7 @@ export function decimalOdd(value) {
   return parsed > 1 ? parsed : null;
 }
 
-function findTeamStats(teams, name) {
+export function findTeamStats(teams, name) {
   return teams.find((team) => team.team === name || name?.includes(team.team) || team.team?.includes(name));
 }
 

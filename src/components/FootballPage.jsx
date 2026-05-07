@@ -13,6 +13,7 @@ import {
   buildFootballRead,
   buildFootballSummary,
   buildLeagueSummary,
+  findTeamStats,
   filterByFootballStatus,
   parseFootballStat,
   sortFootballFixtures,

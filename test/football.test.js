@@ -7,6 +7,7 @@ import {
   buildFootballSummary,
   buildLeagueSummary,
   decimalOdd,
+  findTeamStats,
   filterByFootballStatus,
   parseFootballStat,
   sortFootballFixtures,
@@ -83,6 +84,17 @@ test('parseFootballStat and decimalOdd normalize external API values', () => {
   assert.equal(decimalOdd('+150'), 2.5);
   assert.equal(Number(decimalOdd('-200').toFixed(2)), 1.5);
   assert.equal(decimalOdd('1,85'), 1.85);
+});
+
+test('findTeamStats matches exact and contained ESPN team names', () => {
+  const teams = [
+    { team: 'Arsenal', stats: { totalShots: '12' } },
+    { team: 'Chelsea', stats: { totalShots: '9' } },
+  ];
+
+  assert.equal(findTeamStats(teams, 'Arsenal')?.team, 'Arsenal');
+  assert.equal(findTeamStats(teams, 'Arsenal FC')?.team, 'Arsenal');
+  assert.equal(findTeamStats(teams, 'Chelsea')?.stats.totalShots, '9');
 });
 
 test('buildFootballRead raises score when live stats, market and pregame data exist', () => {
