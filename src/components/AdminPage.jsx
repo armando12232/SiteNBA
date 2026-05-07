@@ -135,7 +135,7 @@ export function AdminPage() {
       <div className="panelHeader">
         <div>
           <h2>Admin</h2>
-          <p className="sectionLead visible">Assinaturas, planos e usuarios do StatCast BR.</p>
+        <p className="sectionLead visible">Assinaturas, planos e usuários do StatCast BR.</p>
         </div>
         <div className="adminActions">
           <span>{state.data?.admin?.email || session.user?.email}</span>

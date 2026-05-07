@@ -1,19 +1,19 @@
 import { PREGAME_PLAYERS } from '../data/pregamePlayers.js';
 
 const MODULES = [
-  { key: 'nba', icon: 'PP', title: 'Player Props', text: 'Hit rates L5-L20, linhas, edge e modal com histórico real.', action: 'Abrir NBA', status: 'Core' },
-  { key: 'football', icon: 'FT', title: 'Futebol', text: 'Jogos do dia, ao vivo, odds, estatísticas, pregame e leitura por score.', action: 'Abrir Futebol', status: 'Novo' },
-  { key: 'nfl', icon: 'NFL', title: 'NFL', text: 'Placar e agenda via ESPN para expandir depois.', action: 'Abrir NFL', status: 'Base' },
-  { key: 'nhl', icon: 'NHL', title: 'NHL', text: 'Hockey ao vivo, placares e calendário.', action: 'Abrir NHL', status: 'Base' },
-  { key: 'mlb', icon: 'MLB', title: 'MLB', text: 'Baseball, scores do dia e classificação.', action: 'Abrir MLB', status: 'Base' },
-  { key: 'injuries', icon: 'INJ', title: 'Lesões NBA', text: 'Jogadores fora, questionáveis e prováveis.', action: 'Ver lesões', status: 'NBA' },
+  { key: 'nba', icon: '📊', title: 'Player Props', text: 'Hit rates L5-L20, linhas, edge e modal com histórico real.', action: 'Abrir NBA', status: 'Core' },
+  { key: 'football', icon: '⚽', title: 'Futebol', text: 'Jogos do dia, ao vivo, odds, estatísticas, pregame e leitura por score.', action: 'Abrir Futebol', status: 'Novo' },
+  { key: 'nfl', icon: '🏈', title: 'NFL', text: 'Placar e agenda via ESPN para expandir depois.', action: 'Abrir NFL', status: 'Base' },
+  { key: 'nhl', icon: '🏒', title: 'NHL', text: 'Hockey ao vivo, placares e calendário.', action: 'Abrir NHL', status: 'Base' },
+  { key: 'mlb', icon: '⚾', title: 'MLB', text: 'Baseball, scores do dia e classificação.', action: 'Abrir MLB', status: 'Base' },
+  { key: 'injuries', icon: '🩹', title: 'Lesões NBA', text: 'Jogadores fora, questionáveis e prováveis.', action: 'Ver lesões', status: 'NBA' },
 ];
 
 const QUICK_ACTIONS = [
-  { icon: 'PP', label: 'NBA Props', target: 'nba', text: 'Radar de props pre-game' },
-  { icon: 'INJ', label: 'NBA Lesões', target: 'nba-injuries', text: 'Disponibilidade dos jogadores' },
-  { icon: 'FT', label: 'Futebol', target: 'football', text: 'Jogos, odds e score' },
-  { icon: 'NFL', label: 'NFL', target: 'nfl', text: 'Placar ESPN' },
+  { icon: '📊', label: 'NBA Props', target: 'nba', text: 'Radar de props pre-game' },
+  { icon: '🩹', label: 'NBA Lesões', target: 'nba-injuries', text: 'Disponibilidade dos jogadores' },
+  { icon: '⚽', label: 'Futebol', target: 'football', text: 'Jogos, odds e score' },
+  { icon: '🏈', label: 'NFL', target: 'nfl', text: 'Placar ESPN' },
 ];
 
 export function HomePage({ onNavigate }) {

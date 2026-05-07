@@ -1022,8 +1022,7 @@ select {
   border-radius: 14px;
   background: linear-gradient(135deg, rgba(253,185,39,.18), rgba(255,255,255,.04));
   color: var(--gold);
-  font-family: var(--display);
-  font-size: 15px;
+  font-size: 24px;
   font-weight: 900;
   letter-spacing: .04em;
   line-height: 1;
@@ -1103,8 +1102,7 @@ select {
     radial-gradient(circle at 30% 20%, rgba(255,255,255,.18), transparent 24%),
     linear-gradient(135deg, rgba(253,185,39,.20), rgba(255,255,255,.035));
   color: var(--gold);
-  font-family: var(--display);
-  font-size: 18px;
+  font-size: 28px;
   font-weight: 900;
   letter-spacing: .03em;
   line-height: 1;

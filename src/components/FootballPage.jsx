@@ -511,9 +511,9 @@ function ModalTeam({ logo, name }) {
 function InfoSection({ fixture }) {
   return (
     <section className="ftModalSection">
-      <div className="ftModalTitle">Informacoes</div>
+      <div className="ftModalTitle">Informações</div>
       <InfoRow label="Data" value={formatDate(fixture.date)} />
-      <InfoRow label="Estadio" value={fixture.venue || '-'} />
+      <InfoRow label="Estádio" value={fixture.venue || '-'} />
       <InfoRow label="Status" value={fixture.status_long || fixture.status || '-'} />
       {fixture.live ? <InfoRow label="Minuto" value={fixture.elapsed || '-'} /> : null}
     </section>
@@ -547,11 +547,11 @@ function FootballReadPanel({ fixture, data }) {
 
 function FootballModalTab({ data, fixture, home, away, tab }) {
   if ((tab === 'stats' || tab === 'events' || tab === 'players') && data.pending?.stats) {
-    return <div className="loadingGrid">Carregando estatisticas do jogo...</div>;
+    return <div className="loadingGrid">Carregando estatísticas do jogo...</div>;
   }
-  if (tab === 'pregame' && data.pending?.pregame) return <div className="loadingGrid">Carregando pre-jogo...</div>;
+  if (tab === 'pregame' && data.pending?.pregame) return <div className="loadingGrid">Carregando pré-jogo...</div>;
   if (tab === 'odds' && (data.pending?.odds || data.pending?.pregame)) return <div className="loadingGrid">Carregando odds...</div>;
-  if (tab === 'referee' && data.pending?.referee) return <div className="loadingGrid">Carregando arbitro...</div>;
+  if (tab === 'referee' && data.pending?.referee) return <div className="loadingGrid">Carregando árbitro...</div>;
   if (tab === 'telegram' && data.pending?.telegram) return <div className="loadingGrid">Carregando intel...</div>;
 
   if (tab === 'stats') return <StatsPanel data={data.stats} home={home} away={away} />;
@@ -628,7 +628,7 @@ function PlayersPanel({ rosters }) {
           </button>
         ))}
       </div>
-      {roster.formation ? <div className="ftFormation">Formacao {roster.formation}</div> : null}
+      {roster.formation ? <div className="ftFormation">Formação {roster.formation}</div> : null}
       <PlayerGroup title="Titulares" players={starters} />
       <PlayerGroup title="Banco" players={bench} />
     </section>
@@ -639,7 +639,7 @@ function PregamePanel({ data, home, away }) {
   if (!data || data.error) return <EmptyModalState text="Pré-jogo indisponível." />;
   return (
     <section className="ftModalSection">
-      <div className="ftModalTitle">Pre-jogo</div>
+      <div className="ftModalTitle">Pré-jogo</div>
       <div className="pregameGrid">
         {(data.teams || []).map((team) => (
           <div className="pregameBox" key={team.team}>
@@ -691,10 +691,10 @@ function RefereePanel({ data, fixture }) {
   const ref = data.referee_stats || {};
   return (
     <section className="ftModalSection">
-      <div className="ftModalTitle">Arbitro</div>
+      <div className="ftModalTitle">Árbitro</div>
       <div className="refereeCard">
         <strong>{data.referee || 'Não divulgado'}</strong>
-        <InfoRow label="Cartoes/jogo" value={ref.avg_cards ?? '-'} />
+        <InfoRow label="Cartões/jogo" value={ref.avg_cards ?? '-'} />
         <InfoRow label="Amarelos/jogo" value={ref.avg_yellow ?? '-'} />
         <InfoRow label="Vermelhos/jogo" value={ref.avg_red ?? '-'} />
         <InfoRow label="Faltas/jogo" value={ref.avg_fouls ?? '-'} />
@@ -716,10 +716,10 @@ function TelegramIntelPanel({ data }) {
     <section className="ftModalSection">
       <div className="ftModalTitle">Telegram Intel</div>
       <div className="refereeCard">
-        <strong>{intel.referee || 'Arbitro nao informado'}</strong>
-        <InfoRow label="Media UCL" value={formatNumber(intel.avg_ucl_cards)} />
-        <InfoRow label="Media liga" value={formatNumber(intel.avg_league_cards)} />
-        <InfoRow label="Ultimos jogos" value={(intel.ref_last || []).join('-') || '-'} />
+        <strong>{intel.referee || 'Árbitro não informado'}</strong>
+        <InfoRow label="Média UCL" value={formatNumber(intel.avg_ucl_cards)} />
+        <InfoRow label="Média liga" value={formatNumber(intel.avg_league_cards)} />
+        <InfoRow label="Últimos jogos" value={(intel.ref_last || []).join('-') || '-'} />
       </div>
       <div className="pregameGrid">
         {teams.map((team) => (
