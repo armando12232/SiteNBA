@@ -8,7 +8,11 @@ import {
   buildLeagueSummary,
   decimalOdd,
   findTeamStats,
+  filterFootballFixtures,
   filterByFootballStatus,
+  footballFilterHasConstraints,
+  footballStatusLabel,
+  normalizeFootballSearch,
   parseFootballStat,
   sortFootballFixtures,
 } from '../src/utils/football.js';
@@ -51,6 +55,30 @@ test('filterByFootballStatus separates live, upcoming and finished fixtures', ()
   assert.deepEqual(filterByFootballStatus(fixtures, 'upcoming').map((item) => item.id), ['1']);
   assert.deepEqual(filterByFootballStatus(fixtures, 'finished').map((item) => item.id), ['3']);
   assert.equal(filterByFootballStatus(fixtures, 'all').length, 3);
+});
+
+test('filterFootballFixtures applies tab, league, status and accent-insensitive search', () => {
+  const result = filterFootballFixtures(
+    [
+      ...fixtures,
+      { ...fixtures[0], id: '4', home: 'Sao Paulo', away: 'Botafogo', league_key: 'brasileirao' },
+    ],
+    { activeTab: 'fixtures', league: 'brasileirao', query: 'são', statusFilter: 'upcoming' },
+  );
+
+  assert.deepEqual(result.map((item) => item.id), ['4']);
+});
+
+test('footballFilterHasConstraints and footballStatusLabel expose UI state safely', () => {
+  assert.equal(footballFilterHasConstraints({ league: 'all', query: '', statusFilter: 'all' }), false);
+  assert.equal(footballFilterHasConstraints({ league: 'premier', query: '', statusFilter: 'all' }), true);
+  assert.equal(footballStatusLabel({ live: true, elapsed: '32:10' }), 'Ao vivo 32:10');
+  assert.equal(footballStatusLabel({ finished: true }), 'Encerrado');
+  assert.equal(footballStatusLabel({ status_long: 'Agendado' }), 'Agendado');
+});
+
+test('normalizeFootballSearch removes accents and trims text for matching', () => {
+  assert.equal(normalizeFootballSearch('  São Paulo  '), 'sao paulo');
 });
 
 test('buildFootballSummary counts status and picks live fixture as featured', () => {

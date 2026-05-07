@@ -5,6 +5,17 @@ export function filterByFootballStatus(fixtures, statusFilter) {
   return fixtures;
 }
 
+export function filterFootballFixtures(fixtures, { activeTab = 'fixtures', league = 'all', query = '', statusFilter = 'all' } = {}) {
+  const cleaned = normalizeFootballSearch(query);
+  const rows = activeTab === 'fixtures'
+    ? fixtures.filter((item) => !item.live)
+    : fixtures;
+  const byLeague = league === 'all' ? rows : rows.filter((item) => item.league_key === league);
+  const byStatus = filterByFootballStatus(byLeague, statusFilter);
+  if (!cleaned) return byStatus;
+  return byStatus.filter((item) => normalizeFootballSearch(`${item.home || ''} ${item.away || ''} ${item.league_name || ''}`).includes(cleaned));
+}
+
 export function sortFootballFixtures(fixtures, sortMode) {
   const rows = [...fixtures];
   if (sortMode === 'read') {
@@ -24,6 +35,25 @@ export function sortFootballFixtures(fixtures, sortMode) {
     if (a.live !== b.live) return a.live ? -1 : 1;
     return new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime();
   });
+}
+
+export function footballFilterHasConstraints({ league = 'all', query = '', statusFilter = 'all' } = {}) {
+  return league !== 'all' || statusFilter !== 'all' || Boolean(String(query || '').trim());
+}
+
+export function footballStatusLabel(fixture) {
+  if (!fixture) return '-';
+  if (fixture.live) return fixture.elapsed ? `Ao vivo ${fixture.elapsed}` : 'Ao vivo';
+  if (fixture.finished) return 'Encerrado';
+  return fixture.status_long || 'Agendado';
+}
+
+export function normalizeFootballSearch(value) {
+  return String(value || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 }
 
 export function buildFootballSummary(fixtures) {

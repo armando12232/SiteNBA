@@ -1236,6 +1236,31 @@ select {
   border-color: rgba(0,230,118,.28);
 }
 
+.footballLiveStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  border: 1px solid rgba(0, 230, 118, 0.25);
+  border-radius: 10px;
+  padding: 7px 9px;
+  background: rgba(0, 230, 118, 0.08);
+}
+
+.footballLiveStrip span,
+.footballLiveStrip strong {
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.footballLiveStrip strong {
+  letter-spacing: 0;
+}
+
 .footballCard.strong,
 .footballCard.elite {
   border-color: rgba(0, 230, 118, 0.24);
@@ -1684,6 +1709,36 @@ select {
   border-top: 1px solid var(--border);
   text-transform: none;
   letter-spacing: 0;
+}
+
+.footballEmptyState {
+  justify-items: start;
+  gap: 6px;
+  text-align: left;
+}
+
+.footballEmptyState strong {
+  color: var(--text);
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.footballEmptyState span {
+  color: var(--text3);
+  font-size: 12px;
+}
+
+.footballEmptyState button {
+  margin-top: 4px;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  padding: 7px 11px;
+  background: rgba(255, 184, 28, 0.08);
+  color: var(--gold);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .ftModalOverlay {

@@ -15,7 +15,9 @@ import {
   buildFootballSummary,
   buildLeagueSummary,
   findTeamStats,
-  filterByFootballStatus,
+  filterFootballFixtures,
+  footballFilterHasConstraints,
+  footballStatusLabel,
   parseFootballStat,
   sortFootballFixtures,
 } from '../utils/football.js';
@@ -70,15 +72,7 @@ export function FootballPage() {
   }, [activeTab]);
 
   const visibleFixtures = useMemo(() => {
-    const cleaned = query.trim().toLowerCase();
-    const rows = activeTab === 'fixtures'
-      ? state.fixtures.filter((item) => !item.live)
-      : state.fixtures;
-    const byLeague = league === 'all' ? rows : rows.filter((item) => item.league_key === league);
-    const byStatus = filterByFootballStatus(byLeague, statusFilter);
-    const filtered = cleaned
-      ? byStatus.filter((item) => `${item.home || ''} ${item.away || ''} ${item.league_name || ''}`.toLowerCase().includes(cleaned))
-      : byStatus;
+    const filtered = filterFootballFixtures(state.fixtures, { activeTab, league, query, statusFilter });
     return sortFootballFixtures(filtered, sortMode);
   }, [activeTab, league, query, sortMode, state.fixtures, statusFilter]);
 
@@ -196,12 +190,31 @@ export function FootballPage() {
                 onSelect={setSelectedFixture}
               />
             ))}
-            {!visibleFixtures.length ? <div className="emptyState">Nenhum jogo encontrado para esse filtro.</div> : null}
+            {!visibleFixtures.length ? (
+              <FootballEmptyState
+                hasFilters={footballFilterHasConstraints({ league, query, statusFilter })}
+                onClear={() => {
+                  setLeague('all');
+                  setQuery('');
+                  setStatusFilter('all');
+                }}
+              />
+            ) : null}
           </div>
         </>
       ) : null}
       <FootballModal fixture={selectedFixture} onClose={() => setSelectedFixture(null)} />
     </section>
+  );
+}
+
+function FootballEmptyState({ hasFilters, onClear }) {
+  return (
+    <div className="emptyState footballEmptyState">
+      <strong>Nenhum jogo encontrado</strong>
+      <span>{hasFilters ? 'Os filtros atuais nao retornaram partidas.' : 'A API nao retornou partidas nesse momento.'}</span>
+      {hasFilters ? <button type="button" onClick={onClear}>Limpar filtros</button> : null}
+    </div>
   );
 }
 
@@ -284,8 +297,9 @@ function FootballCard({ fixture, onSelect }) {
     <button className={`footballCard ${fixture.live ? 'live' : ''} ${read.tier}`} type="button" onClick={() => onSelect(fixture)}>
       <div className="footballMeta">
         <span>{fixture.league_name || fixture.league_key}</span>
-        <em>{fixture.status_long || (fixture.live ? 'Ao vivo' : fixture.finished ? 'Encerrado' : 'Agendado')}</em>
+        <em>{footballStatusLabel(fixture)}</em>
       </div>
+      {fixture.live ? <div className="footballLiveStrip"><span>Ao vivo</span><strong>{fixture.elapsed || fixture.status_long || '-'}</strong></div> : null}
       <div className="footballCardRead">
         <span>{read.title}</span>
         <strong>{read.score}</strong>
@@ -308,7 +322,7 @@ function FootballModal({ fixture, onClose }) {
     odds: null,
     referee: null,
     telegram: null,
-    loading: false,
+    pending: {},
     error: null,
   });
 
@@ -316,21 +330,42 @@ function FootballModal({ fixture, onClose }) {
     if (!fixture) return undefined;
     let alive = true;
     setTab(fixture.live || fixture.finished ? 'stats' : 'pregame');
-    setData({ stats: null, pregame: null, odds: null, referee: null, telegram: null, loading: true, error: null });
+    setData({
+      stats: null,
+      pregame: null,
+      odds: null,
+      referee: null,
+      telegram: null,
+      pending: { stats: true, pregame: true, odds: true, referee: true, telegram: true },
+      error: null,
+    });
 
     const requests = [
-      getFootballStats(fixture.id, fixture.league_key).catch((error) => ({ error: error.message })),
-      getFootballPregame(fixture.id, fixture.league_key).catch((error) => ({ error: error.message })),
-      getFootballBet365Odds(fixture).catch((error) => ({ error: error.message })),
-      getFootballReferee(fixture).catch((error) => ({ error: error.message })),
-      getTelegramFootballIntel(fixture).catch((error) => ({ error: error.message })),
+      ['stats', getFootballStats(fixture.id, fixture.league_key)],
+      ['pregame', getFootballPregame(fixture.id, fixture.league_key)],
+      ['odds', getFootballBet365Odds(fixture)],
+      ['referee', getFootballReferee(fixture)],
+      ['telegram', getTelegramFootballIntel(fixture)],
     ];
 
-    Promise.all(requests).then(([stats, pregame, odds, referee, telegram]) => {
-      if (!alive) return;
-      setData({ stats, pregame, odds, referee, telegram, loading: false, error: null });
-    }).catch((error) => {
-      if (alive) setData((current) => ({ ...current, loading: false, error }));
+    requests.forEach(([key, request]) => {
+      request
+        .then((value) => {
+          if (!alive) return;
+          setData((current) => ({
+            ...current,
+            [key]: value,
+            pending: { ...current.pending, [key]: false },
+          }));
+        })
+        .catch((error) => {
+          if (!alive) return;
+          setData((current) => ({
+            ...current,
+            [key]: { error: error.message },
+            pending: { ...current.pending, [key]: false },
+          }));
+        });
     });
 
     return () => {
@@ -381,21 +416,14 @@ function FootballModal({ fixture, onClose }) {
             ))}
           </div>
 
-          {data.error ? <div className="alertBox">{data.error.message}</div> : null}
-          {data.loading ? <div className="loadingGrid">Carregando dados do jogo...</div> : null}
-
-          {!data.loading ? (
-            <>
-              <FootballReadPanel fixture={fixture} data={data} />
-              {tab === 'stats' ? <StatsPanel data={data.stats} home={fixture.home} away={fixture.away} /> : null}
-              {tab === 'events' ? <EventsPanel events={data.stats?.events || []} /> : null}
-              {tab === 'players' ? <PlayersPanel rosters={data.stats?.rosters || []} /> : null}
-              {tab === 'pregame' ? <PregamePanel data={data.pregame} home={fixture.home} away={fixture.away} /> : null}
-              {tab === 'odds' ? <OddsPanel draftKings={data.pregame?.odds} bet365={data.odds} fixture={fixture} /> : null}
-              {tab === 'referee' ? <RefereePanel data={data.referee} fixture={fixture} /> : null}
-              {tab === 'telegram' ? <TelegramIntelPanel data={data.telegram} /> : null}
-            </>
-          ) : null}
+          <FootballReadPanel fixture={fixture} data={data} />
+          <FootballModalTab
+            data={data}
+            fixture={fixture}
+            home={fixture.home}
+            away={fixture.away}
+            tab={tab}
+          />
         </div>
       </article>
     </div>
@@ -446,6 +474,25 @@ function FootballReadPanel({ fixture, data }) {
       </div>
     </section>
   );
+}
+
+function FootballModalTab({ data, fixture, home, away, tab }) {
+  if ((tab === 'stats' || tab === 'events' || tab === 'players') && data.pending?.stats) {
+    return <div className="loadingGrid">Carregando estatisticas do jogo...</div>;
+  }
+  if (tab === 'pregame' && data.pending?.pregame) return <div className="loadingGrid">Carregando pre-jogo...</div>;
+  if (tab === 'odds' && (data.pending?.odds || data.pending?.pregame)) return <div className="loadingGrid">Carregando odds...</div>;
+  if (tab === 'referee' && data.pending?.referee) return <div className="loadingGrid">Carregando arbitro...</div>;
+  if (tab === 'telegram' && data.pending?.telegram) return <div className="loadingGrid">Carregando intel...</div>;
+
+  if (tab === 'stats') return <StatsPanel data={data.stats} home={home} away={away} />;
+  if (tab === 'events') return <EventsPanel events={data.stats?.events || []} />;
+  if (tab === 'players') return <PlayersPanel rosters={data.stats?.rosters || []} />;
+  if (tab === 'pregame') return <PregamePanel data={data.pregame} home={home} away={away} />;
+  if (tab === 'odds') return <OddsPanel draftKings={data.pregame?.odds} bet365={data.odds} fixture={fixture} />;
+  if (tab === 'referee') return <RefereePanel data={data.referee} fixture={fixture} />;
+  if (tab === 'telegram') return <TelegramIntelPanel data={data.telegram} />;
+  return null;
 }
 
 function StatsPanel({ data, home, away }) {
