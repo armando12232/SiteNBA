@@ -15,10 +15,22 @@ export function getBettingPros(date, stats = DEFAULT_STATS) {
 }
 
 export async function getBettingProsForDates(dates, stats = DEFAULT_STATS) {
-  const cleanDates = [...new Set(dates.filter(Boolean))];
+  return resolveBettingProsForDates(dates, (date) => getBettingPros(date, stats));
+}
+
+export async function resolveBettingProsForDates(dates, loader) {
+  const cleanDates = sanitizeBettingProsDates(dates);
   for (const date of cleanDates) {
-    const data = await getBettingPros(date, stats).catch(() => null);
+    const data = await loader(date).catch(() => null);
     if (data?.players?.length) return data;
   }
-  return { players: [], count: 0, date: cleanDates[0] || null };
+  return emptyBettingProsResult(cleanDates[0] || null);
+}
+
+export function sanitizeBettingProsDates(dates) {
+  return [...new Set((dates || []).filter(Boolean))];
+}
+
+export function emptyBettingProsResult(date = null) {
+  return { players: [], count: 0, date };
 }

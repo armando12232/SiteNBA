@@ -25,7 +25,8 @@ export function getBoxscore(gameId) {
 
 export function getPregame(playerId) {
   const cacheKey = String(playerId);
-  const stored = readStored(`${PREGAME_STORAGE_PREFIX}${cacheKey}`, PREGAME_TTL_MS);
+  const storageKey = getPregameStorageKey(playerId);
+  const stored = readStored(storageKey, PREGAME_TTL_MS);
   if (stored) {
     pregameCache.set(cacheKey, stored);
     return Promise.resolve(stored);
@@ -37,7 +38,7 @@ export function getPregame(playerId) {
   const request = fetchJson(`/api/nba?type=pregame&playerId=${encodeURIComponent(playerId)}`)
     .then((data) => {
       pregameCache.set(cacheKey, data);
-      writeStored(`${PREGAME_STORAGE_PREFIX}${cacheKey}`, data);
+      writeStored(storageKey, data);
       return data;
     })
     .finally(() => {
@@ -49,8 +50,7 @@ export function getPregame(playerId) {
 }
 
 export function getPregameByName(name) {
-  const normalized = String(name || '').trim().toLowerCase();
-  const storageKey = `${PREGAME_NAME_STORAGE_PREFIX}${normalized}`;
+  const storageKey = getPregameNameStorageKey(name);
   const stored = readStored(storageKey, PREGAME_TTL_MS);
   if (stored) return Promise.resolve(stored);
 
@@ -77,6 +77,18 @@ export function clearPregameCache() {
   clearStoredPrefix('statcast:v2-playoffs:nba:pregame-name:');
   clearStoredPrefix('statcast:v3-team:nba:pregame:');
   clearStoredPrefix('statcast:v3-team:nba:pregame-name:');
+}
+
+export function normalizePregameName(name) {
+  return String(name || '').trim().toLowerCase();
+}
+
+export function getPregameNameStorageKey(name) {
+  return `${PREGAME_NAME_STORAGE_PREFIX}${normalizePregameName(name)}`;
+}
+
+export function getPregameStorageKey(playerId) {
+  return `${PREGAME_STORAGE_PREFIX}${String(playerId)}`;
 }
 
 function readStored(key, ttlMs) {
