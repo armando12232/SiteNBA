@@ -6,15 +6,15 @@ const FOOTBALL_LIVE_TTL_MS = 20 * 1000;
 const FOOTBALL_STATS_TTL_MS = 90 * 1000;
 
 export const FOOTBALL_LEAGUES = [
-  { key: 'all', label: 'Todas', icon: '🌐' },
-  { key: 'brasileirao', label: 'Brasileirao', icon: '🇧🇷' },
-  { key: 'champions', label: 'Champions', icon: '🏆' },
-  { key: 'premier', label: 'Premier', icon: '🏴' },
-  { key: 'laliga', label: 'La Liga', icon: '🇪🇸' },
-  { key: 'bundesliga', label: 'Bundesliga', icon: '🇩🇪' },
-  { key: 'seriea', label: 'Serie A', icon: '🇮🇹' },
-  { key: 'ligue1', label: 'Ligue 1', icon: '🇫🇷' },
-  { key: 'libertadores', label: 'Libertadores', icon: '🌎' },
+  { key: 'all', label: 'Todas', icon: '\uD83C\uDF10' },
+  { key: 'brasileirao', label: 'Brasileirao', icon: '\uD83C\uDDE7\uD83C\uDDF7' },
+  { key: 'champions', label: 'Champions', icon: '\uD83C\uDFC6' },
+  { key: 'premier', label: 'Premier', icon: '\uD83C\uDFF4' },
+  { key: 'laliga', label: 'La Liga', icon: '\uD83C\uDDEA\uD83C\uDDF8' },
+  { key: 'bundesliga', label: 'Bundesliga', icon: '\uD83C\uDDE9\uD83C\uDDEA' },
+  { key: 'seriea', label: 'Serie A', icon: '\uD83C\uDDEE\uD83C\uDDF9' },
+  { key: 'ligue1', label: 'Ligue 1', icon: '\uD83C\uDDEB\uD83C\uDDF7' },
+  { key: 'libertadores', label: 'Libertadores', icon: '\uD83C\uDF0E' },
 ];
 
 export function getFootballFixtures() {
