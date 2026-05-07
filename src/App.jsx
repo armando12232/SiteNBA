@@ -95,9 +95,9 @@ export default function App() {
         {page === 'nba' ? (
           <>
             <nav className="page-nav nba-tabs">
-              <button className={`page-nav-btn ${nbaTab === 'pregame' ? 'active' : ''}`} onClick={() => setNbaTabGuard('pregame')}><span className="navIcon">PP</span>Player Props</button>
-              <button className={`page-nav-btn ${nbaTab === 'live' ? 'active' : ''} ${!access.live ? 'locked' : ''}`} onClick={() => setNbaTabGuard('live')}><span className="navIcon liveMark">ON</span>Ao Vivo</button>
-              <button className={`page-nav-btn ${nbaTab === 'injuries' ? 'active' : ''} ${!access.injuries ? 'locked' : ''}`} onClick={() => setNbaTabGuard('injuries')}><span className="navIcon">INJ</span>Lesões</button>
+              <button className={`page-nav-btn ${nbaTab === 'pregame' ? 'active' : ''}`} onClick={() => setNbaTabGuard('pregame')}><span className="navIcon">📊</span>Player Props</button>
+              <button className={`page-nav-btn ${nbaTab === 'live' ? 'active' : ''} ${!access.live ? 'locked' : ''}`} onClick={() => setNbaTabGuard('live')}><span className="navIcon liveMark">🔴</span>Ao Vivo</button>
+              <button className={`page-nav-btn ${nbaTab === 'injuries' ? 'active' : ''} ${!access.injuries ? 'locked' : ''}`} onClick={() => setNbaTabGuard('injuries')}><span className="navIcon">🩹</span>Lesões</button>
             </nav>
             {lockedFeature ? <PlanPaywall feature={lockedFeature} plan={account.subscription?.plan} /> : null}
             {nbaTab === 'pregame' ? <PregameRadar access={access} onSelectPlayer={selectPlayer} /> : null}
@@ -153,12 +153,12 @@ function navLabel(page) {
 
 function navIcon(page) {
   return {
-    home: 'SC',
-    nba: 'NBA',
-    nfl: 'NFL',
-    nhl: 'NHL',
-    mlb: 'MLB',
-    football: 'FT',
+    home: '🏠',
+    nba: '🏀',
+    nfl: '🏈',
+    nhl: '🏒',
+    mlb: '⚾',
+    football: '⚽',
   }[page];
 }
 

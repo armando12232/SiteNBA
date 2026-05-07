@@ -55,7 +55,7 @@ const FOOTBALL_STATUS_FILTERS = [
 ];
 
 const FOOTBALL_SORTS = [
-  { key: 'time', label: 'Horario', icon: FX.clock },
+  { key: 'time', label: 'Horário', icon: FX.clock },
   { key: 'read', label: 'Score', icon: FX.trend },
   { key: 'league', label: 'Liga', icon: FX.sort },
 ];
@@ -213,7 +213,7 @@ export function FootballPage() {
             onClick={() => setSortMode(key)}
           >
             <span>{sortIcon(key)}</span>
-            {key === 'time' ? 'Horario' : label}
+            {key === 'time' ? 'Horário' : label}
           </button>
         ))}
       </div>
@@ -254,7 +254,7 @@ function FootballEmptyState({ hasFilters, onClear }) {
   return (
     <div className="emptyState footballEmptyState">
       <strong>{FX.search} Nenhum jogo encontrado</strong>
-      <span>{hasFilters ? 'Os filtros atuais nao retornaram partidas.' : 'A API nao retornou partidas nesse momento.'}</span>
+      <span>{hasFilters ? 'Os filtros atuais não retornaram partidas.' : 'A API não retornou partidas nesse momento.'}</span>
       {hasFilters ? <button type="button" onClick={onClear}>{FX.refresh} Limpar filtros</button> : null}
     </div>
   );
