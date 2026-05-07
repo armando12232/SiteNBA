@@ -362,12 +362,19 @@ function FootballCard({ fixture, onSelect }) {
         <em>{statusIcon(fixture)} {footballStatusLabel(fixture)}</em>
       </div>
       {fixture.live ? <div className="footballLiveStrip"><span>{FX.live} Ao vivo</span><strong>{fixture.elapsed || fixture.status_long || '-'}</strong></div> : null}
+      <div className="footballMatchup">
+        <TeamLine compact logo={fixture.home_logo} name={fixture.home} score={fixture.home_goals} tag="Casa" />
+        <div className="footballScorePill">
+          <strong>{fixture.home_goals ?? '-'}</strong>
+          <span>x</span>
+          <strong>{fixture.away_goals ?? '-'}</strong>
+        </div>
+        <TeamLine compact logo={fixture.away_logo} name={fixture.away} score={fixture.away_goals} tag="Fora" />
+      </div>
       <div className="footballCardRead">
         <span>{readIcon(read.tier)} {read.title}</span>
         <strong>{read.score}</strong>
       </div>
-      <TeamLine logo={fixture.away_logo} name={fixture.away} score={fixture.away_goals} />
-      <TeamLine logo={fixture.home_logo} name={fixture.home} score={fixture.home_goals} />
       <div className="footballFooter">
         <span>{FX.calendar} {formatDate(fixture.date)}</span>
         <span>{FX.pin} {fixture.venue || '-'}</span>
@@ -857,12 +864,15 @@ function EmptyModalState({ text }) {
   return <div className="emptyState">{text}</div>;
 }
 
-function TeamLine({ logo, name, score }) {
+function TeamLine({ compact = false, logo, name, score, tag }) {
   return (
-    <div className="teamLine">
+    <div className={`teamLine ${compact ? 'compact' : ''}`}>
       {logo ? <img src={logo} alt="" /> : <span className="teamLogoFallback" />}
-      <strong>{name || '-'}</strong>
-      <em>{score ?? '-'}</em>
+      <div>
+        {tag ? <small>{tag}</small> : null}
+        <strong>{name || '-'}</strong>
+      </div>
+      {!compact ? <em>{score ?? '-'}</em> : null}
     </div>
   );
 }

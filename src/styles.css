@@ -1230,6 +1230,15 @@ select {
   color: var(--text);
   cursor: pointer;
   text-align: left;
+  transition: border-color .15s ease, transform .15s ease, background .15s ease;
+}
+
+.footballCard:hover {
+  border-color: rgba(255, 184, 28, 0.34);
+  background:
+    radial-gradient(circle at right top, rgba(255, 184, 28, 0.08), transparent 34%),
+    var(--bg2);
+  transform: translateY(-1px);
 }
 
 .footballCard.live {
@@ -1303,6 +1312,40 @@ select {
 .footballCard.strong .footballCardRead strong,
 .footballCard.elite .footballCardRead strong {
   color: var(--green);
+}
+
+.footballMatchup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.footballScorePill {
+  display: grid;
+  grid-template-columns: 1fr 12px 1fr;
+  align-items: center;
+  justify-items: center;
+  border: 1px solid rgba(255, 184, 28, 0.24);
+  border-radius: 12px;
+  padding: 8px 6px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.footballScorePill strong {
+  color: var(--gold);
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.footballScorePill span {
+  color: var(--text3);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .footballBoard {
@@ -1741,6 +1784,11 @@ select {
   margin-top: 12px;
 }
 
+.teamLine.compact {
+  grid-template-columns: 34px minmax(0, 1fr);
+  margin-top: 0;
+}
+
 .teamLine img,
 .teamLogoFallback {
   width: 32px;
@@ -1751,12 +1799,30 @@ select {
 }
 
 .teamLine strong {
+  display: block;
   overflow: hidden;
   font-family: var(--display);
   font-size: 20px;
   font-weight: 900;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.teamLine small {
+  display: block;
+  overflow: hidden;
+  margin-bottom: 2px;
+  color: var(--text3);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.teamLine.compact strong {
+  font-size: 17px;
 }
 
 .teamLine em {
