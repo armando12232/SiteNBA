@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { getSportsScoreboard } from '../api/sports.js';
 
 const META = {
-  nfl: { title: 'NFL', subtitle: 'National Football League', color: 'var(--amber)' },
-  nhl: { title: 'NHL', subtitle: 'National Hockey League', color: '#4fc3f7' },
-  mlb: { title: 'MLB', subtitle: 'Major League Baseball', color: 'var(--red2)' },
+  nfl: { title: 'NFL', icon: '🏈', subtitle: 'National Football League', color: 'var(--amber)' },
+  nhl: { title: 'NHL', icon: '🏒', subtitle: 'National Hockey League', color: '#4fc3f7' },
+  mlb: { title: 'MLB', icon: '⚾', subtitle: 'Major League Baseball', color: 'var(--red2)' },
 };
 
 export function SportsPage({ league }) {
@@ -31,13 +31,22 @@ export function SportsPage({ league }) {
     <section className="panel">
       <div className="panelHeader">
         <div>
-          <h2><span style={{ color: meta.color }}>{meta.title}</span></h2>
-          <p className="sectionLead visible">{meta.subtitle} via ESPN.</p>
+          <h2><span className="titleIcon">{meta.icon}</span> <span style={{ color: meta.color }}>{meta.title}</span></h2>
+          <p className="sectionLead visible">{meta.subtitle} via ESPN, com placar, horário e local do jogo.</p>
         </div>
-        <button className="refreshButton" type="button" onClick={() => setRefresh((value) => value + 1)}>Atualizar</button>
+        <div className="footballHeaderActions">
+          <button className="footballRefresh" type="button" onClick={() => setRefresh((value) => value + 1)}>🔄 Atualizar</button>
+          <span className="statusPill">📅 {state.games.length} jogos</span>
+        </div>
       </div>
 
-      {state.error ? <div className="alertBox">{state.error.message}</div> : null}
+      {state.error ? (
+        <div className="alertBox actionAlert">
+          <strong>Não foi possível carregar {meta.title} agora.</strong>
+          <span>{state.error.message}</span>
+          <button type="button" onClick={() => setRefresh((value) => value + 1)}>Tentar novamente</button>
+        </div>
+      ) : null}
       {state.loading ? <div className="loadingGrid">Carregando {meta.title}...</div> : null}
 
       {!state.loading ? (
@@ -45,7 +54,12 @@ export function SportsPage({ league }) {
           {state.games.map((game) => (
             <SportsCard game={game} color={meta.color} key={game.id} />
           ))}
-          {!state.games.length ? <div className="emptyState">Nenhum jogo retornado agora.</div> : null}
+          {!state.games.length ? (
+            <div className="emptyState richEmptyState">
+              <strong>📭 Nenhum jogo retornado</strong>
+              <span>A ESPN não retornou partidas para {meta.title} nesse momento.</span>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </section>
@@ -57,13 +71,13 @@ function SportsCard({ game, color }) {
     <article className="sportsCard">
       <div className="sportsMeta">
         <span>{game.league}</span>
-        <em style={{ color }}>{game.state === 'in' ? 'Ao vivo' : game.detail || 'Agendado'}</em>
+        <em style={{ color }}>{game.state === 'in' ? '🔴 Ao vivo' : `🕒 ${game.detail || 'Agendado'}`}</em>
       </div>
       <SportsTeam team={game.away} />
       <SportsTeam team={game.home} />
       <div className="footballFooter">
-        <span>{formatDate(game.date)}</span>
-        <span>{game.venue || '-'}</span>
+        <span>📅 {formatDate(game.date)}</span>
+        <span>📍 {game.venue || '-'}</span>
       </div>
     </article>
   );

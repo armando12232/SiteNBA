@@ -4,6 +4,7 @@ import { getNbaInjuries } from '../api/injuries.js';
 export function InjuriesPage() {
   const [state, setState] = useState({ loading: true, error: null, data: null });
   const [team, setTeam] = useState('all');
+  const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -18,7 +19,7 @@ export function InjuriesPage() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [refresh]);
 
   const teams = useMemo(() => {
     const values = state.data?.by_team?.map((row) => row.team).filter(Boolean) || [];
@@ -34,13 +35,22 @@ export function InjuriesPage() {
     <section className="panel">
       <div className="panelHeader">
         <div>
-          <h2>Lesões NBA</h2>
-          <p className="sectionLead visible">Relatorio ESPN com status por jogador e filtro por time.</p>
+          <h2><span className="titleIcon">🩹</span> Lesões NBA</h2>
+          <p className="sectionLead visible">Relatório ESPN com status por jogador, filtro por time e carregamento parcial quando a API demora.</p>
         </div>
-        <span className="statusPill">{state.data?.total ?? 0} jogadores</span>
+        <div className="footballHeaderActions">
+          <button className="footballRefresh" type="button" onClick={() => setRefresh((value) => value + 1)}>🔄 Atualizar</button>
+          <span className="statusPill">👥 {state.data?.total ?? 0} jogadores</span>
+        </div>
       </div>
 
-      {state.error ? <div className="alertBox">{state.error.message}</div> : null}
+      {state.error ? (
+        <div className="alertBox actionAlert">
+          <strong>Não foi possível carregar lesões agora.</strong>
+          <span>{state.error.message}</span>
+          <button type="button" onClick={() => setRefresh((value) => value + 1)}>Tentar novamente</button>
+        </div>
+      ) : null}
       {state.loading ? <div className="loadingGrid">Carregando lesões...</div> : null}
 
       {!state.loading && state.data ? (
@@ -81,7 +91,12 @@ export function InjuriesPage() {
                 <em style={{ color: item.status_color || 'var(--text2)' }}>{item.status}</em>
               </div>
             ))}
-            {!injuries.length ? <div className="emptyState">Nenhuma lesão encontrada.</div> : null}
+            {!injuries.length ? (
+              <div className="emptyState richEmptyState">
+                <strong>✅ Nenhuma lesão encontrada</strong>
+                <span>{team === 'all' ? 'A fonte não retornou jogadores lesionados agora.' : `Sem registros para ${team}.`}</span>
+              </div>
+            ) : null}
           </div>
         </>
       ) : null}

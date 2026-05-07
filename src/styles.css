@@ -3126,6 +3126,30 @@ select {
   text-align: center;
 }
 
+.actionAlert {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 14px;
+}
+
+.actionAlert strong,
+.actionAlert span {
+  display: block;
+}
+
+.actionAlert button {
+  border: 1px solid rgba(255, 184, 28, 0.45);
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: rgba(255, 184, 28, 0.08);
+  color: var(--gold);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .pp-modal-overlay {
   position: fixed;
   inset: 0;
@@ -4317,6 +4341,25 @@ h2 {
   background: var(--bg2);
   color: var(--text3);
   text-align: center;
+}
+
+.richEmptyState {
+  display: grid;
+  gap: 6px;
+  align-content: center;
+}
+
+.richEmptyState strong {
+  color: var(--text);
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.richEmptyState span {
+  color: var(--text3);
+  font-size: 12px;
 }
 
 @media (max-width: 600px) {
