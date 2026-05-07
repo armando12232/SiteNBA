@@ -1309,7 +1309,7 @@ select {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, .9fr);
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   border: 1px solid rgba(255, 184, 28, 0.2);
   border-radius: 16px;
   padding: 14px;
@@ -1317,6 +1317,57 @@ select {
     radial-gradient(circle at top left, rgba(0, 255, 136, 0.10), transparent 34%),
     linear-gradient(135deg, rgba(255, 184, 28, 0.08), rgba(255, 184, 28, 0.015)),
     var(--bg2);
+}
+
+.footballModeTabs {
+  width: fit-content;
+  margin-bottom: 12px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.footballModeTabs button {
+  min-width: 106px;
+  justify-content: center;
+}
+
+.footballLeagueFilters {
+  position: relative;
+  margin-bottom: 10px;
+  padding: 13px 12px 12px;
+  border: 1px solid rgba(255, 184, 28, 0.12);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.footballLeagueFilters::before {
+  content: "Ligas";
+  position: absolute;
+  top: -7px;
+  left: 12px;
+  padding: 0 6px;
+  color: var(--gold);
+  background: var(--bg);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.footballLeagueFilters .filter-chip {
+  min-height: 34px;
+  padding: 7px 10px;
+}
+
+.footballLeagueFilters .chipIcon,
+.footballStatusFilters .chipIcon {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  font-size: 13px;
+  line-height: 1;
 }
 
 .footballBoardHero span {
@@ -1387,14 +1438,19 @@ select {
 
 .footballTools {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) auto;
+  grid-template-columns: minmax(260px, .95fr) minmax(280px, 1.2fr);
   gap: 10px;
-  margin-bottom: 14px;
+  align-items: stretch;
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.16);
 }
 
 .footballSearch {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) 30px;
+  grid-template-columns: 34px minmax(0, 1fr) 30px;
   align-items: center;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -1402,7 +1458,8 @@ select {
 }
 
 .footballSearch span {
-  color: var(--text3);
+  color: var(--gold);
+  font-size: 14px;
   text-align: center;
 }
 
@@ -1433,24 +1490,26 @@ select {
 .footballStatusFilters button {
   border: 1px solid var(--border);
   border-radius: 9px;
-  padding: 8px 11px;
+  padding: 8px 10px;
   background: var(--bg2);
   color: var(--text3);
   cursor: pointer;
   font-size: 11px;
   font-weight: 900;
+  white-space: nowrap;
 }
 
 .footballStatusFilters button.active {
-  border-color: var(--gold);
-  color: var(--gold);
+  border-color: rgba(0, 230, 118, 0.32);
+  color: var(--green);
+  background: rgba(0, 230, 118, 0.08);
 }
 
 .footballLeagueSummary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
-  margin: -4px 0 14px;
+  margin: 0 0 10px;
 }
 
 .footballLeagueSummary button {
@@ -1466,7 +1525,9 @@ select {
 
 .footballLeagueSummary button.active {
   border-color: var(--gold);
-  background: rgba(255, 184, 28, 0.08);
+  background:
+    radial-gradient(circle at right bottom, rgba(0, 230, 118, 0.16), transparent 42%),
+    rgba(255, 184, 28, 0.08);
 }
 
 .footballLeagueSummary span,
@@ -1502,7 +1563,7 @@ select {
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  margin: -4px 0 14px;
+  margin: 0 0 14px;
 }
 
 .footballSortBar span {
@@ -1515,6 +1576,9 @@ select {
 }
 
 .footballSortBar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 7px 11px;
@@ -1528,6 +1592,7 @@ select {
 .footballSortBar button.active {
   border-color: var(--gold);
   color: var(--gold);
+  background: rgba(255, 184, 28, 0.08);
 }
 
 .footballHeaderActions {

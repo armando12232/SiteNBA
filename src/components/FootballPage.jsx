@@ -22,6 +22,24 @@ import {
   sortFootballFixtures,
 } from '../utils/football.js';
 
+const FOOTBALL_MODES = [
+  { key: 'fixtures', label: 'Jogos', icon: '⚽' },
+  { key: 'live', label: 'Ao vivo', icon: '🔴' },
+];
+
+const FOOTBALL_STATUS_FILTERS = [
+  { key: 'all', label: 'Todos', icon: '🌐' },
+  { key: 'live', label: 'Ao vivo', icon: '🔴' },
+  { key: 'upcoming', label: 'Agendados', icon: '🕒' },
+  { key: 'finished', label: 'Encerrados', icon: '✅' },
+];
+
+const FOOTBALL_SORTS = [
+  { key: 'time', label: 'Horario', icon: '⏱️' },
+  { key: 'read', label: 'Score', icon: '📈' },
+  { key: 'league', label: 'Liga', icon: '🏷️' },
+];
+
 export function FootballPage() {
   const [activeTab, setActiveTab] = useState('fixtures');
   const [league, setLeague] = useState('all');
@@ -102,12 +120,12 @@ export function FootballPage() {
 
       <FootballBoard summary={summary} activeTab={activeTab} />
 
-      <div className="subTabs">
-        <button className={activeTab === 'fixtures' ? 'active' : ''} type="button" onClick={() => { setActiveTab('fixtures'); setStatusFilter('all'); }}><span className="navIcon">FT</span>Jogos</button>
-        <button className={activeTab === 'live' ? 'active' : ''} type="button" onClick={() => { setActiveTab('live'); setStatusFilter('all'); }}><span className="navIcon liveMark">ON</span>Ao Vivo</button>
+      <div className="subTabs footballModeTabs">
+        <button className={activeTab === 'fixtures' ? 'active' : ''} type="button" onClick={() => { setActiveTab('fixtures'); setStatusFilter('all'); }}><span className="navIcon">⚽</span>Jogos</button>
+        <button className={activeTab === 'live' ? 'active' : ''} type="button" onClick={() => { setActiveTab('live'); setStatusFilter('all'); }}><span className="navIcon liveMark">🔴</span>Ao Vivo</button>
       </div>
 
-      <div className="filter-row">
+      <div className="filter-row footballLeagueFilters" aria-label="Filtrar por liga">
         {FOOTBALL_LEAGUES.map((item) => (
           <button
             className={`filter-chip ${league === item.key ? 'active' : ''}`}
@@ -129,7 +147,7 @@ export function FootballPage() {
 
       <div className="footballTools">
         <div className="footballSearch">
-          <span>BUS</span>
+          <span>🔎</span>
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -140,10 +158,10 @@ export function FootballPage() {
         </div>
         <div className="footballStatusFilters">
           {[
-            ['all', 'ALL', 'Todos'],
-            ['live', 'ON', 'Ao vivo'],
-            ['upcoming', 'NEXT', 'Agendados'],
-            ['finished', 'END', 'Encerrados'],
+            ['all', '🌐', 'Todos'],
+            ['live', '🔴', 'Ao vivo'],
+            ['upcoming', '🕒', 'Agendados'],
+            ['finished', '✅', 'Encerrados'],
           ].map(([key, icon, label]) => (
             <button
               type="button"
@@ -159,7 +177,7 @@ export function FootballPage() {
       </div>
 
       <div className="footballSortBar">
-        <span>Ordenar</span>
+        <span>Ordenar por</span>
         {[
           ['time', 'Horário'],
           ['read', 'Score'],
@@ -171,7 +189,8 @@ export function FootballPage() {
             type="button"
             onClick={() => setSortMode(key)}
           >
-            {label}
+            <span>{sortIcon(key)}</span>
+            {key === 'time' ? 'Horario' : label}
           </button>
         ))}
       </div>
@@ -218,6 +237,12 @@ function FootballEmptyState({ hasFilters, onClear }) {
   );
 }
 
+function sortIcon(key) {
+  if (key === 'read') return '📈';
+  if (key === 'league') return '🏷️';
+  return '⏱️';
+}
+
 function FootballLeagueSummary({ activeLeague, items, onSelect }) {
   if (!items.length) return null;
   return (
@@ -229,13 +254,17 @@ function FootballLeagueSummary({ activeLeague, items, onSelect }) {
           type="button"
           onClick={() => onSelect(item.key)}
         >
-          <span>{item.label}</span>
+          <span>{leagueIcon(item.key)} {item.label}</span>
           <strong>{item.total}</strong>
-          <em>{item.live ? `${item.live} live` : `${item.upcoming} prox.`}</em>
+          <em>{item.live ? `🔴 ${item.live} live` : `🕒 ${item.upcoming} prox.`}</em>
         </button>
       ))}
     </div>
   );
+}
+
+function leagueIcon(key) {
+  return FOOTBALL_LEAGUES.find((item) => item.key === key)?.icon || '⚽';
 }
 
 function FootballHighlights({ items, onSelect }) {
@@ -268,24 +297,24 @@ function FootballBoard({ summary, activeTab }) {
   return (
     <div className="footballBoard">
       <div className="footballBoardHero">
-        <span>{activeTab === 'live' ? 'Monitor ao vivo' : 'Agenda do dia'}</span>
+        <span>{activeTab === 'live' ? '🔴 Monitor ao vivo' : '📅 Agenda do dia'}</span>
         <strong>{summary.featured ? `${summary.featured.home} x ${summary.featured.away}` : 'Sem jogo destaque'}</strong>
         <em>{summary.featured?.league_name || 'Futebol'}</em>
       </div>
       <div className="footballBoardMetrics">
-        <FootballMetric label="Total" value={summary.total} />
-        <FootballMetric label="Ao vivo" value={summary.live} hot />
-        <FootballMetric label="Agendados" value={summary.upcoming} />
-        <FootballMetric label="Ligas" value={summary.leagues} />
+        <FootballMetric icon="⚽" label="Total" value={summary.total} />
+        <FootballMetric icon="🔴" label="Ao vivo" value={summary.live} hot />
+        <FootballMetric icon="🕒" label="Agendados" value={summary.upcoming} />
+        <FootballMetric icon="🏆" label="Ligas" value={summary.leagues} />
       </div>
     </div>
   );
 }
 
-function FootballMetric({ label, value, hot = false }) {
+function FootballMetric({ icon, label, value, hot = false }) {
   return (
     <div className={`footballMetric ${hot ? 'hot' : ''}`}>
-      <span>{label}</span>
+      <span>{icon} {label}</span>
       <strong>{value}</strong>
     </div>
   );
