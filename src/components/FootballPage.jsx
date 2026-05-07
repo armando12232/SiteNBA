@@ -8,6 +8,7 @@ import {
   getFootballReferee,
   getFootballStats,
 } from '../api/football.js';
+import { getTelegramFootballIntel } from '../api/telegramIntel.js';
 import {
   buildFootballHighlights,
   buildFootballRead,
@@ -306,6 +307,7 @@ function FootballModal({ fixture, onClose }) {
     pregame: null,
     odds: null,
     referee: null,
+    telegram: null,
     loading: false,
     error: null,
   });
@@ -314,18 +316,19 @@ function FootballModal({ fixture, onClose }) {
     if (!fixture) return undefined;
     let alive = true;
     setTab(fixture.live || fixture.finished ? 'stats' : 'pregame');
-    setData({ stats: null, pregame: null, odds: null, referee: null, loading: true, error: null });
+    setData({ stats: null, pregame: null, odds: null, referee: null, telegram: null, loading: true, error: null });
 
     const requests = [
       getFootballStats(fixture.id, fixture.league_key).catch((error) => ({ error: error.message })),
       getFootballPregame(fixture.id, fixture.league_key).catch((error) => ({ error: error.message })),
       getFootballBet365Odds(fixture).catch((error) => ({ error: error.message })),
       getFootballReferee(fixture).catch((error) => ({ error: error.message })),
+      getTelegramFootballIntel(fixture).catch((error) => ({ error: error.message })),
     ];
 
-    Promise.all(requests).then(([stats, pregame, odds, referee]) => {
+    Promise.all(requests).then(([stats, pregame, odds, referee, telegram]) => {
       if (!alive) return;
-      setData({ stats, pregame, odds, referee, loading: false, error: null });
+      setData({ stats, pregame, odds, referee, telegram, loading: false, error: null });
     }).catch((error) => {
       if (alive) setData((current) => ({ ...current, loading: false, error }));
     });
@@ -345,6 +348,7 @@ function FootballModal({ fixture, onClose }) {
     ['pregame', 'Pre-jogo'],
     ['odds', 'Odds'],
     ['referee', 'Arbitro'],
+    ['telegram', 'Intel'],
   ];
 
   return (
@@ -389,6 +393,7 @@ function FootballModal({ fixture, onClose }) {
               {tab === 'pregame' ? <PregamePanel data={data.pregame} home={fixture.home} away={fixture.away} /> : null}
               {tab === 'odds' ? <OddsPanel draftKings={data.pregame?.odds} bet365={data.odds} fixture={fixture} /> : null}
               {tab === 'referee' ? <RefereePanel data={data.referee} fixture={fixture} /> : null}
+              {tab === 'telegram' ? <TelegramIntelPanel data={data.telegram} /> : null}
             </>
           ) : null}
         </div>
@@ -586,6 +591,34 @@ function RefereePanel({ data, fixture }) {
   );
 }
 
+function TelegramIntelPanel({ data }) {
+  const intel = data?.intel;
+  if (!intel || data?.error) return <EmptyModalState text="Sem intel do Telegram para esse jogo." />;
+  const teams = Array.isArray(intel.teams) ? intel.teams : [];
+
+  return (
+    <section className="ftModalSection">
+      <div className="ftModalTitle">Telegram Intel</div>
+      <div className="refereeCard">
+        <strong>{intel.referee || 'Arbitro nao informado'}</strong>
+        <InfoRow label="Media UCL" value={formatNumber(intel.avg_ucl_cards)} />
+        <InfoRow label="Media liga" value={formatNumber(intel.avg_league_cards)} />
+        <InfoRow label="Ultimos jogos" value={(intel.ref_last || []).join('-') || '-'} />
+      </div>
+      <div className="pregameGrid">
+        {teams.map((team) => (
+          <div className="pregameBox" key={team.name}>
+            <strong>{team.name}</strong>
+            <span>{team.context || 'Disciplina'}</span>
+            <em>{(team.cards_last || []).join('-') || '-'}</em>
+            {team.alternate_last?.length ? <small>{team.alternate_last.join('-')}</small> : null}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function TeamRefCard({ name, stats }) {
   if (!stats) return null;
   return (
@@ -750,5 +783,10 @@ function formatOdd(value) {
   if (!Number.isFinite(parsed)) return String(value);
   if (Math.abs(parsed) > 10) return parsed > 0 ? `+${Math.round(parsed)}` : String(Math.round(parsed));
   return parsed.toFixed(2);
+}
+
+function formatNumber(value) {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed.toFixed(2) : '-';
 }
 
