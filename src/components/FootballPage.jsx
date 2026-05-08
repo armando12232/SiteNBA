@@ -387,6 +387,7 @@ function FootballCard({ fixture, onSelect }) {
 function FootballModal({ fixture, onClose }) {
   const [tab, setTab] = useState('stats');
   const [data, setData] = useState({
+    fixtureId: null,
     stats: null,
     pregame: null,
     odds: null,
@@ -398,50 +399,59 @@ function FootballModal({ fixture, onClose }) {
 
   useEffect(() => {
     if (!fixture) return undefined;
-    let alive = true;
     setTab(fixture.live || fixture.finished ? 'stats' : 'pregame');
     setData({
+      fixtureId: fixture.id,
       stats: null,
       pregame: null,
       odds: null,
       referee: null,
       telegram: null,
-      pending: { stats: true, pregame: true, odds: true, referee: true, telegram: true },
+      pending: {},
       error: null,
     });
+    return undefined;
+  }, [fixture]);
 
-    const requests = [
-      ['stats', getFootballStats(fixture.id, fixture.league_key)],
-      ['pregame', getFootballPregame(fixture.id, fixture.league_key)],
-      ['odds', getFootballBet365Odds(fixture)],
-      ['referee', getFootballReferee(fixture)],
-      ['telegram', getTelegramFootballIntel(fixture)],
-    ];
+  useEffect(() => {
+    if (!fixture) return undefined;
+    if (data.fixtureId !== fixture.id) return undefined;
+    const keys = dataKeysForTab(tab).filter((key) => !data[key] && !data.pending?.[key]);
+    if (!keys.length) return undefined;
 
-    requests.forEach(([key, request]) => {
-      request
-        .then((value) => {
-          if (!alive) return;
-          setData((current) => ({
-            ...current,
-            [key]: value,
-            pending: { ...current.pending, [key]: false },
-          }));
-        })
-        .catch((error) => {
-          if (!alive) return;
-          setData((current) => ({
-            ...current,
-            [key]: { error: error.message },
-            pending: { ...current.pending, [key]: false },
-          }));
-        });
+    setData((current) => {
+      if (current.fixtureId !== fixture.id) return current;
+      return {
+        ...current,
+        pending: keys.reduce((next, key) => ({ ...next, [key]: true }), current.pending || {}),
+      };
     });
 
-    return () => {
-      alive = false;
-    };
-  }, [fixture]);
+    keys.forEach((key) => {
+      requestForFootballTab(key, fixture)
+        .then((value) => {
+          setData((current) => {
+            if (current.fixtureId !== fixture.id) return current;
+            return {
+              ...current,
+              [key]: value,
+              pending: { ...current.pending, [key]: false },
+            };
+          });
+        })
+        .catch((error) => {
+          setData((current) => {
+            if (current.fixtureId !== fixture.id) return current;
+            return {
+              ...current,
+              [key]: { error: error.message },
+              pending: { ...current.pending, [key]: false },
+            };
+          });
+        });
+    });
+    return undefined;
+  }, [data.fixtureId, fixture, tab]);
 
   if (!fixture) return null;
 
@@ -500,6 +510,24 @@ function FootballModal({ fixture, onClose }) {
   );
 }
 
+function dataKeysForTab(tab) {
+  if (tab === 'stats' || tab === 'events' || tab === 'players') return ['stats'];
+  if (tab === 'odds') return ['pregame', 'odds'];
+  if (tab === 'pregame') return ['pregame'];
+  if (tab === 'referee') return ['referee'];
+  if (tab === 'telegram') return ['telegram'];
+  return [];
+}
+
+function requestForFootballTab(key, fixture) {
+  if (key === 'stats') return getFootballStats(fixture.id, fixture.league_key);
+  if (key === 'pregame') return getFootballPregame(fixture.id, fixture.league_key);
+  if (key === 'odds') return getFootballBet365Odds(fixture);
+  if (key === 'referee') return getFootballReferee(fixture);
+  if (key === 'telegram') return getTelegramFootballIntel(fixture);
+  return Promise.resolve(null);
+}
+
 function ModalTeam({ logo, name }) {
   return (
     <div className="ftModalTeam">
@@ -547,13 +575,13 @@ function FootballReadPanel({ fixture, data }) {
 }
 
 function FootballModalTab({ data, fixture, home, away, tab }) {
-  if ((tab === 'stats' || tab === 'events' || tab === 'players') && data.pending?.stats) {
+  if ((tab === 'stats' || tab === 'events' || tab === 'players') && (data.pending?.stats || !data.stats)) {
     return <div className="loadingGrid">Carregando estatísticas do jogo...</div>;
   }
-  if (tab === 'pregame' && data.pending?.pregame) return <div className="loadingGrid">Carregando pré-jogo...</div>;
-  if (tab === 'odds' && (data.pending?.odds || data.pending?.pregame)) return <div className="loadingGrid">Carregando odds...</div>;
-  if (tab === 'referee' && data.pending?.referee) return <div className="loadingGrid">Carregando árbitro...</div>;
-  if (tab === 'telegram' && data.pending?.telegram) return <div className="loadingGrid">Carregando intel...</div>;
+  if (tab === 'pregame' && (data.pending?.pregame || !data.pregame)) return <div className="loadingGrid">Carregando pré-jogo...</div>;
+  if (tab === 'odds' && (data.pending?.odds || data.pending?.pregame || (!data.odds && !data.pregame))) return <div className="loadingGrid">Carregando odds...</div>;
+  if (tab === 'referee' && (data.pending?.referee || !data.referee)) return <div className="loadingGrid">Carregando árbitro...</div>;
+  if (tab === 'telegram' && (data.pending?.telegram || !data.telegram)) return <div className="loadingGrid">Carregando intel...</div>;
 
   if (tab === 'stats') return <StatsPanel data={data.stats} home={home} away={away} />;
   if (tab === 'events') return <EventsPanel events={data.stats?.events || []} />;
