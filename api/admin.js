@@ -1,4 +1,11 @@
-const DEFAULT_SUPABASE_URL = 'https://dhirxfoxcswctxcjzvhf.supabase.co';
+import {
+  normalizeSupabaseUrl,
+  safeHost,
+  serviceHeaders as makeServiceHeaders,
+  supabaseFetch as fetchSupabase,
+  verifySupabaseToken,
+} from './_supabaseAuth.js';
+
 const SUPABASE_URL = normalizeSupabaseUrl(process.env.SUPABASE_URL);
 const SUPABASE_SERVICE_KEY = String(process.env.SUPABASE_SERVICE_KEY || '').trim();
 const SITE_URL = String(process.env.SITE_URL || 'https://site-nba-ten.vercel.app').trim();
@@ -107,19 +114,12 @@ async function requireUser(req, res) {
     return null;
   }
 
-  const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
-  if (!token) {
-    res.status(401).json({ error: 'missing bearer token', runtime: 'node-admin' });
+  try {
+    return await verifySupabaseToken(SUPABASE_URL, SUPABASE_SERVICE_KEY, req.headers.authorization);
+  } catch (error) {
+    res.status(error.status || 500).json({ error: formatError(error), runtime: 'node-admin' });
     return null;
   }
-
-  const user = decodeSupabaseJwt(token);
-  if (!user?.id) {
-    res.status(401).json({ error: 'invalid token payload', runtime: 'node-admin' });
-    return null;
-  }
-
-  return user;
 }
 
 async function requireAdmin(req, res) {
@@ -231,26 +231,11 @@ function metrics(users) {
 }
 
 function serviceHeaders() {
-  return {
-    apikey: SUPABASE_SERVICE_KEY,
-    Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
-  };
+  return makeServiceHeaders(SUPABASE_SERVICE_KEY);
 }
 
 async function supabaseFetch(path, options = {}) {
-  const url = `${SUPABASE_URL}${path}`;
-  const response = await fetch(url, {
-    method: options.method || 'GET',
-    headers: {
-      Accept: 'application/json',
-      ...options.headers,
-    },
-    body: options.body,
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(text || `Supabase HTTP ${response.status}`);
-  if (options.allowEmpty && !text) return null;
-  return text ? JSON.parse(text) : {};
+  return fetchSupabase(SUPABASE_URL, path, options);
 }
 
 function parseBody(body) {
@@ -266,30 +251,4 @@ function parseBody(body) {
 function formatError(error) {
   const message = String(error?.cause?.message || error?.message || error || 'unknown error');
   return message.slice(0, 500);
-}
-
-function decodeSupabaseJwt(token) {
-  try {
-    const payload = token.split('.')[1];
-    if (!payload) return null;
-    const json = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
-    const data = JSON.parse(json);
-    return { id: data.sub, email: data.email };
-  } catch {
-    return null;
-  }
-}
-
-function normalizeSupabaseUrl(value) {
-  const raw = String(value || '').trim().replace(/\/+$/, '');
-  if (!raw || !/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(raw)) return DEFAULT_SUPABASE_URL;
-  return raw;
-}
-
-function safeHost(value) {
-  try {
-    return new URL(value).host;
-  } catch {
-    return 'invalid';
-  }
 }

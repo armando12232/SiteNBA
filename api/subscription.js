@@ -1,4 +1,11 @@
-const DEFAULT_SUPABASE_URL = 'https://dhirxfoxcswctxcjzvhf.supabase.co';
+import {
+  normalizeSupabaseUrl,
+  safeHost,
+  serviceHeaders as makeServiceHeaders,
+  supabaseFetch as fetchSupabase,
+  verifySupabaseToken,
+} from './_supabaseAuth.js';
+
 const SUPABASE_URL = normalizeSupabaseUrl(process.env.SUPABASE_URL);
 const SUPABASE_SERVICE_KEY = String(process.env.SUPABASE_SERVICE_KEY || '').trim();
 const SITE_URL = String(process.env.SITE_URL || 'https://site-nba-ten.vercel.app').trim();
@@ -13,11 +20,8 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'SUPABASE_SERVICE_KEY is not configured', runtime: 'node-subscription' });
     }
 
-    const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
-    if (!token) return res.status(401).json({ error: 'missing bearer token', runtime: 'node-subscription' });
-
-    const user = decodeSupabaseJwt(token);
-    if (!user?.id) return res.status(401).json({ error: 'invalid token payload', runtime: 'node-subscription' });
+    const user = await requireUser(req, res);
+    if (!user) return;
 
     const rows = await supabaseFetch(`/rest/v1/subscriptions?select=plan,status,role&user_id=eq.${encodeURIComponent(user.id)}&limit=1`, {
       headers: serviceHeaders(),
@@ -45,50 +49,19 @@ function setCors(res) {
 }
 
 function serviceHeaders() {
-  return {
-    apikey: SUPABASE_SERVICE_KEY,
-    Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
-  };
+  return makeServiceHeaders(SUPABASE_SERVICE_KEY);
 }
 
 async function supabaseFetch(path, options = {}) {
-  const url = `${SUPABASE_URL}${path}`;
-  const response = await fetch(url, {
-    method: options.method || 'GET',
-    headers: {
-      Accept: 'application/json',
-      ...options.headers,
-    },
-    body: options.body,
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(text || `Supabase HTTP ${response.status}`);
-  return text ? JSON.parse(text) : {};
+  return fetchSupabase(SUPABASE_URL, path, options);
 }
 
-function decodeSupabaseJwt(token) {
+async function requireUser(req, res) {
   try {
-    const payload = token.split('.')[1];
-    if (!payload) return null;
-    const json = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
-    const data = JSON.parse(json);
-    return { id: data.sub, email: data.email };
-  } catch {
+    return await verifySupabaseToken(SUPABASE_URL, SUPABASE_SERVICE_KEY, req.headers.authorization);
+  } catch (error) {
+    res.status(error.status || 500).json({ error: formatError(error), runtime: 'node-subscription' });
     return null;
-  }
-}
-
-function normalizeSupabaseUrl(value) {
-  const raw = String(value || '').trim().replace(/\/+$/, '');
-  if (!raw || !/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(raw)) return DEFAULT_SUPABASE_URL;
-  return raw;
-}
-
-function safeHost(value) {
-  try {
-    return new URL(value).host;
-  } catch {
-    return 'invalid';
   }
 }
 
