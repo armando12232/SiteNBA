@@ -129,9 +129,16 @@ function PlanPaywall({ feature, plan }) {
           <em>{details.plan}</em>
           <b>Clique no badge do plano no topo para assinar ou trocar de plano.</b>
         </div>
+        <button type="button" className="paywallCta" onClick={openPricingModal}>
+          Ver planos
+        </button>
       </div>
     </section>
   );
+}
+
+function openPricingModal() {
+  window.dispatchEvent(new CustomEvent('statcast:open-pricing'));
 }
 
 function featureAccessDetails(feature) {

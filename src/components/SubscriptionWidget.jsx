@@ -46,6 +46,14 @@ export function SubscriptionWidget({ onSubscriptionChange }) {
   }, []);
 
   useEffect(() => {
+    function openPricing() {
+      setModal('pricing');
+    }
+    window.addEventListener('statcast:open-pricing', openPricing);
+    return () => window.removeEventListener('statcast:open-pricing', openPricing);
+  }, []);
+
+  useEffect(() => {
     onSubscriptionChange?.({ session, subscription });
   }, [onSubscriptionChange, session, subscription]);
 

@@ -538,9 +538,16 @@ function PremiumGamePropsLock() {
           Organiza os jogadores por confronto, mostra top score por jogo e deixa a leitura mais rapida
           antes de escolher uma entrada. Disponivel apenas no plano Premium.
         </p>
+        <button type="button" className="paywallCta" onClick={openPricingModal}>
+          Ver Premium
+        </button>
       </div>
     </div>
   );
+}
+
+function openPricingModal() {
+  window.dispatchEvent(new CustomEvent('statcast:open-pricing'));
 }
 
 function GamePropsModal({ activeStat, group, onClose, onSelectPlayer }) {
