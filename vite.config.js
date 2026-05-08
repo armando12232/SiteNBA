@@ -10,6 +10,12 @@ export default defineConfig({
         main: 'index.html',
         react: 'react.html',
       },
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) return 'vendor';
+          return undefined;
+        },
+      },
     },
   },
   server: {
