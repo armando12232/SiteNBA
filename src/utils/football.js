@@ -122,7 +122,7 @@ export function buildFootballRead(fixture, data = {}) {
   const over25 = decimalOdd(odds?.over25 || odds?.overUnder);
   const btts = decimalOdd(odds?.bttsYes);
   const cardAvg = Number.parseFloat(referee.avg_cards);
-  const tempo = fixture.live ? 'Ao vivo' : fixture.finished ? 'Final' : 'Pre-jogo';
+  const tempo = fixture.live ? 'Ao vivo' : fixture.finished ? 'Final' : 'Pré-jogo';
   const hasStats = Boolean(homeStats || awayStats);
   const hasPregame = Boolean(homePregame || awayPregame);
   const hasMarket = Boolean(over25 || btts);
@@ -136,16 +136,16 @@ export function buildFootballRead(fixture, data = {}) {
   const title = score >= 78 ? 'Elite read' : score >= 64 ? 'Leitura forte' : score >= 50 ? 'Monitorar' : 'Leitura inicial';
   const signals = [
     { label: 'Status', value: tempo, note: fixture.status_long || fixture.status || '-' },
-    { label: 'Pressao', value: homeShots + awayShots || '-', note: `${homeTarget + awayTarget || 0} no alvo` },
+    { label: 'Pressão', value: homeShots + awayShots || '-', note: `${homeTarget + awayTarget || 0} no alvo` },
     { label: 'Over 2.5', value: over25 ? over25.toFixed(2) : '-', note: over25 ? marketNote(over25) : 'sem odd' },
-    { label: 'Arbitro', value: Number.isFinite(cardAvg) ? cardAvg.toFixed(1) : '-', note: 'cartoes/jogo' },
+    { label: 'Árbitro', value: Number.isFinite(cardAvg) ? cardAvg.toFixed(1) : '-', note: 'cartões/jogo' },
   ];
 
   return {
     score,
     tier,
     title,
-    summary: `${fixture.home} x ${fixture.away}: leitura baseada em ritmo do jogo, mercado e contexto pre-jogo disponivel.`,
+    summary: `${fixture.home} x ${fixture.away}: leitura baseada em ritmo do jogo, mercado e contexto pré-jogo disponível.`,
     signals,
   };
 }

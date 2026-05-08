@@ -106,7 +106,7 @@ export function AdminPage() {
       <main className="main adminMain">
         <section className="adminLogin panel">
           <div>
-            <span>Admin</span>
+            <span>🔐 Admin</span>
             <h2>Entrar no painel</h2>
             <p>Use uma conta com `role=admin` na tabela `subscriptions`.</p>
           </div>
@@ -134,7 +134,7 @@ export function AdminPage() {
     <section className="adminPage panel">
       <div className="panelHeader">
         <div>
-          <h2>Admin</h2>
+          <h2>🔐 Admin</h2>
         <p className="sectionLead visible">Assinaturas, planos e usuários do StatCast BR.</p>
         </div>
         <div className="adminActions">

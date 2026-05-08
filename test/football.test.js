@@ -145,8 +145,8 @@ test('buildFootballRead raises score when live stats, market and pregame data ex
 
   assert.equal(read.tier, 'elite');
   assert.equal(read.title, 'Elite read');
-  assert.equal(read.signals.find((item) => item.label === 'Pressao').value, 21);
-  assert.equal(read.signals.find((item) => item.label === 'Arbitro').value, '4.8');
+  assert.equal(read.signals.find((item) => item.label === 'Pressão').value, 21);
+  assert.equal(read.signals.find((item) => item.label === 'Árbitro').value, '4.8');
 });
 
 test('buildFootballHighlights returns the top five sorted by read strength', () => {

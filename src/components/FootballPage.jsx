@@ -449,9 +449,9 @@ function FootballModal({ fixture, onClose }) {
     ['stats', 'Stats'],
     ['events', 'Eventos'],
     ['players', 'Jogadores'],
-    ['pregame', 'Pre-jogo'],
+    ['pregame', 'Pré-jogo'],
     ['odds', 'Odds'],
-    ['referee', 'Arbitro'],
+    ['referee', 'Árbitro'],
     ['telegram', 'Intel'],
   ];
 
