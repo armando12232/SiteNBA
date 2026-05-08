@@ -820,6 +820,25 @@ select {
   box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
 }
 
+.paywallBox {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.paywallIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(253,185,39,.28);
+  border-radius: 16px;
+  background: rgba(253,185,39,.08);
+  font-size: 24px;
+}
+
 .paywallBox span {
   color: var(--gold);
   font-size: 10px;
@@ -842,6 +861,33 @@ select {
   color: var(--text2);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.paywallMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.paywallMeta em,
+.paywallMeta b {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: rgba(0,0,0,.18);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.paywallMeta em {
+  border-color: rgba(0,230,118,.28);
+  color: var(--green);
+}
+
+.paywallMeta b {
+  color: var(--text3);
 }
 
 .page-nav-pill {

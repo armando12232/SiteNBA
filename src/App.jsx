@@ -117,27 +117,65 @@ export default function App() {
 }
 
 function PlanPaywall({ feature, plan }) {
+  const details = featureAccessDetails(feature);
   return (
     <section className="paywallBox">
+      <div className="paywallIcon">🔒</div>
       <div>
         <span>Plano atual: {plan || 'free'}</span>
-        <strong>Recurso bloqueado</strong>
-        <p>{featureLabel(feature)} exige upgrade. Clique no badge do plano no topo para assinar.</p>
+        <strong>{details.title}</strong>
+        <p>{details.description}</p>
+        <div className="paywallMeta">
+          <em>{details.plan}</em>
+          <b>Clique no badge do plano no topo para assinar ou trocar de plano.</b>
+        </div>
       </div>
     </section>
   );
 }
 
-function featureLabel(feature) {
+function featureAccessDetails(feature) {
   return {
-    live: 'NBA ao vivo',
-    injuries: 'lesões NBA',
-    football: 'futebol',
-    nfl: 'NFL',
-    nhl: 'NHL',
-    mlb: 'MLB',
-    modal: 'modal completo do jogador',
-  }[feature] || feature;
+    live: {
+      title: 'NBA ao vivo bloqueado',
+      description: 'Alertas em tempo real, box score e jogadores em destaque ficam disponíveis nos planos pagos.',
+      plan: 'Libera no Basic+',
+    },
+    injuries: {
+      title: 'Lesões NBA bloqueado',
+      description: 'O relatório de lesões por time é um módulo pago por depender de chamadas externas frequentes.',
+      plan: 'Libera no Basic+',
+    },
+    football: {
+      title: 'Futebol bloqueado',
+      description: 'Jogos do dia, odds, árbitro, estatísticas e leitura por score ficam disponíveis em plano superior.',
+      plan: 'Libera no Pro+',
+    },
+    nfl: {
+      title: 'NFL bloqueado',
+      description: 'Placar e agenda de esportes extras fazem parte do pacote multi-esportes.',
+      plan: 'Libera no Pro+',
+    },
+    nhl: {
+      title: 'NHL bloqueado',
+      description: 'Placar e agenda de esportes extras fazem parte do pacote multi-esportes.',
+      plan: 'Libera no Pro+',
+    },
+    mlb: {
+      title: 'MLB bloqueado',
+      description: 'Placar e agenda de esportes extras fazem parte do pacote multi-esportes.',
+      plan: 'Libera no Pro+',
+    },
+    modal: {
+      title: 'Modal completo bloqueado',
+      description: 'Histórico real, gráfico, hit rates e leitura detalhada do jogador exigem plano ativo.',
+      plan: 'Libera no Basic+',
+    },
+  }[feature] || {
+    title: 'Recurso bloqueado',
+    description: 'Este módulo exige upgrade para liberar a visualização completa.',
+    plan: 'Plano pago necessário',
+  };
 }
 
 function navLabel(page) {

@@ -209,7 +209,7 @@ export function AdminPage() {
                 ))}
               </tbody>
             </table>
-            {!users.length ? <div className="emptyState">Nenhum usuario encontrado.</div> : null}
+            {!users.length ? <div className="emptyState richEmptyState"><strong>Nenhum usuário encontrado</strong><span>Ajuste os filtros ou atualize o painel.</span></div> : null}
           </div>
         </>
       ) : null}
@@ -235,7 +235,7 @@ function PlanDistribution({ users }) {
   const total = users.length || 1;
   return (
     <section className="adminPlanBox">
-      <div className="ftModalTitle">Distribuicao de planos</div>
+      <div className="ftModalTitle">Distribuição de planos</div>
       {counts.map((item) => (
         <div className="adminPlanRow" key={item.plan}>
           <span>{item.plan}</span>
