@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getAdminHealth, getAdminSummary, updateAdminUser } from '../api/admin.js';
 import { loadSubscriptionDetails } from '../api/subscriptions.js';
-import { supabase } from '../api/supabase.js';
+import { SUPABASE_CONFIGURED, SUPABASE_CONFIG_ERROR, supabase } from '../api/supabase.js';
 
 const PLANS = ['free', 'basic', 'pro', 'premium'];
 const STATUSES = ['active', 'trialing', 'past_due', 'cancelled'];
@@ -18,6 +18,12 @@ export function AdminPage() {
 
   useEffect(() => {
     let alive = true;
+    if (!SUPABASE_CONFIGURED) {
+      setAuth((current) => ({ ...current, loading: false, error: SUPABASE_CONFIG_ERROR }));
+      return () => {
+        alive = false;
+      };
+    }
     supabase.auth.getSession().then(({ data }) => {
       if (!alive) return;
       setSession(data.session || null);

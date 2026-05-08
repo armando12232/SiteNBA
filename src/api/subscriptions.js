@@ -1,5 +1,5 @@
 import { fetchJson } from './http.js';
-import { supabase } from './supabase.js';
+import { SUPABASE_CONFIGURED, SUPABASE_CONFIG_ERROR, supabase } from './supabase.js';
 
 export const PLANS = {
   free: {
@@ -73,6 +73,7 @@ export function getPlanAccess(plan) {
 }
 
 export async function getCurrentSession() {
+  if (!SUPABASE_CONFIGURED) return null;
   const { data } = await supabase.auth.getSession();
   return data.session || null;
 }
@@ -95,18 +96,22 @@ export async function loadSubscriptionDetails(accessToken) {
 }
 
 export async function signIn(email, password) {
+  if (!SUPABASE_CONFIGURED) return authConfigError();
   return supabase.auth.signInWithPassword({ email, password });
 }
 
 export async function signUp(email, password) {
+  if (!SUPABASE_CONFIGURED) return authConfigError();
   return supabase.auth.signUp({ email, password });
 }
 
 export async function signOut() {
+  if (!SUPABASE_CONFIGURED) return { error: null };
   return supabase.auth.signOut({ scope: 'local' });
 }
 
 export async function startCheckout(plan) {
+  if (!SUPABASE_CONFIGURED) throw new Error(SUPABASE_CONFIG_ERROR);
   const session = await getCurrentSession();
   if (!session?.access_token) throw new Error('Entre na conta antes de assinar.');
   return fetchJson('/api/checkout', {
@@ -131,4 +136,8 @@ export function normalizeSubscription(row) {
 
 export function freeSubscription() {
   return normalizeSubscription({ plan: 'free', status: 'active', role: 'guest' });
+}
+
+function authConfigError() {
+  return { data: null, error: new Error(SUPABASE_CONFIG_ERROR) };
 }

@@ -8,7 +8,7 @@ import {
   signUp,
   startCheckout,
 } from '../api/subscriptions.js';
-import { supabase } from '../api/supabase.js';
+import { SUPABASE_CONFIGURED, supabase } from '../api/supabase.js';
 
 export function SubscriptionWidget({ onSubscriptionChange }) {
   const [session, setSession] = useState(null);
@@ -19,6 +19,10 @@ export function SubscriptionWidget({ onSubscriptionChange }) {
   useEffect(() => {
     let alive = true;
     async function boot() {
+      if (!SUPABASE_CONFIGURED) {
+        if (alive) setLoading(false);
+        return;
+      }
       const nextSession = await getCurrentSession();
       if (!alive) return;
       setSession(nextSession);
@@ -26,6 +30,11 @@ export function SubscriptionWidget({ onSubscriptionChange }) {
       setLoading(false);
     }
     boot();
+    if (!SUPABASE_CONFIGURED) {
+      return () => {
+        alive = false;
+      };
+    }
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       refreshSubscription(nextSession, setSubscription);
