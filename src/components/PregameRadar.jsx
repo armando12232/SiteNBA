@@ -116,6 +116,9 @@ export function PregameRadar({ access, onSelectPlayer }) {
   const topEdge = visiblePlayers[0]?.props?.[activeStat]?.edge;
   const avgHit = averageHitRate(visiblePlayers, activeStat);
   const bpCount = state.bpPlayers?.length || 0;
+  const previewRows = access?.previewRows > 0 && basePlayers.length > visiblePlayers.length
+    ? buildLockedPreviewRows(access.previewRows)
+    : [];
   const gameGroups = useMemo(() => buildGameGroups(visiblePlayers, activeStat), [activeStat, visiblePlayers]);
 
   return (
@@ -234,7 +237,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
       {state.loading && !state.players.length ? <div className="state-box compact">Buscando dados NBA...</div> : null}
       {access?.maxProps > 0 && basePlayers.length > access.maxProps ? (
         <div className="planLimitBox">
-          Plano atual mostra {access.maxProps} jogadores. Upgrade libera lista completa e recursos avançados.
+          Plano Free libera {access.maxProps} jogadores reais. As linhas embaçadas são preview visual; upgrade libera dados completos.
         </div>
       ) : null}
 
@@ -274,6 +277,9 @@ export function PregameRadar({ access, onSelectPlayer }) {
                 activeStat={activeStat}
                 onSelectPlayer={onSelectPlayer}
               />
+            ))}
+            {previewRows.map((row) => (
+              <LockedPreviewRow key={row.id} row={row} activeStat={activeStat} />
             ))}
           </div>
         ) : (
@@ -628,6 +634,39 @@ function GamePropsModal({ activeStat, group, onClose, onSelectPlayer }) {
   );
 }
 
+function LockedPreviewRow({ row, activeStat }) {
+  return (
+    <button type="button" className="props-table-row locked-preview-row" onClick={openPricingModal}>
+      <div className="props-player-cell preview-blur">
+        <div className="locked-preview-avatar" />
+        <div className="props-player-meta">
+          <div className="props-player-name">{row.name}</div>
+          <div className="props-player-sub">{row.team} / {statLabels[activeStat]} / <span>O {row.line}</span></div>
+        </div>
+      </div>
+      <LockedPreviewCell value={row.h2h} tone="mid" />
+      <LockedPreviewCell value={row.l5} tone={row.l5 >= 70 ? 'high' : row.l5 >= 50 ? 'mid' : 'low'} />
+      <LockedPreviewCell value={row.l10} tone={row.l10 >= 70 ? 'high' : row.l10 >= 50 ? 'mid' : 'low'} />
+      <div className="hide-mobile">
+        <LockedPreviewCell value={row.season} tone={row.season >= 70 ? 'high' : row.season >= 50 ? 'mid' : 'low'} />
+      </div>
+      <div className="projection-cell preview-blur">
+        <strong className="statcast-score strong">{row.score}</strong>
+        <small>Proj {row.proj}</small>
+      </div>
+      <div className="line-cell preview-blur">
+        <strong>O {row.line}</strong>
+        <small>{row.edge > 0 ? '+' : ''}{row.edge} edge</small>
+      </div>
+      <span className="locked-preview-badge">Upgrade</span>
+    </button>
+  );
+}
+
+function LockedPreviewCell({ value, tone }) {
+  return <div className={`hit-rate-cell preview-blur ${tone}`}>{value}%</div>;
+}
+
 function PregameRow({ player, activeStat, onSelectPlayer }) {
   const activeProp = player.props?.[activeStat];
   const best = activeProp?.line != null ? { stat: activeStat, ...activeProp } : getBestProp(player);
@@ -738,6 +777,27 @@ function normalizeGameLabel(gameLabel, fallbackTeam) {
   if (/\b[A-Z]{2,3}\s+x\s+[A-Z]{2,3}\b/.test(label)) return label;
   if (fallbackTeam) return `${fallbackTeam} / jogo do dia`;
   return 'Jogo nao identificado';
+}
+
+function buildLockedPreviewRows(count) {
+  const names = ['Premium Guard', 'Sharp Wing', 'Elite Center', 'Hot Shooter', 'Value Forward', 'Late Steam', 'Court Edge', 'Model Pick'];
+  const teams = ['BOS', 'LAL', 'NYK', 'OKC', 'DEN', 'MIN', 'DAL', 'PHX'];
+  return Array.from({ length: count }, (_, index) => {
+    const seed = index + 1;
+    return {
+      id: `locked-${seed}`,
+      name: names[index % names.length],
+      team: teams[index % teams.length],
+      line: `${[8.5, 10.5, 12.5, 15.5, 18.5, 20.5][index % 6]}`,
+      h2h: [60, 67, 72, 50, 80, 58][index % 6],
+      l5: [80, 60, 75, 40, 85, 70][index % 6],
+      l10: [70, 55, 80, 50, 65, 90][index % 6],
+      season: [81, 62, 74, 58, 93, 68][index % 6],
+      score: [78, 71, 86, 64, 82, 69][index % 6],
+      proj: [11.2, 14.8, 19.4, 22.1, 9.7, 16.6][index % 6],
+      edge: [1.4, -0.3, 2.1, 0.8, 1.9, -0.6][index % 6],
+    };
+  });
 }
 
 function playerPhotoUrl(player) {

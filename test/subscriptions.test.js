@@ -14,7 +14,8 @@ test('getPlanAccess falls back to free for unknown plans', () => {
 
 test('free plan keeps the most restrictive access profile', () => {
   const access = getPlanAccess('free');
-  assert.equal(access.maxProps, 8);
+  assert.equal(access.maxProps, 5);
+  assert.equal(access.previewRows, 12);
   assert.equal(access.modal, false);
   assert.equal(access.live, false);
   assert.equal(access.injuries, false);

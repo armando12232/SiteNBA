@@ -35,7 +35,8 @@ export const PLANS = {
 
 export const PLAN_ACCESS = {
   free: {
-    maxProps: 8,
+    maxProps: 5,
+    previewRows: 12,
     modal: false,
     live: false,
     injuries: false,
@@ -45,6 +46,7 @@ export const PLAN_ACCESS = {
   },
   basic: {
     maxProps: 25,
+    previewRows: 0,
     modal: true,
     live: false,
     injuries: false,
@@ -54,6 +56,7 @@ export const PLAN_ACCESS = {
   },
   pro: {
     maxProps: -1,
+    previewRows: 0,
     modal: true,
     live: true,
     injuries: true,
@@ -63,6 +66,7 @@ export const PLAN_ACCESS = {
   },
   premium: {
     maxProps: -1,
+    previewRows: 0,
     modal: true,
     live: true,
     injuries: true,
