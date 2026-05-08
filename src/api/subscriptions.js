@@ -6,26 +6,30 @@ export const PLANS = {
     name: 'Free',
     price: 0,
     label: 'R$0',
+    summary: 'Para testar o radar antes de assinar.',
     features: ['Props principais', 'Acesso limitado', 'Dados com cache'],
   },
   basic: {
     name: 'Basic',
     price: 29,
     label: 'R$29/mês',
-    features: ['Mais jogadores', 'Histórico recente', 'Futebol básico'],
+    summary: 'Para quem quer abrir modais e ver mais props NBA.',
+    features: ['Mais jogadores NBA', 'Modal completo do jogador', 'Histórico recente', 'Leitura por linha e hit rate'],
   },
   pro: {
     name: 'Pro',
     price: 59,
     label: 'R$59/mês',
     popular: true,
-    features: ['NBA completo', 'Live alerts', 'Futebol completo', 'Lesões'],
+    summary: 'Plano principal para usar NBA + futebol no dia a dia.',
+    features: ['NBA completo', 'Live alerts', 'Futebol completo', 'Lesões NBA', 'NFL/NHL/MLB'],
   },
   premium: {
     name: 'Premium',
     price: 99,
     label: 'R$99/mês',
-    features: ['Tudo do Pro', 'Prioridade', 'Admin/relatórios', 'Novos módulos'],
+    summary: 'Para operação completa, prioridade e recursos avançados.',
+    features: ['Tudo do Pro', 'Prioridade', 'Admin/relatórios', 'Novos módulos', 'Ajustes avançados'],
   },
 };
 

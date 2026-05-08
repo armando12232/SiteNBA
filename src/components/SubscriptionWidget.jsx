@@ -121,9 +121,11 @@ function AuthModal({ onClose }) {
 
 function PricingModal({ currentPlan, hasSession, onNeedAuth, onClose }) {
   const [busyPlan, setBusyPlan] = useState('');
+  const [error, setError] = useState('');
   const paidPlans = useMemo(() => Object.entries(PLANS).filter(([key]) => key !== 'free'), []);
 
   async function selectPlan(plan) {
+    setError('');
     if (!hasSession) {
       onNeedAuth();
       return;
@@ -133,7 +135,7 @@ function PricingModal({ currentPlan, hasSession, onNeedAuth, onClose }) {
       const data = await startCheckout(plan);
       if (data?.url) window.location.href = data.url;
     } catch (error) {
-      alert(error.message);
+      setError(error.message || 'Não foi possível abrir o checkout.');
       setBusyPlan('');
     }
   }
@@ -144,14 +146,20 @@ function PricingModal({ currentPlan, hasSession, onNeedAuth, onClose }) {
         <button type="button" className="subClose" onClick={onClose}>x</button>
         <div className="subKicker">Assinaturas</div>
         <h3>Escolha seu plano</h3>
+        <p className="pricingLead">Comece no Basic para liberar os modais. Use Pro para NBA ao vivo, futebol e esportes extras.</p>
+        {error ? <div className="authMessage pricingError">{error}</div> : null}
         <div className="pricingGrid">
           {paidPlans.map(([key, plan]) => {
             const current = currentPlan === key;
             return (
               <article className={`pricingCard ${plan.popular ? 'popular' : ''} ${current ? 'current' : ''}`} key={key}>
-                {plan.popular ? <span className="popularTag">Mais usado</span> : null}
+                <div className="pricingCardHead">
+                  {plan.popular ? <span className="popularTag">Mais usado</span> : <span className="popularTag muted">{planBadge(key)}</span>}
+                  {current ? <span className="currentTag">Atual</span> : null}
+                </div>
                 <strong>{plan.name}</strong>
                 <div className="planPrice">{plan.label}</div>
+                <p>{plan.summary}</p>
                 <ul>
                   {plan.features.map((feature) => <li key={feature}>{feature}</li>)}
                 </ul>
@@ -165,4 +173,12 @@ function PricingModal({ currentPlan, hasSession, onNeedAuth, onClose }) {
       </section>
     </div>
   );
+}
+
+function planBadge(plan) {
+  return {
+    basic: 'Entrada',
+    pro: 'Completo',
+    premium: 'Avançado',
+  }[plan] || 'Plano';
 }

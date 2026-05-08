@@ -332,6 +332,21 @@ select {
   text-transform: uppercase;
 }
 
+.pricingLead {
+  max-width: 560px;
+  margin: -8px 0 16px;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.pricingError {
+  margin-bottom: 12px;
+  border-color: rgba(255,23,68,.28);
+  background: var(--danger-dim);
+  color: var(--danger);
+}
+
 .authForm {
   display: grid;
   gap: 10px;
@@ -405,6 +420,14 @@ select {
     var(--bg3);
 }
 
+.pricingCardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+}
+
 .pricingCard.popular {
   border-color: rgba(0,230,118,.35);
 }
@@ -425,6 +448,24 @@ select {
   text-transform: uppercase;
 }
 
+.popularTag.muted {
+  border-color: rgba(255,255,255,.12);
+  color: var(--text3);
+}
+
+.currentTag {
+  width: fit-content;
+  border: 1px solid rgba(253,185,39,.34);
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: rgba(253,185,39,.08);
+  color: var(--gold);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
 .pricingCard strong {
   font-family: var(--display);
   font-size: 28px;
@@ -437,6 +478,14 @@ select {
   font-family: var(--display);
   font-size: 34px;
   font-weight: 900;
+}
+
+.pricingCard p {
+  min-height: 36px;
+  margin: 0;
+  color: var(--text3);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .pricingCard ul {
