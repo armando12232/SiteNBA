@@ -29,7 +29,7 @@ export const PLANS = {
     price: 99,
     label: 'R$99/mês',
     summary: 'Para operação completa, prioridade e recursos avançados.',
-    features: ['Tudo do Pro', 'Prioridade', 'Admin/relatórios', 'Novos módulos', 'Ajustes avançados'],
+    features: ['Tudo do Pro', 'Props por jogo do dia', 'Prioridade', 'Admin/relatórios', 'Novos módulos'],
   },
 };
 
@@ -41,6 +41,7 @@ export const PLAN_ACCESS = {
     injuries: false,
     football: false,
     sports: false,
+    propsByGame: false,
   },
   basic: {
     maxProps: 25,
@@ -49,6 +50,7 @@ export const PLAN_ACCESS = {
     injuries: false,
     football: false,
     sports: false,
+    propsByGame: false,
   },
   pro: {
     maxProps: -1,
@@ -57,6 +59,7 @@ export const PLAN_ACCESS = {
     injuries: true,
     football: true,
     sports: true,
+    propsByGame: false,
   },
   premium: {
     maxProps: -1,
@@ -65,6 +68,7 @@ export const PLAN_ACCESS = {
     injuries: true,
     football: true,
     sports: true,
+    propsByGame: true,
   },
 };
 

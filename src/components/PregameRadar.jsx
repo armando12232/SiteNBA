@@ -23,6 +23,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [scoreInfoOpen, setScoreInfoOpen] = useState(false);
   const [scoreFilter, setScoreFilter] = useState(savedPrefs.scoreFilter || 'all');
+  const [viewMode, setViewMode] = useState(savedPrefs.viewMode || 'list');
   const [state, setState] = useState({
     loading: true,
     error: null,
@@ -88,8 +89,8 @@ export function PregameRadar({ access, onSelectPlayer }) {
   }, [refreshKey]);
 
   useEffect(() => {
-    writePrefs({ activeStat, sortBy, query, scoreFilter });
-  }, [activeStat, query, scoreFilter, sortBy]);
+    writePrefs({ activeStat, sortBy, query, scoreFilter, viewMode });
+  }, [activeStat, query, scoreFilter, sortBy, viewMode]);
 
   const basePlayers = useMemo(() => {
     const cleaned = query.trim().toLowerCase();
@@ -115,6 +116,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
   const topEdge = visiblePlayers[0]?.props?.[activeStat]?.edge;
   const avgHit = averageHitRate(visiblePlayers, activeStat);
   const bpCount = state.bpPlayers?.length || 0;
+  const gameGroups = useMemo(() => buildGameGroups(visiblePlayers, activeStat), [activeStat, visiblePlayers]);
 
   return (
     <section>
@@ -199,6 +201,23 @@ export function PregameRadar({ access, onSelectPlayer }) {
         </div>
       </div>
 
+      <div className="view-mode-row">
+        <button
+          type="button"
+          className={`view-mode-btn ${viewMode === 'list' ? 'active' : ''}`}
+          onClick={() => setViewMode('list')}
+        >
+          Lista geral
+        </button>
+        <button
+          type="button"
+          className={`view-mode-btn premium ${viewMode === 'games' ? 'active' : ''}`}
+          onClick={() => setViewMode('games')}
+        >
+          Props por jogo <span>Premium</span>
+        </button>
+      </div>
+
       <StatCastBoard
         activeStat={activeStat}
         scoreFilter={scoreFilter}
@@ -219,7 +238,20 @@ export function PregameRadar({ access, onSelectPlayer }) {
         </div>
       ) : null}
 
-      {!state.error ? (
+      {!state.error && viewMode === 'games' ? (
+        access?.propsByGame ? (
+          <PropsByGameView
+            activeStat={activeStat}
+            groups={gameGroups}
+            loading={state.loading}
+            onSelectPlayer={onSelectPlayer}
+          />
+        ) : (
+          <PremiumGamePropsLock />
+        )
+      ) : null}
+
+      {!state.error && viewMode === 'list' ? (
         visiblePlayers.length ? (
           <div className="props-table-wrap">
             <div className="props-table-game-header">
@@ -288,6 +320,7 @@ function readPrefs() {
       sortBy: ['l5', 'hit', 'h2h', 'season', 'score'].includes(parsed.sortBy) ? parsed.sortBy : 'l5',
       query: typeof parsed.query === 'string' && parsed.query.length <= 50 ? parsed.query : '',
       scoreFilter: ['all', 'elite', 'strong', 'watch'].includes(parsed.scoreFilter) ? parsed.scoreFilter : 'all',
+      viewMode: ['list', 'games'].includes(parsed.viewMode) ? parsed.viewMode : 'list',
     };
   } catch {
     return {};
@@ -410,6 +443,90 @@ function InfoFactor({ weight, title, text }) {
   );
 }
 
+function PropsByGameView({ activeStat, groups, loading, onSelectPlayer }) {
+  if (!groups.length) {
+    return (
+      <div className="state-box compact">
+        {loading ? 'Montando props por jogo...' : 'Nenhum jogo identificado para as props de hoje.'}
+      </div>
+    );
+  }
+
+  return (
+    <div className="game-props-board">
+      <div className="game-props-head">
+        <div>
+          <span>Premium</span>
+          <strong>Props por jogo do dia</strong>
+        </div>
+        <em>{groups.length} jogos / {groups.reduce((sum, group) => sum + group.players.length, 0)} props</em>
+      </div>
+      {groups.map((group) => (
+        <section className="game-props-card" key={group.key}>
+          <div className="game-props-card-head">
+            <div>
+              <span>{group.date || 'Hoje'}</span>
+              <strong>{group.label}</strong>
+            </div>
+            <div className="game-props-card-metrics">
+              <GameMetric label="Props" value={group.players.length} />
+              <GameMetric label="Top SC" value={group.topScore ?? '-'} />
+              <GameMetric label="Media" value={group.avgScore ?? '-'} />
+            </div>
+          </div>
+          <div className="game-props-list">
+            {group.players.slice(0, 8).map((player) => {
+              const entry = scoreEntry(player, activeStat);
+              const prop = entry?.prop || {};
+              return (
+                <button
+                  type="button"
+                  className="game-prop-row"
+                  key={`${group.key}-${player.player_id || player.player_name}-${entry?.stat || activeStat}`}
+                  onClick={() => onSelectPlayer?.(player)}
+                >
+                  <span>
+                    <b>{player.player_name}</b>
+                    <small>{player.team_abbr || inferTeamFromGames(player.last5_games || []) || '-'} / {statLabels[entry?.stat || activeStat]}</small>
+                  </span>
+                  <em>O {entry?.line ?? '-'}</em>
+                  <strong className={`statcast-score ${entry?.score?.tier || ''}`}>{entry?.score?.score ?? '-'}</strong>
+                  <i>{prop.l10 ?? prop.hit_rate ?? '-'}%</i>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function GameMetric({ label, value }) {
+  return (
+    <div>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function PremiumGamePropsLock() {
+  return (
+    <div className="game-props-lock">
+      <div className="game-props-lock-icon">P</div>
+      <div>
+        <span>Recurso Premium</span>
+        <strong>Props separadas por jogo do dia</strong>
+        <p>
+          Organiza os jogadores por confronto, mostra top score por jogo e deixa a leitura mais rapida
+          antes de escolher uma entrada. Disponivel apenas no plano Premium.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function PregameRow({ player, activeStat, onSelectPlayer }) {
   const activeProp = player.props?.[activeStat];
   const best = activeProp?.line != null ? { stat: activeStat, ...activeProp } : getBestProp(player);
@@ -483,6 +600,45 @@ function pregameSortScore(player, stat) {
   const prop = player.props?.[stat] || {};
   const line = ensureHalfLine(prop.line ?? player.synthetic_lines?.pts);
   return buildPregameScore({ player, stat, prop, line, games: player.last5_games || [] }).score;
+}
+
+function buildGameGroups(players, activeStat) {
+  const map = new Map();
+  for (const player of players) {
+    const label = normalizeGameLabel(player.gameLabel, player.team_abbr);
+    const key = `${player.gameDateLabel || 'today'}:${label}`;
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        label,
+        date: player.gameDateLabel,
+        players: [],
+      });
+    }
+    map.get(key).players.push(player);
+  }
+
+  return [...map.values()]
+    .map((group) => {
+      const ranked = group.players
+        .map((player) => ({ player, entry: scoreEntry(player, activeStat) }))
+        .sort((a, b) => (b.entry?.score?.score || 0) - (a.entry?.score?.score || 0));
+      const scores = ranked.map((row) => row.entry?.score?.score).filter((score) => typeof score === 'number');
+      return {
+        ...group,
+        players: ranked.map((row) => row.player),
+        topScore: scores[0] ?? null,
+        avgScore: scores.length ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length) : null,
+      };
+    })
+    .sort((a, b) => (b.topScore || 0) - (a.topScore || 0));
+}
+
+function normalizeGameLabel(gameLabel, fallbackTeam) {
+  const label = String(gameLabel || '').trim();
+  if (/\b[A-Z]{2,3}\s+x\s+[A-Z]{2,3}\b/.test(label)) return label;
+  if (fallbackTeam) return `${fallbackTeam} / jogo do dia`;
+  return 'Jogo nao identificado';
 }
 
 function buildScoreBoard(players, activeStat) {

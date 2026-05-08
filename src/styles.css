@@ -2970,8 +2970,252 @@ select {
   color: var(--text);
 }
 
+.view-mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 0 16px;
+}
+
+.view-mode-btn {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 13px;
+  background: var(--bg2);
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.view-mode-btn.active {
+  border-color: var(--gold);
+  background: rgba(253,185,39,.09);
+  color: var(--gold);
+}
+
+.view-mode-btn.premium span {
+  margin-left: 6px;
+  border: 1px solid rgba(0,230,118,.28);
+  border-radius: 999px;
+  padding: 2px 6px;
+  color: var(--green);
+  font-size: 9px;
+}
+
 .refresh-compact {
   margin-left: auto;
+}
+
+.game-props-board {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.game-props-head,
+.game-props-card,
+.game-props-lock {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg2);
+}
+
+.game-props-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  background:
+    radial-gradient(circle at top right, rgba(0,230,118,.10), transparent 34%),
+    var(--bg2);
+}
+
+.game-props-head span,
+.game-props-lock span {
+  display: block;
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.game-props-head strong,
+.game-props-lock strong {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 900;
+  line-height: .95;
+  text-transform: uppercase;
+}
+
+.game-props-head em {
+  color: var(--text3);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.game-props-card {
+  overflow: hidden;
+}
+
+.game-props-card-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+}
+
+.game-props-card-head > div > span {
+  color: var(--text3);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.game-props-card-head > div > strong {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--display);
+  font-size: 23px;
+  font-weight: 900;
+}
+
+.game-props-card-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 66px);
+  gap: 8px;
+}
+
+.game-props-card-metrics div {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 6px;
+  background: rgba(0,0,0,.18);
+  text-align: center;
+}
+
+.game-props-card-metrics span {
+  display: block;
+  color: var(--text3);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.game-props-card-metrics strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--gold);
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.game-props-list {
+  display: grid;
+}
+
+.game-prop-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px 62px 54px;
+  gap: 10px;
+  align-items: center;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 14px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.game-prop-row:last-child {
+  border-bottom: 0;
+}
+
+.game-prop-row:hover {
+  background: var(--bg3);
+}
+
+.game-prop-row b,
+.game-prop-row small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-prop-row b {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.game-prop-row small {
+  margin-top: 2px;
+  color: var(--text3);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.game-prop-row em,
+.game-prop-row i {
+  color: var(--text2);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  text-align: center;
+}
+
+.game-prop-row i {
+  color: var(--green);
+}
+
+.game-props-lock {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+  padding: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(253,185,39,.12), transparent 34%),
+    var(--bg2);
+}
+
+.game-props-lock-icon {
+  display: grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  border: 1px solid rgba(0,230,118,.30);
+  border-radius: 16px;
+  color: var(--green);
+  background: rgba(0,230,118,.08);
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.game-props-lock p {
+  max-width: 640px;
+  margin-top: 8px;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .props-table-wrap {
@@ -4554,8 +4798,27 @@ h2 {
   .statcast-board-metrics,
   .statcast-quick-row,
   .statcast-top-picks,
-  .score-info-grid {
+  .score-info-grid,
+  .game-props-card-head {
     grid-template-columns: 1fr;
+  }
+
+  .game-props-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .game-props-card-metrics {
+    grid-template-columns: repeat(3, 1fr);
+    width: 100%;
+  }
+
+  .game-prop-row {
+    grid-template-columns: minmax(0, 1fr) 54px 46px;
+  }
+
+  .game-prop-row i {
+    display: none;
   }
 
   .statcast-tier-filters,
