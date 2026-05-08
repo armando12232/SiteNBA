@@ -4,6 +4,7 @@ import { clearPregameCache, getPregame, getSchedule } from '../api/nba.js';
 import { PREGAME_PLAYERS } from '../data/pregamePlayers.js';
 import { ensureHalfLine, getBestProp } from '../utils/props.js';
 import { buildPregameScore } from '../utils/statcastScore.js';
+import { userErrorMessage } from '../utils/errors.js';
 
 const statLabels = {
   pts: 'Pontos',
@@ -210,7 +211,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
 
       {scoreInfoOpen ? <ScoreInfoModal onClose={() => setScoreInfoOpen(false)} /> : null}
 
-      {state.error ? <div className="alertBox">{state.error.message}</div> : null}
+      {state.error ? <div className="alertBox">{userErrorMessage(state.error, 'Não foi possível carregar props NBA agora.')}</div> : null}
       {state.loading && !state.players.length ? <div className="state-box compact">Buscando dados NBA...</div> : null}
       {access?.maxProps > 0 && basePlayers.length > access.maxProps ? (
         <div className="planLimitBox">

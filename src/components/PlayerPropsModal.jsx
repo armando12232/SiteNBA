@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getPregame, getPregameByName } from '../api/nba.js';
 import { ensureHalfLine, getBestProp } from '../utils/props.js';
 import { buildPregameScore } from '../utils/statcastScore.js';
+import { userErrorMessage } from '../utils/errors.js';
 
 export function PlayerPropsModal({ playerName, onClose }) {
   const tableData = typeof playerName === 'object' && playerName ? playerName : null;
@@ -90,7 +91,7 @@ export function PlayerPropsModal({ playerName, onClose }) {
         </div>
 
         <div className="pp-modal-body">
-          {state.error ? <div className="alertBox">{state.error.message}</div> : null}
+          {state.error ? <div className="alertBox">{userErrorMessage(state.error, 'Não foi possível carregar o histórico real agora.')}</div> : null}
 
           {!state.loading && !state.error ? (
             <>

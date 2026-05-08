@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getBoxscore, getScoreboard } from '../api/nba.js';
 import { promisePool } from '../utils/promisePool.js';
 import { buildLiveScore } from '../utils/statcastScore.js';
+import { userErrorMessage } from '../utils/errors.js';
 
 const ALERT_FILTERS = [
   { id: 'all', label: 'Todos' },
@@ -143,7 +144,7 @@ export function LiveMonitor() {
         ))}
       </div>
 
-      {state.error ? <div className="alertBox">{state.error.message}</div> : null}
+      {state.error ? <div className="alertBox">{userErrorMessage(state.error, 'Não foi possível carregar NBA ao vivo agora.')}</div> : null}
       {state.loading ? <div className="loadingGrid">Buscando jogos e boxscores...</div> : null}
 
       {!state.loading && !state.error ? (

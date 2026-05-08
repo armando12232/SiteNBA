@@ -21,6 +21,7 @@ import {
   parseFootballStat,
   sortFootballFixtures,
 } from '../utils/football.js';
+import { userErrorMessage } from '../utils/errors.js';
 
 const FX = {
   all: '\uD83C\uDF10',
@@ -218,7 +219,7 @@ export function FootballPage() {
         ))}
       </div>
 
-      {state.error ? <div className="alertBox">{state.error.message}</div> : null}
+      {state.error ? <div className="alertBox">{userErrorMessage(state.error, 'Não foi possível carregar futebol agora.')}</div> : null}
       {state.loading ? <div className="loadingGrid">Carregando futebol...</div> : null}
 
       {!state.loading ? (

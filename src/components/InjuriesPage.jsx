@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getNbaInjuries } from '../api/injuries.js';
+import { userErrorMessage } from '../utils/errors.js';
 
 export function InjuriesPage() {
   const [state, setState] = useState({ loading: true, error: null, data: null });
@@ -47,7 +48,7 @@ export function InjuriesPage() {
       {state.error ? (
         <div className="alertBox actionAlert">
           <strong>Não foi possível carregar lesões agora.</strong>
-          <span>{state.error.message}</span>
+          <span>{userErrorMessage(state.error, 'Não foi possível carregar lesões agora.')}</span>
           <button type="button" onClick={() => setRefresh((value) => value + 1)}>Tentar novamente</button>
         </div>
       ) : null}

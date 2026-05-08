@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getSportsScoreboard } from '../api/sports.js';
+import { userErrorMessage } from '../utils/errors.js';
 
 const META = {
   nfl: { title: 'NFL', icon: '🏈', subtitle: 'National Football League', color: 'var(--amber)' },
@@ -43,7 +44,7 @@ export function SportsPage({ league }) {
       {state.error ? (
         <div className="alertBox actionAlert">
           <strong>Não foi possível carregar {meta.title} agora.</strong>
-          <span>{state.error.message}</span>
+          <span>{userErrorMessage(state.error, `Não foi possível carregar ${meta.title} agora.`)}</span>
           <button type="button" onClick={() => setRefresh((value) => value + 1)}>Tentar novamente</button>
         </div>
       ) : null}
