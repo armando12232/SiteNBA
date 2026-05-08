@@ -444,6 +444,8 @@ function InfoFactor({ weight, title, text }) {
 }
 
 function PropsByGameView({ activeStat, groups, loading, onSelectPlayer }) {
+  const [selectedGame, setSelectedGame] = useState(null);
+
   if (!groups.length) {
     return (
       <div className="state-box compact">
@@ -463,7 +465,7 @@ function PropsByGameView({ activeStat, groups, loading, onSelectPlayer }) {
       </div>
       {groups.map((group) => (
         <section className="game-props-card" key={group.key}>
-          <div className="game-props-card-head">
+          <button type="button" className="game-props-card-head" onClick={() => setSelectedGame(group)}>
             <div>
               <span>{group.date || 'Hoje'}</span>
               <strong>{group.label}</strong>
@@ -473,9 +475,9 @@ function PropsByGameView({ activeStat, groups, loading, onSelectPlayer }) {
               <GameMetric label="Top SC" value={group.topScore ?? '-'} />
               <GameMetric label="Media" value={group.avgScore ?? '-'} />
             </div>
-          </div>
+          </button>
           <div className="game-props-list">
-            {group.players.slice(0, 8).map((player) => {
+            {group.players.slice(0, 6).map((player) => {
               const entry = scoreEntry(player, activeStat);
               const prop = entry?.prop || {};
               return (
@@ -485,6 +487,7 @@ function PropsByGameView({ activeStat, groups, loading, onSelectPlayer }) {
                   key={`${group.key}-${player.player_id || player.player_name}-${entry?.stat || activeStat}`}
                   onClick={() => onSelectPlayer?.(player)}
                 >
+                  <img src={playerPhotoUrl(player)} alt="" />
                   <span>
                     <b>{player.player_name}</b>
                     <small>{player.team_abbr || inferTeamFromGames(player.last5_games || []) || '-'} / {statLabels[entry?.stat || activeStat]}</small>
@@ -496,8 +499,21 @@ function PropsByGameView({ activeStat, groups, loading, onSelectPlayer }) {
               );
             })}
           </div>
+          {group.players.length > 6 ? (
+            <button type="button" className="game-props-more" onClick={() => setSelectedGame(group)}>
+              Ver {group.players.length} props do jogo
+            </button>
+          ) : null}
         </section>
       ))}
+      {selectedGame ? (
+        <GamePropsModal
+          activeStat={activeStat}
+          group={selectedGame}
+          onClose={() => setSelectedGame(null)}
+          onSelectPlayer={onSelectPlayer}
+        />
+      ) : null}
     </div>
   );
 }
@@ -527,14 +543,90 @@ function PremiumGamePropsLock() {
   );
 }
 
+function GamePropsModal({ activeStat, group, onClose, onSelectPlayer }) {
+  const teamCounts = countTeams(group.players);
+  const topPlayers = group.players.slice(0, 3);
+
+  return (
+    <div className="game-props-modal-overlay" onMouseDown={onClose}>
+      <section className="game-props-modal" onMouseDown={(event) => event.stopPropagation()}>
+        <button type="button" className="pp-modal-close" onClick={onClose}>x</button>
+        <div className="game-props-modal-hero">
+          <span>Premium / Props por jogo</span>
+          <h3>{group.label}</h3>
+          <p>{group.date || 'Hoje'} / {group.players.length} jogadores monitorados</p>
+          <div className="game-props-modal-metrics">
+            <GameMetric label="Props" value={group.players.length} />
+            <GameMetric label="Top SC" value={group.topScore ?? '-'} />
+            <GameMetric label="Media" value={group.avgScore ?? '-'} />
+            <GameMetric label="Times" value={teamCounts.length || '-'} />
+          </div>
+        </div>
+
+        <div className="game-props-modal-body">
+          <div className="game-props-featured">
+            {topPlayers.map((player) => {
+              const entry = scoreEntry(player, activeStat);
+              return (
+                <button
+                  type="button"
+                  className="game-props-feature-card"
+                  key={`featured-${player.player_id || player.player_name}`}
+                  onClick={() => onSelectPlayer?.(player)}
+                >
+                  <img src={playerPhotoUrl(player)} alt="" />
+                  <span>{player.team_abbr || inferTeamFromGames(player.last5_games || []) || '-'}</span>
+                  <strong>{player.player_name}</strong>
+                  <em>{statLabels[entry?.stat || activeStat]} / O {entry?.line ?? '-'}</em>
+                  <b className={`statcast-score ${entry?.score?.tier || ''}`}>{entry?.score?.score ?? '-'}</b>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="game-props-modal-table">
+            <div className="game-props-modal-table-head">
+              <span>Jogador</span>
+              <span>Linha</span>
+              <span>L10</span>
+              <span>Edge</span>
+              <span>SC</span>
+            </div>
+            {group.players.map((player) => {
+              const entry = scoreEntry(player, activeStat);
+              const prop = entry?.prop || {};
+              return (
+                <button
+                  type="button"
+                  className="game-props-modal-row"
+                  key={`modal-${player.player_id || player.player_name}-${entry?.stat || activeStat}`}
+                  onClick={() => onSelectPlayer?.(player)}
+                >
+                  <span>
+                    <img src={playerPhotoUrl(player)} alt="" />
+                    <b>{player.player_name}</b>
+                    <small>{player.team_abbr || inferTeamFromGames(player.last5_games || []) || '-'}</small>
+                  </span>
+                  <em>O {entry?.line ?? '-'}</em>
+                  <em>{prop.l10 ?? prop.hit_rate ?? '-'}%</em>
+                  <em className={(prop.edge ?? 0) >= 0 ? 'edge-up' : 'edge-down'}>{prop.edge ?? '-'}</em>
+                  <strong className={`statcast-score ${entry?.score?.tier || ''}`}>{entry?.score?.score ?? '-'}</strong>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function PregameRow({ player, activeStat, onSelectPlayer }) {
   const activeProp = player.props?.[activeStat];
   const best = activeProp?.line != null ? { stat: activeStat, ...activeProp } : getBestProp(player);
   const stat = best?.stat || activeStat || 'pts';
   const line = ensureHalfLine(best?.line ?? player.synthetic_lines?.pts);
-  const photoUrl = player.player_id
-    ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.player_id}.png`
-    : player.bp_image;
+  const photoUrl = playerPhotoUrl(player);
   const projection = best?.projection ?? player.last5_avg?.[stat] ?? player.season_avg?.[stat];
   const edge = best?.edge;
   const teamAbbr = player.team_abbr || inferTeamFromGames(player.last5_games || []);
@@ -639,6 +731,22 @@ function normalizeGameLabel(gameLabel, fallbackTeam) {
   if (/\b[A-Z]{2,3}\s+x\s+[A-Z]{2,3}\b/.test(label)) return label;
   if (fallbackTeam) return `${fallbackTeam} / jogo do dia`;
   return 'Jogo nao identificado';
+}
+
+function playerPhotoUrl(player) {
+  return player?.player_id
+    ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.player_id}.png`
+    : player?.bp_image || 'imagem_2026-04-14_214614873.png';
+}
+
+function countTeams(players) {
+  const counts = new Map();
+  for (const player of players || []) {
+    const team = player.team_abbr || inferTeamFromGames(player.last5_games || []);
+    if (!team) continue;
+    counts.set(team, (counts.get(team) || 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]);
 }
 
 function buildScoreBoard(players, activeStat) {

@@ -3068,12 +3068,21 @@ select {
 
 .game-props-card-head {
   display: grid;
+  width: 100%;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
+  border: 0;
   padding: 13px 14px;
   border-bottom: 1px solid var(--border);
   background: var(--bg3);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.game-props-card-head:hover {
+  background: rgba(255,255,255,.055);
 }
 
 .game-props-card-head > div > span {
@@ -3130,7 +3139,7 @@ select {
 
 .game-prop-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 84px 62px 54px;
+  grid-template-columns: 44px minmax(0, 1fr) 84px 62px 54px;
   gap: 10px;
   align-items: center;
   border: 0;
@@ -3140,6 +3149,16 @@ select {
   color: var(--text);
   cursor: pointer;
   text-align: left;
+}
+
+.game-prop-row img {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg3);
+  object-fit: cover;
+  object-position: top;
 }
 
 .game-prop-row:last-child {
@@ -3183,6 +3202,280 @@ select {
 
 .game-prop-row i {
   color: var(--green);
+}
+
+.game-props-more {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--border);
+  padding: 11px 14px;
+  background: rgba(253,185,39,.055);
+  color: var(--gold);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.game-props-more:hover {
+  background: rgba(253,185,39,.10);
+}
+
+.game-props-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1260;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0,0,0,.76);
+  backdrop-filter: blur(10px);
+}
+
+.game-props-modal {
+  position: relative;
+  width: min(920px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  border: 1px solid var(--border2);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 15% 0, rgba(0,230,118,.10), transparent 35%),
+    radial-gradient(circle at 92% 0, rgba(253,185,39,.12), transparent 38%),
+    #0b0d0e;
+  box-shadow: 0 30px 90px rgba(0,0,0,.62);
+}
+
+.game-props-modal-hero {
+  padding: 24px 24px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.game-props-modal-hero > span {
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.game-props-modal-hero h3 {
+  margin: 7px 0 6px;
+  font-family: var(--display);
+  font-size: clamp(38px, 7vw, 62px);
+  font-weight: 900;
+  line-height: .9;
+  text-transform: uppercase;
+}
+
+.game-props-modal-hero p {
+  color: var(--text3);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.game-props-modal-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.game-props-modal-metrics div {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(0,0,0,.22);
+  text-align: center;
+}
+
+.game-props-modal-metrics span {
+  display: block;
+  color: var(--text3);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.game-props-modal-metrics strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--gold);
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 900;
+}
+
+.game-props-modal-body {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.game-props-featured {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.game-props-feature-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(253,185,39,.22);
+  border-radius: 16px;
+  padding: 14px;
+  background:
+    radial-gradient(circle at bottom right, rgba(253,185,39,.12), transparent 42%),
+    var(--bg2);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.game-props-feature-card:hover {
+  border-color: var(--gold);
+  transform: translateY(-1px);
+}
+
+.game-props-feature-card img {
+  width: 62px;
+  height: 62px;
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  background: var(--bg3);
+  object-fit: cover;
+  object-position: top;
+}
+
+.game-props-feature-card span {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: 1px solid rgba(0,230,118,.28);
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.game-props-feature-card strong {
+  display: block;
+  margin-top: 12px;
+  overflow: hidden;
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 900;
+  line-height: .95;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-props-feature-card em {
+  display: block;
+  margin-top: 5px;
+  color: var(--text3);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.game-props-feature-card b {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 30px;
+}
+
+.game-props-modal-table {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg2);
+}
+
+.game-props-modal-table-head,
+.game-props-modal-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 78px 64px 64px 58px;
+  gap: 10px;
+  align-items: center;
+}
+
+.game-props-modal-table-head {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text3);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.game-props-modal-row {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 10px 14px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.game-props-modal-row:last-child {
+  border-bottom: 0;
+}
+
+.game-props-modal-row:hover {
+  background: var(--bg3);
+}
+
+.game-props-modal-row > span {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+}
+
+.game-props-modal-row img {
+  grid-row: span 2;
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  background: var(--bg3);
+  object-fit: cover;
+  object-position: top;
+}
+
+.game-props-modal-row b,
+.game-props-modal-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-props-modal-row b {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.game-props-modal-row small {
+  color: var(--text3);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.game-props-modal-row em {
+  color: var(--text2);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+  text-align: center;
 }
 
 .game-props-lock {
@@ -4813,11 +5106,43 @@ h2 {
     width: 100%;
   }
 
+  .game-props-modal-overlay {
+    align-items: flex-end;
+    padding: 10px;
+  }
+
+  .game-props-modal {
+    max-height: 92vh;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .game-props-modal-metrics,
+  .game-props-featured {
+    grid-template-columns: 1fr;
+  }
+
   .game-prop-row {
-    grid-template-columns: minmax(0, 1fr) 54px 46px;
+    grid-template-columns: 38px minmax(0, 1fr) 54px 46px;
   }
 
   .game-prop-row i {
+    display: none;
+  }
+
+  .game-prop-row img {
+    width: 38px;
+    height: 38px;
+  }
+
+  .game-props-modal-table-head,
+  .game-props-modal-row {
+    grid-template-columns: minmax(0, 1fr) 54px 46px;
+  }
+
+  .game-props-modal-table-head span:nth-child(3),
+  .game-props-modal-table-head span:nth-child(4),
+  .game-props-modal-row em:nth-child(3),
+  .game-props-modal-row em:nth-child(4) {
     display: none;
   }
 
