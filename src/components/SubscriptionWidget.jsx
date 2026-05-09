@@ -112,7 +112,7 @@ function AuthModal({ onClose }) {
       setMessage(error.message);
       return;
     }
-    setMessage(mode === 'login' ? 'Login feito.' : 'Conta criada. Confirme email se Supabase pedir.');
+    setMessage(mode === 'login' ? 'Login feito.' : 'Conta criada. Confirme o e-mail se solicitado.');
     setTimeout(onClose, 500);
   }
 

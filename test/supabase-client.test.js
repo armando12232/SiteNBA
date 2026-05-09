@@ -5,7 +5,7 @@ import { getCurrentSession, signIn, signOut, startCheckout } from '../src/api/su
 
 test('frontend Supabase client requires explicit Vite env', async () => {
   assert.equal(SUPABASE_CONFIGURED, false);
-  assert.equal(SUPABASE_CONFIG_ERROR.includes('VITE_SUPABASE_URL'), true);
+  assert.equal(SUPABASE_CONFIG_ERROR, 'Login indisponível no momento. Tente novamente mais tarde.');
   assert.equal(await getCurrentSession(), null);
 
   const login = await signIn('user@test.com', 'password');

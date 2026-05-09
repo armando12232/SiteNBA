@@ -670,7 +670,6 @@ function PregameRow({ player, activeStat, onSelectPlayer }) {
   const edge = best?.edge;
   const teamAbbr = player.team_abbr || inferTeamFromGames(player.last5_games || []);
   const odds = best?.odds;
-  const source = best?.source;
   const score = buildPregameScore({
     player,
     stat,
@@ -703,7 +702,7 @@ function PregameRow({ player, activeStat, onSelectPlayer }) {
       </div>
       <div className="line-cell">
         <strong>O {line ?? '-'}</strong>
-        <small>{odds ? `${odds} odds` : best?.hit_rate != null ? `${best.hit_rate}% hit` : source || '-'}</small>
+        <small>{odds ? `${odds} odds` : best?.hit_rate != null ? `${best.hit_rate}% hit` : 'Linha principal'}</small>
       </div>
     </div>
   );

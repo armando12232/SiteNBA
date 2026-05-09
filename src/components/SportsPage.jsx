@@ -33,7 +33,7 @@ export function SportsPage({ league }) {
       <div className="panelHeader">
         <div>
           <h2><span className="titleIcon">{meta.icon}</span> <span style={{ color: meta.color }}>{meta.title}</span></h2>
-          <p className="sectionLead visible">{meta.subtitle} via ESPN, com placar, horário e local do jogo.</p>
+          <p className="sectionLead visible">{meta.subtitle}, com placar, horário e local do jogo.</p>
         </div>
         <div className="footballHeaderActions">
           <button className="footballRefresh" type="button" onClick={() => setRefresh((value) => value + 1)}>🔄 Atualizar</button>
@@ -58,7 +58,7 @@ export function SportsPage({ league }) {
           {!state.games.length ? (
             <div className="emptyState richEmptyState">
               <strong>📭 Nenhum jogo retornado</strong>
-              <span>A ESPN não retornou partidas para {meta.title} nesse momento.</span>
+              <span>Nenhuma partida de {meta.title} disponível nesse momento.</span>
             </div>
           ) : null}
         </div>

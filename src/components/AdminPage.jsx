@@ -70,7 +70,7 @@ export function AdminPage() {
       ]);
       setDiagnostic({ health, me });
       if (me?.error || me?.subscription_error) {
-        throw new Error(`Falha no /api/subscription: ${me.error || me.subscription_error}`);
+        throw new Error(`Falha ao carregar assinatura: ${me.error || me.subscription_error}`);
       }
       if (me?.role !== 'admin') {
         throw new Error(`Conta sem admin. role atual: ${me?.role || 'desconhecida'} / plano: ${me?.plan || 'desconhecido'}`);

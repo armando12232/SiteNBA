@@ -10,11 +10,9 @@ export function NbaHealthPanel() {
 
   return (
     <section className="panel">
-      <div className="eyebrow">NBA API</div>
-      <h1>StatCast BR React Shell</h1>
-      <p className="muted">
-        Base React criada para migrar o site atual por módulos, mantendo as rotas Python em <code>/api</code>.
-      </p>
+      <div className="eyebrow">NBA</div>
+      <h1>StatCast BR</h1>
+      <p className="muted">Acompanhe jogos ao vivo, agenda e leituras em tempo real.</p>
 
       <div className="metricGrid">
         <Metric

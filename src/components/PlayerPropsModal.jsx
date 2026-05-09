@@ -274,7 +274,7 @@ function EstimatedHistory({ player, stat, line }) {
       </div>
       <div className="chart-footer">
         <span>Histórico estimado pela linha da casa</span>
-        <span>{prop.source || player?.source || 'Fallback'}</span>
+        <span>StatCast</span>
       </div>
     </div>
   );

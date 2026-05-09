@@ -37,7 +37,7 @@ export function InjuriesPage() {
       <div className="panelHeader">
         <div>
           <h2><span className="titleIcon">🩹</span> Lesões NBA</h2>
-          <p className="sectionLead visible">Relatório ESPN com status por jogador, filtro por time e carregamento parcial quando a API demora.</p>
+          <p className="sectionLead visible">Status por jogador, filtro por time e atualização parcial quando alguma lista demora.</p>
         </div>
         <div className="footballHeaderActions">
           <button className="footballRefresh" type="button" onClick={() => setRefresh((value) => value + 1)}>🔄 Atualizar</button>
@@ -95,7 +95,7 @@ export function InjuriesPage() {
             {!injuries.length ? (
               <div className="emptyState richEmptyState">
                 <strong>✅ Nenhuma lesão encontrada</strong>
-                <span>{team === 'all' ? 'A fonte não retornou jogadores lesionados agora.' : `Sem registros para ${team}.`}</span>
+                <span>{team === 'all' ? 'Nenhum jogador lesionado disponível agora.' : `Sem registros para ${team}.`}</span>
               </div>
             ) : null}
           </div>

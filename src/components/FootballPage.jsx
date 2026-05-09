@@ -124,7 +124,7 @@ export function FootballPage() {
       <div className="panelHeader">
         <div>
           <h2><span className="titleIcon">{FX.soccer}</span> Futebol</h2>
-          <p className="sectionLead visible">Jogos do dia e partidas ao vivo usando a API de futebol atual.</p>
+          <p className="sectionLead visible">Jogos do dia, partidas ao vivo, odds e leituras avançadas em um só painel.</p>
         </div>
         <div className="footballHeaderActions">
           {lastUpdated ? <span className="footballUpdated">{FX.clock} Atualizado {formatClock(lastUpdated)}</span> : null}
@@ -255,7 +255,7 @@ function FootballEmptyState({ hasFilters, onClear }) {
   return (
     <div className="emptyState footballEmptyState">
       <strong>{FX.search} Nenhum jogo encontrado</strong>
-      <span>{hasFilters ? 'Os filtros atuais não retornaram partidas.' : 'A API não retornou partidas nesse momento.'}</span>
+      <span>{hasFilters ? 'Os filtros atuais não retornaram partidas.' : 'Nenhuma partida disponível nesse momento.'}</span>
       {hasFilters ? <button type="button" onClick={onClear}>{FX.refresh} Limpar filtros</button> : null}
     </div>
   );
@@ -463,7 +463,7 @@ function FootballModal({ fixture, onClose }) {
     ['pregame', 'Pré-jogo'],
     ['odds', 'Odds'],
     ['referee', 'Árbitro'],
-    ['telegram', 'Intel'],
+    ['telegram', 'Leitura'],
   ];
 
   return (
@@ -581,7 +581,7 @@ function FootballModalTab({ data, fixture, home, away, tab }) {
   if (tab === 'pregame' && (data.pending?.pregame || !data.pregame)) return <div className="loadingGrid">Carregando pré-jogo...</div>;
   if (tab === 'odds' && (data.pending?.odds || data.pending?.pregame || (!data.odds && !data.pregame))) return <div className="loadingGrid">Carregando odds...</div>;
   if (tab === 'referee' && (data.pending?.referee || !data.referee)) return <div className="loadingGrid">Carregando árbitro...</div>;
-  if (tab === 'telegram' && (data.pending?.telegram || !data.telegram)) return <div className="loadingGrid">Carregando intel...</div>;
+  if (tab === 'telegram' && (data.pending?.telegram || !data.telegram)) return <div className="loadingGrid">Carregando leitura...</div>;
 
   if (tab === 'stats') return <StatsPanel data={data.stats} home={home} away={away} />;
   if (tab === 'events') return <EventsPanel events={data.stats?.events || []} />;
@@ -738,12 +738,12 @@ function RefereePanel({ data, fixture }) {
 
 function TelegramIntelPanel({ data }) {
   const intel = data?.intel;
-  if (!intel || data?.error) return <EmptyModalState text="Sem intel do Telegram para esse jogo." />;
+  if (!intel || data?.error) return <EmptyModalState text="Sem leitura avançada para esse jogo." />;
   const teams = Array.isArray(intel.teams) ? intel.teams : [];
 
   return (
     <section className="ftModalSection">
-      <div className="ftModalTitle">Telegram Intel</div>
+      <div className="ftModalTitle">Leitura Avançada</div>
       <div className="refereeCard">
         <strong>{intel.referee || 'Árbitro não informado'}</strong>
         <InfoRow label="Média UCL" value={formatNumber(intel.avg_ucl_cards)} />
