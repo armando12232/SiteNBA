@@ -3788,6 +3788,23 @@ select {
   font-style: normal;
 }
 
+.props-player-sample,
+.pp-player-sample {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 5px;
+  padding: 2px 7px;
+  border: 1px solid rgba(255, 193, 7, .22);
+  border-radius: 999px;
+  background: rgba(255, 193, 7, .07);
+  color: var(--gold);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
 .hit-rate-cell {
   font-family: var(--display);
   font-size: 16px;

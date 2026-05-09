@@ -83,6 +83,9 @@ export function PlayerPropsModal({ playerName, onClose }) {
               <div className="pp-player-team">
                 {state.loading ? 'Carregando histórico...' : `${teamAbbr || '-'} / ${statLabels[stat]} / Linha ${line ?? '-'}`}
               </div>
+              {!state.loading && !state.error && sampleLabel(data) ? (
+                <div className="pp-player-sample">{sampleLabel(data)}</div>
+              ) : null}
               {!state.loading && !state.error ? (
                 <div className={`pp-rec-badge ${(best?.edge ?? 0) >= 0 ? 'over' : 'under'}`}>
                   {(best?.edge ?? 0) >= 0 ? 'OVER recomendado' : 'UNDER recomendado'}
@@ -444,4 +447,10 @@ function parseNbaDate(value) {
 function monthIndex(value) {
   return ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
     .indexOf(String(value).toLowerCase());
+}
+
+function sampleLabel(player) {
+  const seasons = Array.isArray(player?.sample_seasons) ? player.sample_seasons.filter(Boolean) : [];
+  if (!seasons.length) return '';
+  return player?.using_previous_season ? `Amostra ${seasons.join(' + ')}` : `Temporada ${seasons[0]}`;
 }

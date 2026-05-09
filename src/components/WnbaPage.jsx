@@ -92,7 +92,9 @@ export function WnbaPage({ onSelectPlayer }) {
           <span>WNBA Radar</span>
           <strong>{topEntry?.player?.player_name || 'Jogadoras em destaque'}</strong>
           <em>
-            {topEntry ? `${statLabels[topEntry.stat]} / Linha ${topEntry.line ?? '-'} / SC ${topEntry.score.score}` : 'L5, L10, linha e últimos jogos'}
+            {topEntry
+              ? `${statLabels[topEntry.stat]} / Linha ${topEntry.line ?? '-'} / SC ${topEntry.score.score} / ${sampleLabel(topEntry.player)}`
+              : 'L5, L10, linha e últimos jogos'}
           </em>
         </div>
         <button
@@ -227,6 +229,7 @@ function WnbaRow({ player, activeStat, onSelectPlayer }) {
             {player.team_abbr || '-'} / {statLabels[stat]} / <span>O {line}</span>
             {prop.edge != null ? <em className={prop.edge >= 0 ? 'edge-up' : 'edge-down'}>{prop.edge >= 0 ? ' up' : ' down'}</em> : null}
           </div>
+          <div className="props-player-sample">{sampleLabel(player)}</div>
         </div>
       </div>
       <HitCell value={prop.l5} />
@@ -297,4 +300,10 @@ function normalizeSearch(value) {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .trim();
+}
+
+function sampleLabel(player) {
+  const seasons = Array.isArray(player?.sample_seasons) ? player.sample_seasons.filter(Boolean) : [];
+  if (!seasons.length) return 'Amostra carregando';
+  return player?.using_previous_season ? `Amostra ${seasons.join(' + ')}` : `Temporada ${seasons[0]}`;
 }
