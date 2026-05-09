@@ -1270,6 +1270,10 @@ select {
   --cardGlow: rgba(0,230,118,.13);
 }
 
+.module-wnba {
+  --cardGlow: rgba(255,143,179,.14);
+}
+
 .module-nfl {
   --cardGlow: rgba(255,138,61,.13);
 }

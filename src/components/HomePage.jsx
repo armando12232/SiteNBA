@@ -1,6 +1,7 @@
 import { PREGAME_PLAYERS } from '../data/pregamePlayers.js';
 
 const MODULES = [
+  { key: 'wnba', icon: '🏀', title: 'WNBA', text: 'Placar, agenda e jogos ao vivo da liga feminina.', action: 'Abrir WNBA', status: 'Novo' },
   { key: 'nba', icon: '📊', title: 'Player Props', text: 'Hit rates L5-L20, linhas, edge e modal com histórico real.', action: 'Abrir NBA', status: 'Core' },
   { key: 'football', icon: '⚽', title: 'Futebol', text: 'Jogos do dia, ao vivo, odds, estatísticas, pré-jogo e leitura por score.', action: 'Abrir Futebol', status: 'Novo' },
   { key: 'nfl', icon: '🏈', title: 'NFL', text: 'Placar e agenda para acompanhar os próximos jogos.', action: 'Abrir NFL', status: 'Base' },
@@ -10,6 +11,7 @@ const MODULES = [
 ];
 
 const QUICK_ACTIONS = [
+  { icon: '🏀', label: 'WNBA', target: 'wnba', text: 'Jogos e placares' },
   { icon: '📊', label: 'NBA Props', target: 'nba', text: 'Radar de props pré-jogo' },
   { icon: '🩹', label: 'NBA Lesões', target: 'nba-injuries', text: 'Disponibilidade dos jogadores' },
   { icon: '⚽', label: 'Futebol', target: 'football', text: 'Jogos, odds e score' },
@@ -28,7 +30,7 @@ export function HomePage({ onNavigate }) {
         <div className="homeStatusGrid">
           <HomeStat label="Props NBA" value={PREGAME_PLAYERS.length} />
           <HomeStat label="Módulos" value={MODULES.length} />
-          <HomeStat label="Esportes" value="5" />
+          <HomeStat label="Esportes" value="6" />
         </div>
       </div>
 

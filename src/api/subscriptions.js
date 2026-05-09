@@ -22,7 +22,7 @@ export const PLANS = {
     label: 'R$59/mês',
     popular: true,
     summary: 'Plano principal para usar NBA, futebol e alertas ao vivo.',
-    features: ['Lista NBA completa', 'NBA ao vivo', 'Futebol completo', 'Lesões NBA', 'NFL/NHL/MLB'],
+    features: ['Lista NBA completa', 'NBA ao vivo', 'Futebol completo', 'Lesões NBA', 'WNBA/NFL/NHL/MLB'],
   },
   premium: {
     name: 'Premium',

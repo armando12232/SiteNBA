@@ -3,6 +3,7 @@ import { getSportsScoreboard } from '../api/sports.js';
 import { userErrorMessage } from '../utils/errors.js';
 
 const META = {
+  wnba: { title: 'WNBA', icon: '🏀', subtitle: 'Basquete feminino profissional', color: '#ff8fb3' },
   nfl: { title: 'NFL', icon: '🏈', subtitle: 'National Football League', color: 'var(--amber)' },
   nhl: { title: 'NHL', icon: '🏒', subtitle: 'National Hockey League', color: '#4fc3f7' },
   mlb: { title: 'MLB', icon: '⚾', subtitle: 'Major League Baseball', color: 'var(--red2)' },

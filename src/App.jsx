@@ -40,7 +40,7 @@ export default function App() {
 
   function canOpenPage(nextPage) {
     if (nextPage === 'football') return access.football;
-    if (['nfl', 'nhl', 'mlb'].includes(nextPage)) return access.sports;
+    if (['wnba', 'nfl', 'nhl', 'mlb'].includes(nextPage)) return access.sports;
     return true;
   }
 
@@ -77,7 +77,7 @@ export default function App() {
       </header>
       <main className={`main page-${page}`}>
         <nav className="page-nav main-nav">
-          {['home', 'nba', 'nfl', 'nhl', 'mlb', 'football'].map((item) => (
+          {['home', 'nba', 'wnba', 'nfl', 'nhl', 'mlb', 'football'].map((item) => (
             <button
               className={`page-nav-btn ${page === item ? 'active' : ''}`}
               key={item}
@@ -107,7 +107,7 @@ export default function App() {
         ) : null}
 
         {page === 'football' && access.football ? <FootballPage /> : null}
-        {['nfl', 'nhl', 'mlb'].includes(page) && access.sports ? <SportsPage league={page} /> : null}
+        {['wnba', 'nfl', 'nhl', 'mlb'].includes(page) && access.sports ? <SportsPage league={page} /> : null}
         {lockedFeature && page !== 'nba' ? <PlanPaywall feature={lockedFeature} plan={account.subscription?.plan} /> : null}
 
         <PlayerPropsModal playerName={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
@@ -163,6 +163,11 @@ function featureAccessDetails(feature) {
       description: 'Placar e agenda de esportes extras fazem parte do pacote multi-esportes.',
       plan: 'Libera no Pro+',
     },
+    wnba: {
+      title: 'WNBA bloqueado',
+      description: 'Placar, agenda e acompanhamento da WNBA fazem parte do pacote multi-esportes.',
+      plan: 'Libera no Pro+',
+    },
     nhl: {
       title: 'NHL bloqueado',
       description: 'Placar e agenda de esportes extras fazem parte do pacote multi-esportes.',
@@ -189,6 +194,7 @@ function navLabel(page) {
   return {
     home: 'Home',
     nba: 'NBA',
+    wnba: 'WNBA',
     nfl: 'NFL',
     nhl: 'NHL',
     mlb: 'MLB',
@@ -198,6 +204,7 @@ function navLabel(page) {
 
 function navIcon(page) {
   return {
+    wnba: '🏀',
     home: '🏠',
     nba: '🏀',
     nfl: '🏈',
