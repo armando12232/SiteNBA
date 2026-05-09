@@ -235,12 +235,6 @@ export function PregameRadar({ access, onSelectPlayer }) {
 
       {state.error ? <div className="alertBox">{userErrorMessage(state.error, 'Não foi possível carregar props NBA agora.')}</div> : null}
       {state.loading && !state.players.length ? <div className="state-box compact">Buscando dados NBA...</div> : null}
-      {access?.maxProps > 0 && basePlayers.length > access.maxProps ? (
-        <div className="planLimitBox">
-          Plano Free libera {access.maxProps} jogadores reais. As linhas embaçadas são preview visual; upgrade libera dados completos.
-        </div>
-      ) : null}
-
       {!state.error && viewMode === 'games' ? (
         access?.propsByGame ? (
           <PropsByGameView
@@ -637,7 +631,7 @@ function GamePropsModal({ activeStat, group, onClose, onSelectPlayer }) {
 function LockedPreviewRow({ row, activeStat }) {
   return (
     <button type="button" className="props-table-row locked-preview-row" onClick={openPricingModal}>
-      <div className="props-player-cell preview-blur">
+      <div className="props-player-cell">
         <div className="locked-preview-avatar" />
         <div className="props-player-meta">
           <div className="props-player-name">{row.name}</div>
@@ -650,21 +644,20 @@ function LockedPreviewRow({ row, activeStat }) {
       <div className="hide-mobile">
         <LockedPreviewCell value={row.season} tone={row.season >= 70 ? 'high' : row.season >= 50 ? 'mid' : 'low'} />
       </div>
-      <div className="projection-cell preview-blur">
+      <div className="projection-cell">
         <strong className="statcast-score strong">{row.score}</strong>
         <small>Proj {row.proj}</small>
       </div>
-      <div className="line-cell preview-blur">
+      <div className="line-cell">
         <strong>O {row.line}</strong>
         <small>{row.edge > 0 ? '+' : ''}{row.edge} edge</small>
       </div>
-      <span className="locked-preview-badge">Upgrade</span>
     </button>
   );
 }
 
 function LockedPreviewCell({ value, tone }) {
-  return <div className={`hit-rate-cell preview-blur ${tone}`}>{value}%</div>;
+  return <div className={`hit-rate-cell ${tone}`}>{value}%</div>;
 }
 
 function PregameRow({ player, activeStat, onSelectPlayer }) {
