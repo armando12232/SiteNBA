@@ -3580,10 +3580,16 @@ select {
 }
 
 .props-table-row {
+  width: 100%;
+  border: 0;
   min-height: 77px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
   cursor: pointer;
+  font: inherit;
+  text-align: left;
   transition: background .12s;
 }
 
@@ -3595,6 +3601,9 @@ select {
   position: relative;
   cursor: pointer;
   overflow: hidden;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
   background:
     linear-gradient(90deg, rgba(255,255,255,.018), rgba(255,255,255,.045), rgba(255,255,255,.018)),
     var(--bg2);
