@@ -1,4 +1,4 @@
-from urllib.parse import parse_qs, urlencode, urlparse
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen, ProxyHandler, build_opener
 import json, math, os, sys, time
 from datetime import datetime, timezone, timedelta
@@ -16,7 +16,8 @@ PROXY_READY = bool(PROXY_URL and "user:pass" not in PROXY_URL and "replace" not 
 
 WNBA_CDN = "https://cdn.wnba.com/static/json/staticData"
 WNBA_STATS = "https://stats.wnba.com/stats"
-WNBA_SEASONS = ["2026", "2025"]
+MAX_GAMELOG_ROWS = 20
+MIN_CURRENT_SEASON_ROWS = 10
 POPULAR_PLAYER_IDS = [
     1628932, 1629483, 1629477, 1642286, 1642291, 1628276, 203826,
     1627668, 204319, 1629498, 1627674, 1631009, 204324, 203400,
@@ -148,6 +149,10 @@ def _player_from_index_row(headers, row):
 def _norm_name(value):
     return "".join(ch.lower() for ch in str(value or "") if ch.isalnum())
 
+def _season_candidates():
+    year = datetime.now(timezone.utc).year
+    return [str(year), str(year - 1)]
+
 def get_players(limit=60):
     cached = _cache_get(f"players_{limit}")
     if cached:
@@ -183,8 +188,11 @@ def _fetch_gamelog_rows(player_id):
         return cached
 
     rows = []
+    current_rows = 0
     seen = set()
-    for season in WNBA_SEASONS:
+    seasons = _season_candidates()
+    current_season = seasons[0]
+    for season in seasons:
         for season_type in ("Regular Season", "Playoffs"):
             params = {
                 "DateFrom": "",
@@ -208,11 +216,15 @@ def _fetch_gamelog_rows(player_id):
                     row["_SEASON"] = season
                     row["_SEASON_TYPE"] = season_type
                     rows.append(row)
+                    if season == current_season:
+                        current_rows += 1
             except Exception:
                 continue
-            if len(rows) >= 10:
+            if len(rows) >= MAX_GAMELOG_ROWS:
                 break
-        if len(rows) >= 10:
+        if len(rows) >= MAX_GAMELOG_ROWS:
+            break
+        if season == current_season and current_rows >= MIN_CURRENT_SEASON_ROWS:
             break
 
     rows.sort(key=lambda row: _parse_date(row.get("GAME_DATE")), reverse=True)
@@ -279,10 +291,12 @@ def get_pregame(player_id):
     rows = _fetch_gamelog_rows(int(player_id))
     last5 = rows[:5]
     last10 = rows[:10]
+    sample_seasons = sorted({row.get("_SEASON") for row in rows if row.get("_SEASON")}, reverse=True)
+    current_season = _season_candidates()[0]
 
     season_avg = dict(player.get("season_avg") or {})
     for source_key, target_key in (("PTS", "pts"), ("REB", "reb"), ("AST", "ast"), ("FG3M", "fg3m")):
-        if season_avg.get(target_key) is None:
+        if season_avg.get(target_key) is None or season_avg.get(target_key) == 0:
             season_avg[target_key] = _avg(rows, source_key)
 
     props = _build_props(rows, season_avg)
@@ -305,6 +319,8 @@ def get_pregame(player_id):
         "synthetic_lines": {key: value.get("line") for key, value in props.items()},
         "hit_rates": {"pts_last10": props.get("pts", {}).get("hit_rate")},
         "edge_points": props.get("pts", {}).get("edge"),
+        "sample_seasons": sample_seasons,
+        "using_previous_season": any(season != current_season for season in sample_seasons),
         "last5_games": [
             {
                 "opp": row.get("MATCHUP", ""),
@@ -317,7 +333,7 @@ def get_pregame(player_id):
             }
             for row in rows[:20]
         ],
-        "summary": f"WNBA L5 {props.get('pts', {}).get('l5', '-')}",
+        "summary": f"WNBA L5 {props.get('pts', {}).get('l5', '-')} / amostra {', '.join(sample_seasons) or '-'}",
     }
     _cache_set(f"pregame_{player_id}", result)
     return result
