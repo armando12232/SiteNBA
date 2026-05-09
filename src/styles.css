@@ -3681,6 +3681,21 @@ select {
   background: var(--bg3);
 }
 
+.props-table-row.is-loading {
+  cursor: wait;
+}
+
+.props-table-row.is-loading .props-player-img {
+  filter: saturate(.7);
+  opacity: .72;
+}
+
+.props-table-row.is-loading .props-player-sample {
+  color: var(--text3);
+  border-color: rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+}
+
 .locked-preview-row {
   position: relative;
   cursor: pointer;
@@ -3828,6 +3843,59 @@ select {
   color: var(--text3);
   font-family: var(--body);
   font-size: 12px;
+}
+
+.loading-cell,
+.metric-loading i {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+}
+
+.loading-cell {
+  width: 38px;
+  height: 14px;
+  margin: 0 auto;
+}
+
+.metric-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.metric-loading.right {
+  align-items: flex-end;
+}
+
+.metric-loading i {
+  width: 42px;
+  height: 14px;
+}
+
+.metric-loading small {
+  color: var(--text3);
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.loading-cell::after,
+.metric-loading i::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+  animation: statcast-shimmer 1.15s infinite;
+}
+
+@keyframes statcast-shimmer {
+  to {
+    transform: translateX(100%);
+  }
 }
 
 .projection-cell,

@@ -74,7 +74,11 @@ export function WnbaPage({ onSelectPlayer }) {
   }, [activeStat, query, sortBy, state.players]);
 
   const topEntry = useMemo(() => (
-    filteredPlayers.map((player) => scoreEntry(player, activeStat)).filter(Boolean).sort((a, b) => b.score.score - a.score.score)[0] || null
+    filteredPlayers
+      .filter(isPlayerLoaded)
+      .map((player) => scoreEntry(player, activeStat))
+      .filter(Boolean)
+      .sort((a, b) => b.score.score - a.score.score)[0] || null
   ), [activeStat, filteredPlayers]);
 
   return (
@@ -218,9 +222,10 @@ function WnbaRow({ player, activeStat, onSelectPlayer }) {
   const score = entry?.score;
   const stat = entry?.stat || activeStat;
   const projection = prop.projection ?? player.last5_avg?.[stat] ?? player.season_avg?.[stat];
+  const loaded = isPlayerLoaded(player);
 
   return (
-    <div className="props-table-row" onClick={() => onSelectPlayer?.({ ...player, league: 'wnba' })}>
+    <div className={`props-table-row ${loaded ? '' : 'is-loading'}`} onClick={() => onSelectPlayer?.({ ...player, league: 'wnba' })}>
       <div className="props-player-cell">
         <img src={playerPhotoUrl(player)} alt="" className="player-img-mobile props-player-img" />
         <div className="props-player-meta">
@@ -232,18 +237,30 @@ function WnbaRow({ player, activeStat, onSelectPlayer }) {
           <div className="props-player-sample">{sampleLabel(player)}</div>
         </div>
       </div>
-      <HitCell value={prop.l5} />
-      <HitCell value={prop.l10 ?? prop.hit_rate} />
+      <HitCell value={prop.l5} loading={!loaded} />
+      <HitCell value={prop.l10 ?? prop.hit_rate} loading={!loaded} />
       <div className="hide-mobile">
-        <HitCell value={prop.hit_rate} />
+        <HitCell value={prop.hit_rate} loading={!loaded} />
       </div>
       <div className="projection-cell">
-        <strong className={`statcast-score ${score?.tier || ''}`}>{score?.score ?? '-'}</strong>
-        <small>{projection != null ? `Proj ${Number(projection).toFixed(1)}` : score?.label || '-'}</small>
+        {loaded ? (
+          <>
+            <strong className={`statcast-score ${score?.tier || ''}`}>{score?.score ?? '-'}</strong>
+            <small>{projection != null ? `Proj ${Number(projection).toFixed(1)}` : score?.label || '-'}</small>
+          </>
+        ) : (
+          <LoadingMetric label="SC" />
+        )}
       </div>
       <div className="line-cell">
-        <strong>O {line}</strong>
-        <small>{prop.edge != null ? `${prop.edge > 0 ? '+' : ''}${prop.edge} edge` : 'Linha principal'}</small>
+        {loaded ? (
+          <>
+            <strong>O {line}</strong>
+            <small>{prop.edge != null ? `${prop.edge > 0 ? '+' : ''}${prop.edge} edge` : 'Linha principal'}</small>
+          </>
+        ) : (
+          <LoadingMetric label="Linha" align="right" />
+        )}
       </div>
     </div>
   );
@@ -267,6 +284,8 @@ function scoreEntry(player, activeStat) {
 
 function sortPlayers(players, stat, sortBy) {
   return [...players].sort((a, b) => {
+    const loadedDiff = Number(isPlayerLoaded(b)) - Number(isPlayerLoaded(a));
+    if (loadedDiff) return loadedDiff;
     const aEntry = scoreEntry(a, stat);
     const bEntry = scoreEntry(b, stat);
     const aProp = aEntry?.prop || {};
@@ -278,12 +297,22 @@ function sortPlayers(players, stat, sortBy) {
   });
 }
 
-function HitCell({ value }) {
+function HitCell({ value, loading = false }) {
+  if (loading) return <div className="hit-rate-cell loading-cell" />;
   if (value == null || value === '') return <div className="hit-rate-cell none">-</div>;
   const n = Number(value);
   if (Number.isNaN(n)) return <div className="hit-rate-cell none">-</div>;
   const cls = n >= 70 ? 'high' : n >= 50 ? 'mid' : 'low';
   return <div className={`hit-rate-cell ${cls}`}>{n}%</div>;
+}
+
+function LoadingMetric({ label, align = 'center' }) {
+  return (
+    <div className={`metric-loading ${align === 'right' ? 'right' : ''}`}>
+      <i />
+      <small>{label}</small>
+    </div>
+  );
 }
 
 function playerPhotoUrl(player) {
@@ -306,4 +335,14 @@ function sampleLabel(player) {
   const seasons = Array.isArray(player?.sample_seasons) ? player.sample_seasons.filter(Boolean) : [];
   if (!seasons.length) return 'Amostra carregando';
   return player?.using_previous_season ? `Amostra ${seasons.join(' + ')}` : `Temporada ${seasons[0]}`;
+}
+
+function isPlayerLoaded(player) {
+  return Boolean(
+    player?.last5_games?.length
+    || player?.props?.pts
+    || player?.props?.reb
+    || player?.props?.ast
+    || player?.props?.fg3m
+  );
 }
