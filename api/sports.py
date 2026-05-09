@@ -1,13 +1,22 @@
 import json, os, time, urllib.request, urllib.parse, sys
 from http.server import BaseHTTPRequestHandler
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+API_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(API_DIR)
+sys.path.insert(0, API_DIR)
+sys.path.insert(0, ROOT_DIR)
 try:
-    from _security import rate_limit_check, get_client_ip, sanitize_team_name
+    from _security import rate_limit_check, get_client_ip, sanitize_team_name, is_valid_id
 except ImportError:
     def rate_limit_check(ip): return True
     def get_client_ip(h): return '0.0.0.0'
     def sanitize_team_name(s): return (s or '')[:60]
+    def is_valid_id(s): return bool(s) and len(s) <= 40
+
+try:
+    from server.wnba_data import get_players as get_wnba_players, get_pregame as get_wnba_pregame, get_player_by_name as get_wnba_player_by_name
+except ImportError:
+    get_wnba_players = get_wnba_pregame = get_wnba_player_by_name = None
 
 # ── ESPN Base ──────────────────────────────────────────────────────────────────
 ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports'
@@ -174,7 +183,7 @@ def get_news(league, limit=10):
 
 # ── Handler ───────────────────────────────────────────────────────────────────
 VALID_LEAGUES = {'nfl', 'nhl', 'mlb', 'nba', 'wnba'}
-VALID_TYPES   = {'scoreboard', 'game', 'standings', 'news'}
+VALID_TYPES   = {'scoreboard', 'game', 'standings', 'news', 'players', 'pregame', 'pregame_by_name'}
 
 class handler(BaseHTTPRequestHandler):
 
@@ -201,7 +210,35 @@ class handler(BaseHTTPRequestHandler):
             self._json(400, {'error': f'invalid league: {lg}'})
             return
 
-        if t == 'scoreboard':
+        if lg == 'wnba' and t == 'players':
+            if not get_wnba_players:
+                self._json(500, {'error': 'internal server error'})
+                return
+            limit = int(qs.get('limit', ['60'])[0] or 60)
+            self._json(200, {'players': get_wnba_players(limit)})
+        elif lg == 'wnba' and t == 'pregame':
+            if not get_wnba_pregame:
+                self._json(500, {'error': 'internal server error'})
+                return
+            player_id = qs.get('playerId', [''])[0]
+            if not is_valid_id(player_id) or not str(player_id).isdigit():
+                self._json(400, {'error': 'invalid playerId'})
+                return
+            self._json(200, get_wnba_pregame(int(player_id)))
+        elif lg == 'wnba' and t == 'pregame_by_name':
+            if not get_wnba_player_by_name or not get_wnba_pregame:
+                self._json(500, {'error': 'internal server error'})
+                return
+            name = sanitize_team_name(qs.get('name', [''])[0]).strip()
+            if not name:
+                self._json(400, {'error': 'invalid name'})
+                return
+            player = get_wnba_player_by_name(name)
+            if not player:
+                self._json(404, {'error': 'player not found'})
+                return
+            self._json(200, get_wnba_pregame(player['player_id']))
+        elif t == 'scoreboard':
             self._json(200, {'games': get_scoreboard(lg)})
         elif t == 'game':
             if not gid:

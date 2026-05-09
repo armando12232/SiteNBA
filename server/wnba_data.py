@@ -1,4 +1,3 @@
-from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import Request, urlopen, ProxyHandler, build_opener
 import json, math, os, sys, time
@@ -352,58 +351,3 @@ def get_schedule():
             })
     _cache_set("schedule", games)
     return games
-
-class handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        ip = get_client_ip(self)
-        if not rate_limit_check(ip):
-            self._send(429, {"error": "rate limit exceeded"})
-            return
-
-        params = parse_qs(urlparse(self.path).query)
-        req_type = params.get("type", [""])[0].lower().strip()
-        if req_type not in {"players", "pregame", "pregame_by_name", "schedule"}:
-            self._send(400, {"error": "invalid type"})
-            return
-
-        try:
-            if req_type == "players":
-                limit = int(params.get("limit", ["60"])[0] or 60)
-                self._send(200, {"players": get_players(limit)})
-            elif req_type == "pregame":
-                player_id = params.get("playerId", [""])[0]
-                if not is_valid_id(player_id) or not str(player_id).isdigit():
-                    self._send(400, {"error": "invalid playerId"})
-                    return
-                self._send(200, get_pregame(int(player_id)))
-            elif req_type == "pregame_by_name":
-                name = params.get("name", [""])[0].strip()
-                if not name or len(name) > 80:
-                    self._send(400, {"error": "invalid name"})
-                    return
-                player = get_player_by_name(name)
-                if not player:
-                    self._send(404, {"error": "player not found"})
-                    return
-                self._send(200, get_pregame(player["player_id"]))
-            elif req_type == "schedule":
-                self._send(200, {"games": get_schedule()})
-        except Exception:
-            self._send(500, {"error": "internal server error"})
-
-    def do_OPTIONS(self):
-        self.send_response(204)
-        self.end_headers()
-
-    def _send(self, status, data):
-        body = json.dumps(data).encode()
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Cache-Control", "no-store" if status >= 400 else "public, max-age=60")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    def log_message(self, *args):
-        pass

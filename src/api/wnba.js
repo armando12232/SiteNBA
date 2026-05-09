@@ -8,7 +8,7 @@ const WNBA_STORAGE_PREFIX = `statcast:${CACHE_VERSION}:wnba:pregame:`;
 const WNBA_NAME_STORAGE_PREFIX = `statcast:${CACHE_VERSION}:wnba:pregame-name:`;
 
 export function getWnbaPlayers(limit = 48) {
-  return fetchJson(`/api/wnba?type=players&limit=${encodeURIComponent(limit)}`, {}, 12000);
+  return fetchJson(`/api/sports?league=wnba&type=players&limit=${encodeURIComponent(limit)}`, {}, 12000);
 }
 
 export function getWnbaPregame(playerId) {
@@ -23,7 +23,7 @@ export function getWnbaPregame(playerId) {
   if (wnbaCache.has(cacheKey)) return Promise.resolve(wnbaCache.get(cacheKey));
   if (wnbaInflight.has(cacheKey)) return wnbaInflight.get(cacheKey);
 
-  const request = fetchJson(`/api/wnba?type=pregame&playerId=${encodeURIComponent(playerId)}`, {}, 15000)
+  const request = fetchJson(`/api/sports?league=wnba&type=pregame&playerId=${encodeURIComponent(playerId)}`, {}, 15000)
     .then((data) => {
       wnbaCache.set(cacheKey, data);
       writeStored(storageKey, data);
@@ -42,7 +42,7 @@ export function getWnbaPregameByName(name) {
   const stored = readStored(storageKey, WNBA_TTL_MS);
   if (stored) return Promise.resolve(stored);
 
-  return fetchJson(`/api/wnba?type=pregame_by_name&name=${encodeURIComponent(name)}`, {}, 15000)
+  return fetchJson(`/api/sports?league=wnba&type=pregame_by_name&name=${encodeURIComponent(name)}`, {}, 15000)
     .then((data) => {
       writeStored(storageKey, data);
       if (data?.player_id) {
