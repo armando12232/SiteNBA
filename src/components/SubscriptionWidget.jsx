@@ -163,8 +163,14 @@ function PricingModal({ currentPlan, hasSession, onNeedAuth, onClose }) {
         <button type="button" className="subClose" onClick={onClose}>x</button>
         <div className="subKicker">Assinaturas</div>
         <h3>Escolha seu plano</h3>
-        <p className="pricingLead">Comece no Basic para liberar os modais. Use Pro para NBA ao vivo, futebol e esportes extras.</p>
+        <p className="pricingLead">Free mostra uma amostra. Basic libera estudo NBA. Pro libera a operação completa. Premium adiciona leitura por confronto.</p>
         {error ? <div className="authMessage pricingError">{error}</div> : null}
+        <div className="pricingCompare">
+          <CompareItem title="Free" text="Preview limitado" />
+          <CompareItem title="Basic" text="Modal + histórico" />
+          <CompareItem title="Pro" text="NBA + Futebol + Live" />
+          <CompareItem title="Premium" text="Props por jogo" hot />
+        </div>
         <div className="pricingGrid">
           {paidPlans.map(([key, plan]) => {
             const current = currentPlan === key;
@@ -188,6 +194,15 @@ function PricingModal({ currentPlan, hasSession, onNeedAuth, onClose }) {
           })}
         </div>
       </section>
+    </div>
+  );
+}
+
+function CompareItem({ title, text, hot = false }) {
+  return (
+    <div className={`pricingCompareItem ${hot ? 'hot' : ''}`}>
+      <strong>{title}</strong>
+      <span>{text}</span>
     </div>
   );
 }
