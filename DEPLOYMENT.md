@@ -36,3 +36,34 @@ PROXY_URL
 TELEGRAM_WEBHOOK_SECRET
 TELEGRAM_CHAT_ID
 ```
+
+## Telegram via Telethon
+
+O Telethon nao roda dentro da Vercel, porque ele precisa de sessao persistente. Use o coletor em uma maquina local ou VPS e envie as mensagens autorizadas para `/api/telegram`.
+
+Instalacao:
+
+```bash
+python -m venv .venv-telethon
+.venv-telethon\Scripts\pip install -r requirements-telethon.txt
+```
+
+Variaveis do coletor:
+
+```env
+SITE_URL=https://site-nba-ten.vercel.app
+TELEGRAM_WEBHOOK_SECRET=
+TELEGRAM_API_ID=
+TELEGRAM_API_HASH=
+TELEGRAM_SESSION=statcast_telegram
+TELEGRAM_SOURCE_CHAT=
+TELEGRAM_SYNC_STATE=.telegram-sync-state.json
+```
+
+Rodar uma sincronizacao:
+
+```bash
+.venv-telethon\Scripts\python scripts\telegram_telethon_sync.py --limit 100
+```
+
+O coletor envia apenas mensagens que contem "DADOS DISCIPLINARES". Nao envie autores, membros ou dados pessoais do grupo para o site.
