@@ -1,5 +1,6 @@
 import { getSchedule, getScoreboard } from '../api/nba.js';
 import { useAsync } from '../hooks/useAsync.js';
+import { userErrorMessage } from '../utils/errors.js';
 
 export function NbaHealthPanel() {
   const scoreboard = useAsync(getScoreboard, []);
@@ -35,7 +36,7 @@ function Metric({ label, value, error }) {
     <div className="metric">
       <span>{label}</span>
       <strong className={error ? 'error' : ''}>{error ? 'erro' : value}</strong>
-      {error ? <small>{error.message}</small> : null}
+      {error ? <small>{userErrorMessage(error, 'Não foi possível carregar agora.')}</small> : null}
     </div>
   );
 }

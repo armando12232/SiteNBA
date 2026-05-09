@@ -9,6 +9,7 @@ import {
   startCheckout,
 } from '../api/subscriptions.js';
 import { SUPABASE_CONFIGURED, supabase } from '../api/supabase.js';
+import { userErrorMessage } from '../utils/errors.js';
 
 export function SubscriptionWidget({ onSubscriptionChange }) {
   const [session, setSession] = useState(null);
@@ -109,7 +110,7 @@ function AuthModal({ onClose }) {
     const { error } = await action(email.trim(), password);
     setBusy(false);
     if (error) {
-      setMessage(error.message);
+      setMessage(userErrorMessage(error, mode === 'login' ? 'Não foi possível entrar agora.' : 'Não foi possível criar a conta agora.'));
       return;
     }
     setMessage(mode === 'login' ? 'Login feito.' : 'Conta criada. Confirme o e-mail se solicitado.');
@@ -152,7 +153,7 @@ function PricingModal({ currentPlan, hasSession, onNeedAuth, onClose }) {
       const data = await startCheckout(plan);
       if (data?.url) window.location.href = data.url;
     } catch (error) {
-      setError(error.message || 'Não foi possível abrir o checkout.');
+      setError(userErrorMessage(error, 'Não foi possível abrir o checkout agora.'));
       setBusyPlan('');
     }
   }
