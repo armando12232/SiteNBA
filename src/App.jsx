@@ -8,6 +8,7 @@ import { PlayerPropsModal } from './components/PlayerPropsModal.jsx';
 import { SportsPage } from './components/SportsPage.jsx';
 import { SubscriptionWidget } from './components/SubscriptionWidget.jsx';
 import { AdminPage } from './components/AdminPage.jsx';
+import { WnbaPage } from './components/WnbaPage.jsx';
 import { getPlanAccess } from './api/subscriptions.js';
 
 export default function App() {
@@ -107,7 +108,8 @@ export default function App() {
         ) : null}
 
         {page === 'football' && access.football ? <FootballPage /> : null}
-        {['wnba', 'nfl', 'nhl', 'mlb'].includes(page) && access.sports ? <SportsPage league={page} /> : null}
+        {page === 'wnba' && access.sports ? <WnbaPage onSelectPlayer={selectPlayer} /> : null}
+        {['nfl', 'nhl', 'mlb'].includes(page) && access.sports ? <SportsPage league={page} /> : null}
         {lockedFeature && page !== 'nba' ? <PlanPaywall feature={lockedFeature} plan={account.subscription?.plan} /> : null}
 
         <PlayerPropsModal playerName={selectedPlayer} onClose={() => setSelectedPlayer(null)} />

@@ -1274,6 +1274,45 @@ select {
   --cardGlow: rgba(255,143,179,.14);
 }
 
+.wnba-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+  border-color: rgba(255,143,179,.24);
+  background:
+    radial-gradient(circle at 82% 22%, rgba(255,143,179,.16), transparent 30%),
+    radial-gradient(circle at 14% 80%, rgba(253,185,39,.10), transparent 30%),
+    var(--bg2);
+}
+
+.wnba-hero span {
+  display: block;
+  color: #ff8fb3;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.wnba-hero strong {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--display);
+  font-size: clamp(28px, 5vw, 46px);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.wnba-hero em {
+  display: block;
+  margin-top: 4px;
+  color: var(--text2);
+  font-size: 12px;
+  font-style: normal;
+}
+
 .module-nfl {
   --cardGlow: rgba(255,138,61,.13);
 }

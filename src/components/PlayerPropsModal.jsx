@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { getPregame, getPregameByName } from '../api/nba.js';
+import { getPregame as getNbaPregame, getPregameByName as getNbaPregameByName } from '../api/nba.js';
+import { getWnbaPregame, getWnbaPregameByName } from '../api/wnba.js';
 import { ensureHalfLine, getBestProp } from '../utils/props.js';
 import { buildPregameScore } from '../utils/statcastScore.js';
 import { userErrorMessage } from '../utils/errors.js';
@@ -16,7 +17,10 @@ export function PlayerPropsModal({ playerName, onClose }) {
     setActiveStat('pts');
     setState({ loading: !tableData, error: null, data: tableData });
 
-    const request = tableData?.player_id ? getPregame(tableData.player_id) : getPregameByName(displayName);
+    const isWnba = tableData?.league === 'wnba';
+    const request = tableData?.player_id
+      ? (isWnba ? getWnbaPregame(tableData.player_id) : getNbaPregame(tableData.player_id))
+      : (isWnba ? getWnbaPregameByName(displayName) : getNbaPregameByName(displayName));
     request
       .then((data) => {
         if (!alive) return;
@@ -48,9 +52,7 @@ export function PlayerPropsModal({ playerName, onClose }) {
   const teamAbbr = data?.team_abbr || inferTeamFromGames(games);
   const maxValue = Math.max(...games.map((game) => Number(game[stat] ?? game.pts ?? 0)), Number(line) || 20, 1);
   const chartMax = Math.ceil(maxValue / 2) * 2;
-  const photoUrl = data?.player_id
-    ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${data.player_id}.png`
-    : '';
+  const photoUrl = playerPhotoUrl(data);
   const hitRate = best?.hit_rate;
   const lineNumber = Number(line);
   const chartLinePct = Number.isFinite(lineNumber)
@@ -209,6 +211,15 @@ const statLabels = {
   ast: 'Assistências',
   fg3m: '3PT',
 };
+
+function playerPhotoUrl(player) {
+  if (player?.photo_url) return player.photo_url;
+  if (!player?.player_id) return '';
+  if (player?.league === 'wnba') {
+    return `https://cdn.wnba.com/headshots/wnba/latest/1040x760/${player.player_id}.png`;
+  }
+  return `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.player_id}.png`;
+}
 
 function ModalMetric({ label, value, hot = false }) {
   return (
