@@ -122,14 +122,28 @@ function translateInjuryDescription(text) {
   let value = String(text || '').trim();
   if (!value) return '';
 
-  const sourceMatch = value.match(/,\s*([^,]+?)\s+reports\.?$/i);
+  const sourceMatch = value.match(/,\s*(?:according to|per)\s+(.+?)\.?$/i)
+    || value.match(/,\s*([^,]+?)\s+reports\.?$/i);
   const source = cleanReportSource(sourceMatch?.[1]);
-  if (source) value = value.replace(/,\s*[^,]+?\s+reports\.?$/i, '');
+  if (source) {
+    value = value
+      .replace(/,\s*(?:according to|per)\s+.+?\.?$/i, '')
+      .replace(/,\s*[^,]+?\s+reports\.?$/i, '');
+  }
 
   value = value
+    .replace(/^Head coach ([A-Z][A-Za-z\s.']+) said Friday that\s+/i, 'O técnico $1 disse na sexta-feira que ')
     .replace(/^The Nets announced Friday that\s+/i, 'O Brooklyn Nets anunciou na sexta-feira que ')
+    .replace(/^The ([A-Z][A-Za-z\s]+) announced Wednesday that\s+/i, 'O $1 anunciou na quarta-feira que ')
+    .replace(/^The ([A-Z][A-Za-z\s]+) announced Thursday that\s+/i, 'O $1 anunciou na quinta-feira que ')
     .replace(/^The ([A-Z][A-Za-z\s]+) announced Friday that\s+/i, 'O $1 anunciou na sexta-feira que ')
     .replace(/\bwon't play Sunday in Toronto\b/gi, 'não jogará domingo em Toronto')
+    .replace(/\bhas been ruled out for Sunday's game against the ([A-Za-z0-9ers .'-]+)\b/gi, 'está fora do jogo de domingo contra o $1')
+    .replace(/\bis out for Sunday's game against the ([A-Za-z0-9ers .'-]+)\b/gi, 'está fora do jogo de domingo contra o $1')
+    .replace(/\bwill miss Sunday's regular-season finale against the ([A-Za-z0-9ers .'-]+)\b/gi, 'perderá o último jogo da temporada regular de domingo contra o $1')
+    .replace(/\bwill miss the remainder of the ([0-9-]+) campaign\b/gi, 'perderá o restante da temporada $1')
+    .replace(/\bwill not play in Chicago's final two games of the regular season\b/gi, 'não jogará os dois últimos jogos de Chicago na temporada regular')
+    .replace(/\bwill not play in Chicago's final two regular-season games\b/gi, 'não jogará os dois últimos jogos de Chicago na temporada regular')
     .replace(/\bhas been ruled out for the remainder of the ([0-9-]+) season\b/gi, 'está fora pelo restante da temporada $1')
     .replace(/\bis out for Sunday's game in Toronto\b/gi, 'está fora do jogo de domingo em Toronto')
     .replace(/\bfor Sunday's game in Toronto\b/gi, 'para o jogo de domingo em Toronto')
@@ -138,11 +152,15 @@ function translateInjuryDescription(text) {
     .replace(/\bis being shut down for the rest of the season\b/gi, 'não jogará mais nesta temporada')
     .replace(/\bwill require season-ending surgery\b/gi, 'precisará de cirurgia e está fora da temporada')
     .replace(/\bhas been diagnosed with\b/gi, 'foi diagnosticado com')
+    .replace(/\bunderwent successful surgery to address\b/gi, 'passou por cirurgia bem-sucedida para tratar')
     .replace(/\bunderwent a non-surgical procedure to address\b/gi, 'passou por procedimento não cirúrgico para tratar')
+    .replace(/\bunderwent a procedure to address a fractured\b/gi, 'passou por procedimento para tratar fratura no')
     .replace(/\bthere'?s hope he will make a full recovery\b/gi, 'há expectativa de recuperação completa')
     .replace(/\bin time for NBA Summer League\b/gi, 'a tempo da NBA Summer League')
     .replace(/\bsigned a two-way contract with the\b/gi, 'assinou contrato two-way com o')
     .replace(/\bon Tuesday\b/gi, 'na terça-feira')
+    .replace(/\bon Wednesday\b/gi, 'na quarta-feira')
+    .replace(/\bon Thursday\b/gi, 'na quinta-feira')
     .replace(/\bon Friday\b/gi, 'na sexta-feira')
     .replace(/\bannounced Friday that\b/gi, 'anunciou na sexta-feira que')
     .replace(/\baccording to\b/gi, 'segundo')
@@ -152,6 +170,8 @@ function translateInjuryDescription(text) {
     .replace(/\bplantar fasciitis\b/gi, 'fascite plantar')
     .replace(/\bfinger\b/gi, 'dedo')
     .replace(/\bthumb\b/gi, 'polegar')
+    .replace(/\bwrist\b/gi, 'punho')
+    .replace(/\belbow\b/gi, 'cotovelo')
     .replace(/\bright\b/gi, 'direito')
     .replace(/\bleft\b/gi, 'esquerdo')
     .replace(/\bknee\b/gi, 'joelho')
