@@ -58,7 +58,7 @@ export function InjuriesPage() {
         <>
           <div className="injurySummary">
             {Object.entries(state.data.by_status || {}).map(([status, count]) => (
-              <span key={status}>{status} <strong>{count}</strong></span>
+              <span key={status}>{translateStatus(status)} <strong>{count}</strong></span>
             ))}
           </div>
           {state.data.partial ? (
@@ -87,9 +87,9 @@ export function InjuriesPage() {
                 <div>
                   <strong>{item.athlete_name}</strong>
                   <span>{item.team} {item.position ? `- ${item.position}` : ''}</span>
-                  <p>{item.description || 'Sem detalhes.'}</p>
+                  <p>{translateInjuryDescription(item.description) || 'Sem detalhes.'}</p>
                 </div>
-                <em style={{ color: item.status_color || 'var(--text2)' }}>{item.status}</em>
+                <em style={{ color: item.status_color || 'var(--text2)' }}>{translateStatus(item.status)}</em>
               </div>
             ))}
             {!injuries.length ? (
@@ -103,4 +103,43 @@ export function InjuriesPage() {
       ) : null}
     </section>
   );
+}
+
+function translateStatus(status) {
+  const key = String(status || '').trim().toLowerCase();
+  return {
+    out: 'Fora',
+    'out for season': 'Fora da temporada',
+    doubtful: 'Duvidoso',
+    questionable: 'Questionável',
+    'day-to-day': 'Dia a dia',
+    probable: 'Provável',
+    available: 'Disponível',
+  }[key] || status || '-';
+}
+
+function translateInjuryDescription(text) {
+  const value = String(text || '').trim();
+  if (!value) return '';
+  return value
+    .replace(/\bout for season\b/gi, 'fora da temporada')
+    .replace(/\bday-to-day\b/gi, 'dia a dia')
+    .replace(/\bquestionable\b/gi, 'questionável')
+    .replace(/\bdoubtful\b/gi, 'duvidoso')
+    .replace(/\bprobable\b/gi, 'provável')
+    .replace(/\bout\b/gi, 'fora')
+    .replace(/\bright\b/gi, 'direito')
+    .replace(/\bleft\b/gi, 'esquerdo')
+    .replace(/\bknee\b/gi, 'joelho')
+    .replace(/\bankle\b/gi, 'tornozelo')
+    .replace(/\bfoot\b/gi, 'pé')
+    .replace(/\bhamstring\b/gi, 'posterior da coxa')
+    .replace(/\bcalf\b/gi, 'panturrilha')
+    .replace(/\bshoulder\b/gi, 'ombro')
+    .replace(/\bback\b/gi, 'costas')
+    .replace(/\billness\b/gi, 'doença')
+    .replace(/\binjury\b/gi, 'lesão')
+    .replace(/\bsoreness\b/gi, 'dores')
+    .replace(/\bsprain\b/gi, 'entorse')
+    .replace(/\bstrain\b/gi, 'distensão');
 }

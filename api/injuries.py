@@ -57,15 +57,15 @@ NBA_TEAMS = [
 ]
 
 # ── Mapeamento status ESPN → categorias visuais ─────────────────────────────────
-# ESPN retorna: "Out", "Day-To-Day", "Out For Season", "Doubtful", "Questionable", "Probable"
+# ESPN returns: "Out", "Day-To-Day", "Out For Season", "Doubtful", "Questionable", "Probable"
 STATUS_CATEGORIES = {
-    'out':            {'label': 'Out',             'color': '#dc2626', 'priority': 5},
-    'out for season': {'label': 'Out For Season',  'color': '#7c3aed', 'priority': 6},
-    'doubtful':       {'label': 'Doubtful',        'color': '#f97316', 'priority': 4},
-    'questionable':   {'label': 'Questionable',    'color': '#eab308', 'priority': 3},
-    'day-to-day':     {'label': 'Day-To-Day',      'color': '#3b82f6', 'priority': 2},
-    'probable':       {'label': 'Probable',        'color': '#22c55e', 'priority': 1},
-    'available':      {'label': 'Available',       'color': '#22c55e', 'priority': 0},
+    'out':            {'label': 'Fora',                'color': '#dc2626', 'priority': 5},
+    'out for season': {'label': 'Fora da temporada',   'color': '#7c3aed', 'priority': 6},
+    'doubtful':       {'label': 'Duvidoso',            'color': '#f97316', 'priority': 4},
+    'questionable':   {'label': 'Questionável',        'color': '#eab308', 'priority': 3},
+    'day-to-day':     {'label': 'Dia a dia',           'color': '#3b82f6', 'priority': 2},
+    'probable':       {'label': 'Provável',            'color': '#22c55e', 'priority': 1},
+    'available':      {'label': 'Disponível',          'color': '#22c55e', 'priority': 0},
 }
 
 def _categorize_status(s):
