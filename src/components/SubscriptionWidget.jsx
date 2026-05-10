@@ -170,7 +170,7 @@ function PricingModal({ currentPlan, hasSession, onNeedAuth, onClose }) {
           <CompareItem title="Free" text="Preview limitado" />
           <CompareItem title="Basic" text="Modal + histórico" />
           <CompareItem title="Pro" text="NBA + Futebol + Live" />
-          <CompareItem title="Premium" text="Props por jogo" hot />
+          <CompareItem title="Premium" text="Melhores Props" hot />
         </div>
         <div className="pricingGrid">
           {paidPlans.map(([key, plan]) => {

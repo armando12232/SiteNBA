@@ -255,7 +255,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
           <div className="props-table-wrap">
             <div className="props-table-game-header">
               <span>Hoje</span>
-              <span>{state.loading ? `carregando ${state.loadedCount}/${PREGAME_PLAYERS.length}` : `${visiblePlayers.length} jogadores`} {bpCount ? '/ linhas reais' : '/ fallback'}</span>
+              <span>{state.loading ? `carregando ${state.loadedCount}/${PREGAME_PLAYERS.length}` : `${visiblePlayers.length} jogadores`} {bpCount ? '/ linhas reais' : '/ linhas estimadas'}</span>
             </div>
             <div className="props-table-header">
               <div>Jogador</div>
@@ -451,7 +451,7 @@ function PropsByGameView({ activeStat, dayLabel, groups, loading, onSelectPlayer
   if (!groups.length) {
     return (
       <div className="state-box compact">
-        {loading ? 'Montando props por jogo...' : 'Nenhum jogo identificado para as props de hoje.'}
+        {loading ? 'Montando melhores props...' : 'Nenhum jogo identificado para as melhores props de hoje.'}
       </div>
     );
   }
@@ -538,8 +538,8 @@ function PremiumGamePropsLock() {
         <span>Recurso Premium</span>
         <strong>Melhores props do dia</strong>
         <p>
-          Organiza os jogadores por confronto, mostra top score por jogo e deixa a leitura mais rapida
-          antes de escolher uma entrada. Disponivel apenas no plano Premium.
+          Organiza os jogadores por confronto, mostra top score por jogo e deixa a leitura mais rápida
+          antes de escolher uma entrada. Disponível apenas no plano Premium.
         </p>
         <button type="button" className="paywallCta" onClick={openPricingModal}>
           Ver Premium
@@ -771,7 +771,7 @@ function normalizeGameLabel(gameLabel, fallbackTeam) {
   const label = String(gameLabel || '').trim();
   if (/\b[A-Z]{2,3}\s+x\s+[A-Z]{2,3}\b/.test(label)) return label;
   if (fallbackTeam) return `${fallbackTeam} / jogo do dia`;
-  return 'Jogo nao identificado';
+  return 'Jogo não identificado';
 }
 
 function buildLockedPreviewRows(count) {

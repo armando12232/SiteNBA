@@ -29,7 +29,7 @@ export const PLANS = {
     price: 99,
     label: 'R$99/mês',
     summary: 'Para operação avançada com leitura premium por confronto.',
-    features: ['Tudo do Pro', 'Props por jogo do dia', 'Modal exclusivo por confronto', 'Prioridade', 'Novos módulos'],
+    features: ['Tudo do Pro', 'Melhores Props do dia', 'Modal exclusivo por confronto', 'Prioridade', 'Novos módulos'],
   },
 };
 
