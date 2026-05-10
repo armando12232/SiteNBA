@@ -2,13 +2,39 @@ import { fetchJson } from './http.js';
 
 const wnbaCache = new Map();
 const wnbaInflight = new Map();
+const wnbaPlayersCache = new Map();
+const wnbaPlayersInflight = new Map();
+const wnbaNameCache = new Map();
+const wnbaNameInflight = new Map();
 const WNBA_TTL_MS = 10 * 60 * 1000;
 const CACHE_VERSION = 'v1';
+const WNBA_PLAYERS_STORAGE_PREFIX = `statcast:${CACHE_VERSION}:wnba:players:`;
 const WNBA_STORAGE_PREFIX = `statcast:${CACHE_VERSION}:wnba:pregame:`;
 const WNBA_NAME_STORAGE_PREFIX = `statcast:${CACHE_VERSION}:wnba:pregame-name:`;
 
 export function getWnbaPlayers(limit = 48) {
-  return fetchJson(`/api/sports?league=wnba&type=players&limit=${encodeURIComponent(limit)}`, {}, 12000);
+  const cacheKey = String(limit);
+  const storageKey = `${WNBA_PLAYERS_STORAGE_PREFIX}${cacheKey}`;
+  const stored = readStored(storageKey, WNBA_TTL_MS);
+  if (stored) {
+    wnbaPlayersCache.set(cacheKey, stored);
+    return Promise.resolve(stored);
+  }
+  if (wnbaPlayersCache.has(cacheKey)) return Promise.resolve(wnbaPlayersCache.get(cacheKey));
+  if (wnbaPlayersInflight.has(cacheKey)) return wnbaPlayersInflight.get(cacheKey);
+
+  const request = fetchJson(`/api/sports?league=wnba&type=players&limit=${encodeURIComponent(limit)}`, {}, 12000)
+    .then((data) => {
+      wnbaPlayersCache.set(cacheKey, data);
+      writeStored(storageKey, data);
+      return data;
+    })
+    .finally(() => {
+      wnbaPlayersInflight.delete(cacheKey);
+    });
+
+  wnbaPlayersInflight.set(cacheKey, request);
+  return request;
 }
 
 export function getWnbaPregame(playerId) {
@@ -38,12 +64,19 @@ export function getWnbaPregame(playerId) {
 }
 
 export function getWnbaPregameByName(name) {
-  const storageKey = `${WNBA_NAME_STORAGE_PREFIX}${normalizeName(name)}`;
+  const cacheKey = normalizeName(name);
+  const storageKey = `${WNBA_NAME_STORAGE_PREFIX}${cacheKey}`;
   const stored = readStored(storageKey, WNBA_TTL_MS);
-  if (stored) return Promise.resolve(stored);
+  if (stored) {
+    wnbaNameCache.set(cacheKey, stored);
+    return Promise.resolve(stored);
+  }
+  if (wnbaNameCache.has(cacheKey)) return Promise.resolve(wnbaNameCache.get(cacheKey));
+  if (wnbaNameInflight.has(cacheKey)) return wnbaNameInflight.get(cacheKey);
 
-  return fetchJson(`/api/sports?league=wnba&type=pregame_by_name&name=${encodeURIComponent(name)}`, {}, 15000)
+  const request = fetchJson(`/api/sports?league=wnba&type=pregame_by_name&name=${encodeURIComponent(name)}`, {}, 15000)
     .then((data) => {
+      wnbaNameCache.set(cacheKey, data);
       writeStored(storageKey, data);
       if (data?.player_id) {
         const playerKey = String(data.player_id);
@@ -51,18 +84,33 @@ export function getWnbaPregameByName(name) {
         writeStored(`${WNBA_STORAGE_PREFIX}${playerKey}`, data);
       }
       return data;
+    })
+    .finally(() => {
+      wnbaNameInflight.delete(cacheKey);
     });
+
+  wnbaNameInflight.set(cacheKey, request);
+  return request;
 }
 
 export function clearWnbaCache() {
   wnbaCache.clear();
   wnbaInflight.clear();
+  wnbaPlayersCache.clear();
+  wnbaPlayersInflight.clear();
+  wnbaNameCache.clear();
+  wnbaNameInflight.clear();
+  clearStoredPrefix(WNBA_PLAYERS_STORAGE_PREFIX);
   clearStoredPrefix(WNBA_STORAGE_PREFIX);
   clearStoredPrefix(WNBA_NAME_STORAGE_PREFIX);
 }
 
 function normalizeName(name) {
-  return String(name || '').trim().toLowerCase();
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
 }
 
 function readStored(key, ttlMs) {
