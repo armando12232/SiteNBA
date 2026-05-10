@@ -3083,6 +3083,9 @@ select {
 }
 
 .view-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 8px 13px;
@@ -3095,6 +3098,13 @@ select {
   text-transform: uppercase;
 }
 
+.view-mode-btn small {
+  color: var(--text3);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
 .view-mode-btn.active {
   border-color: var(--gold);
   background: rgba(253,185,39,.09);
@@ -3102,7 +3112,6 @@ select {
 }
 
 .view-mode-btn.premium span {
-  margin-left: 6px;
   border: 1px solid rgba(0,230,118,.28);
   border-radius: 999px;
   padding: 2px 6px;
@@ -3165,6 +3174,19 @@ select {
   font-size: 12px;
   font-style: normal;
   font-weight: 800;
+}
+
+.game-props-head small {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 7px;
+  padding: 3px 8px;
+  border: 1px solid rgba(253,185,39,.24);
+  border-radius: 999px;
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .game-props-card {

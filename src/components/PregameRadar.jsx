@@ -120,6 +120,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
     ? buildLockedPreviewRows(access.previewRows)
     : [];
   const gameGroups = useMemo(() => buildGameGroups(visiblePlayers, activeStat), [activeStat, visiblePlayers]);
+  const propsDayLabel = useMemo(() => formatPropsDay(state.bpDate), [state.bpDate]);
 
   return (
     <section>
@@ -217,7 +218,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
           className={`view-mode-btn premium ${viewMode === 'games' ? 'active' : ''}`}
           onClick={() => setViewMode('games')}
         >
-          Props por jogo <span>Premium</span>
+          Melhores Props <small>{propsDayLabel}</small><span>Premium</span>
         </button>
       </div>
 
@@ -239,6 +240,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
         access?.propsByGame ? (
           <PropsByGameView
             activeStat={activeStat}
+            dayLabel={propsDayLabel}
             groups={gameGroups}
             loading={state.loading}
             onSelectPlayer={onSelectPlayer}
@@ -443,7 +445,7 @@ function InfoFactor({ weight, title, text }) {
   );
 }
 
-function PropsByGameView({ activeStat, groups, loading, onSelectPlayer }) {
+function PropsByGameView({ activeStat, dayLabel, groups, loading, onSelectPlayer }) {
   const [selectedGame, setSelectedGame] = useState(null);
 
   if (!groups.length) {
@@ -459,7 +461,8 @@ function PropsByGameView({ activeStat, groups, loading, onSelectPlayer }) {
       <div className="game-props-head">
         <div>
           <span>Premium</span>
-          <strong>Props por jogo do dia</strong>
+          <strong>Melhores Props</strong>
+          <small>{dayLabel}</small>
         </div>
         <em>{groups.length} jogos / {groups.reduce((sum, group) => sum + group.players.length, 0)} props</em>
       </div>
@@ -533,7 +536,7 @@ function PremiumGamePropsLock() {
       <div className="game-props-lock-icon">P</div>
       <div>
         <span>Recurso Premium</span>
-        <strong>Props separadas por jogo do dia</strong>
+        <strong>Melhores props do dia</strong>
         <p>
           Organiza os jogadores por confronto, mostra top score por jogo e deixa a leitura mais rapida
           antes de escolher uma entrada. Disponivel apenas no plano Premium.
@@ -559,7 +562,7 @@ function GamePropsModal({ activeStat, group, onClose, onSelectPlayer }) {
       <section className="game-props-modal" onMouseDown={(event) => event.stopPropagation()}>
         <button type="button" className="pp-modal-close" onClick={onClose}>x</button>
         <div className="game-props-modal-hero">
-          <span>Premium / Props por jogo</span>
+          <span>Premium / Melhores Props</span>
           <h3>{group.label}</h3>
           <p>{group.date || 'Hoje'} / {group.players.length} jogadores monitorados</p>
           <div className="game-props-modal-metrics">
@@ -919,6 +922,17 @@ function scheduleDates(games) {
   const dates = (Array.isArray(games) ? games : []).map((game) => game.gameDateLabel).filter(Boolean);
   const today = new Date().toISOString().slice(0, 10);
   return dates.length ? dates : [today];
+}
+
+function formatPropsDay(value) {
+  const raw = value || new Date().toISOString().slice(0, 10);
+  const match = String(raw).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return 'Hoje';
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  const today = new Date();
+  const isToday = date.toDateString() === today.toDateString();
+  const day = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  return isToday ? `Hoje ${day}` : day;
 }
 
 function findGameForTeam(games, teamAbbr) {
