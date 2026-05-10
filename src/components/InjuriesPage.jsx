@@ -40,8 +40,8 @@ export function InjuriesPage() {
           <p className="sectionLead visible">Status por jogador, filtro por time e atualização parcial quando alguma lista demora.</p>
         </div>
         <div className="footballHeaderActions">
-          <button className="footballRefresh" type="button" onClick={() => setRefresh((value) => value + 1)}>🔄 Atualizar</button>
-          <span className="statusPill">👥 {state.data?.total ?? 0} jogadores</span>
+          <button className="footballRefresh" type="button" onClick={() => setRefresh((value) => value + 1)}>↻ Atualizar</button>
+          <span className="statusPill">Jogadores: {state.data?.total ?? 0}</span>
         </div>
       </div>
 
@@ -94,7 +94,7 @@ export function InjuriesPage() {
             ))}
             {!injuries.length ? (
               <div className="emptyState richEmptyState">
-                <strong>✅ Nenhuma lesão encontrada</strong>
+                <strong>Nenhuma lesão encontrada</strong>
                 <span>{team === 'all' ? 'Nenhum jogador lesionado disponível agora.' : `Sem registros para ${team}.`}</span>
               </div>
             ) : null}
@@ -119,15 +119,30 @@ function translateStatus(status) {
 }
 
 function translateInjuryDescription(text) {
-  const value = String(text || '').trim();
+  let value = String(text || '').trim();
   if (!value) return '';
-  return value
-    .replace(/\bout for season\b/gi, 'fora da temporada')
-    .replace(/\bday-to-day\b/gi, 'dia a dia')
-    .replace(/\bquestionable\b/gi, 'questionável')
-    .replace(/\bdoubtful\b/gi, 'duvidoso')
-    .replace(/\bprobable\b/gi, 'provável')
-    .replace(/\bout\b/gi, 'fora')
+
+  const sourceMatch = value.match(/,\s*([^,]+?)\s+reports\.?$/i);
+  const source = sourceMatch?.[1]?.trim();
+  if (source) value = value.replace(/,\s*[^,]+?\s+reports\.?$/i, '');
+
+  value = value
+    .replace(/\bwill be re-evaluated in two weeks\b/gi, 'será reavaliado em duas semanas')
+    .replace(/\bwill be re-evaluated\b/gi, 'será reavaliado')
+    .replace(/\bis being shut down for the rest of the season\b/gi, 'não jogará mais nesta temporada')
+    .replace(/\bwill require season-ending surgery\b/gi, 'precisará de cirurgia e está fora da temporada')
+    .replace(/\bhas been diagnosed with\b/gi, 'foi diagnosticado com')
+    .replace(/\bunderwent a non-surgical procedure to address\b/gi, 'passou por procedimento não cirúrgico para tratar')
+    .replace(/\bthere'?s hope he will make a full recovery\b/gi, 'há expectativa de recuperação completa')
+    .replace(/\bin time for NBA Summer League\b/gi, 'a tempo da NBA Summer League')
+    .replace(/\bsigned a two-way contract with the\b/gi, 'assinou contrato two-way com o')
+    .replace(/\bon Tuesday\b/gi, 'na terça-feira')
+    .replace(/\bon Friday\b/gi, 'na sexta-feira')
+    .replace(/\bannounced Friday that\b/gi, 'anunciou na sexta-feira que')
+    .replace(/\baccording to\b/gi, 'segundo')
+    .replace(/\bulnar collateral ligament tear\b/gi, 'ruptura do ligamento colateral ulnar')
+    .replace(/\bplantar fasciitis\b/gi, 'fascite plantar')
+    .replace(/\bthumb\b/gi, 'polegar')
     .replace(/\bright\b/gi, 'direito')
     .replace(/\bleft\b/gi, 'esquerdo')
     .replace(/\bknee\b/gi, 'joelho')
@@ -141,5 +156,13 @@ function translateInjuryDescription(text) {
     .replace(/\binjury\b/gi, 'lesão')
     .replace(/\bsoreness\b/gi, 'dores')
     .replace(/\bsprain\b/gi, 'entorse')
-    .replace(/\bstrain\b/gi, 'distensão');
+    .replace(/\bstrain\b/gi, 'distensão')
+    .replace(/\bout for season\b/gi, 'fora da temporada')
+    .replace(/\bday-to-day\b/gi, 'dia a dia')
+    .replace(/\bquestionable\b/gi, 'questionável')
+    .replace(/\bdoubtful\b/gi, 'duvidoso')
+    .replace(/\bprobable\b/gi, 'provável')
+    .replace(/\bout\b/gi, 'fora');
+
+  return source ? `${value}, segundo ${source}.` : value;
 }
