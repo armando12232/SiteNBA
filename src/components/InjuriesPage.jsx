@@ -123,10 +123,16 @@ function translateInjuryDescription(text) {
   if (!value) return '';
 
   const sourceMatch = value.match(/,\s*([^,]+?)\s+reports\.?$/i);
-  const source = sourceMatch?.[1]?.trim();
+  const source = cleanReportSource(sourceMatch?.[1]);
   if (source) value = value.replace(/,\s*[^,]+?\s+reports\.?$/i, '');
 
   value = value
+    .replace(/^The Nets announced Friday that\s+/i, 'O Brooklyn Nets anunciou na sexta-feira que ')
+    .replace(/^The ([A-Z][A-Za-z\s]+) announced Friday that\s+/i, 'O $1 anunciou na sexta-feira que ')
+    .replace(/\bwon't play Sunday in Toronto\b/gi, 'não jogará domingo em Toronto')
+    .replace(/\bhas been ruled out for the remainder of the ([0-9-]+) season\b/gi, 'está fora pelo restante da temporada $1')
+    .replace(/\bis out for Sunday's game in Toronto\b/gi, 'está fora do jogo de domingo em Toronto')
+    .replace(/\bfor Sunday's game in Toronto\b/gi, 'para o jogo de domingo em Toronto')
     .replace(/\bwill be re-evaluated in two weeks\b/gi, 'será reavaliado em duas semanas')
     .replace(/\bwill be re-evaluated\b/gi, 'será reavaliado')
     .replace(/\bis being shut down for the rest of the season\b/gi, 'não jogará mais nesta temporada')
@@ -140,8 +146,11 @@ function translateInjuryDescription(text) {
     .replace(/\bon Friday\b/gi, 'na sexta-feira')
     .replace(/\bannounced Friday that\b/gi, 'anunciou na sexta-feira que')
     .replace(/\baccording to\b/gi, 'segundo')
+    .replace(/\bin his\b/gi, 'no')
+    .replace(/\bin her\b/gi, 'na')
     .replace(/\bulnar collateral ligament tear\b/gi, 'ruptura do ligamento colateral ulnar')
     .replace(/\bplantar fasciitis\b/gi, 'fascite plantar')
+    .replace(/\bfinger\b/gi, 'dedo')
     .replace(/\bthumb\b/gi, 'polegar')
     .replace(/\bright\b/gi, 'direito')
     .replace(/\bleft\b/gi, 'esquerdo')
@@ -164,5 +173,24 @@ function translateInjuryDescription(text) {
     .replace(/\bprobable\b/gi, 'provável')
     .replace(/\bout\b/gi, 'fora');
 
+  value = value
+    .replace(/\s+and\s+/gi, ' e ')
+    .replace(/\s+with\s+/gi, ' com ')
+    .replace(/\s+for\s+/gi, ' para ')
+    .replace(/\s+in\s+/gi, ' em ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
   return source ? `${value}, segundo ${source}.` : value;
+}
+
+function cleanReportSource(source) {
+  const value = String(source || '').trim();
+  if (!value) return '';
+  return value
+    .replace(/\s+of\s+the\s+.+$/i, '')
+    .replace(/\s+of\s+.+$/i, '')
+    .replace(/\s+from\s+.+$/i, '')
+    .replace(/\.(com|net|org)$/i, '')
+    .trim();
 }
