@@ -34,16 +34,23 @@ export function WnbaPage({ onSelectPlayer }) {
         const list = await getWnbaPlayers(PLAYER_LIMIT);
         const basePlayers = list.players || [];
         if (!alive) return;
-        setState((current) => ({ ...current, players: basePlayers, totalCount: basePlayers.length || PLAYER_LIMIT }));
+        const initialLoaded = basePlayers.filter(isPlayerLoaded).length;
+        setState((current) => ({
+          ...current,
+          players: basePlayers,
+          loadedCount: initialLoaded,
+          loading: initialLoaded < basePlayers.length,
+          totalCount: basePlayers.length || PLAYER_LIMIT,
+        }));
 
         await progressivePool(basePlayers, 3, async (player) => {
-          const data = await getWnbaPregame(player.player_id || player.id).catch(() => null);
+          const data = await withTimeout(getWnbaPregame(player.player_id || player.id), 9000).catch(() => null);
           if (!alive) return;
           setState((current) => {
             const nextPlayers = data && !data.error
-              ? upsertPlayer(current.players, { ...player, ...data, league: 'wnba' })
-              : current.players;
-            const loadedCount = current.loadedCount + 1;
+              ? upsertPlayer(current.players, { ...player, ...data, league: 'wnba', _detailAttempted: true })
+              : upsertPlayer(current.players, { ...player, league: 'wnba', _detailAttempted: true });
+            const loadedCount = Math.min(current.totalCount, current.loadedCount + (isPlayerLoaded(player) ? 0 : 1));
             return {
               ...current,
               players: nextPlayers,
@@ -206,6 +213,15 @@ async function progressivePool(items, limit, worker) {
   await Promise.all(runners);
 }
 
+function withTimeout(promise, timeoutMs) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('timeout')), timeoutMs);
+    }),
+  ]);
+}
+
 function upsertPlayer(players, player) {
   const id = player.player_id || player.id;
   const index = players.findIndex((row) => (row.player_id || row.id) === id);
@@ -333,13 +349,15 @@ function normalizeSearch(value) {
 
 function sampleLabel(player) {
   const seasons = Array.isArray(player?.sample_seasons) ? player.sample_seasons.filter(Boolean) : [];
+  if (!seasons.length && player?._detailAttempted) return 'Sem amostra';
   if (!seasons.length) return 'Amostra carregando';
   return player?.using_previous_season ? `Amostra ${seasons.join(' + ')}` : `Temporada ${seasons[0]}`;
 }
 
 function isPlayerLoaded(player) {
   return Boolean(
-    player?.last5_games?.length
+    player?._detailAttempted
+    || player?.last5_games?.length
     || player?.props?.pts
     || player?.props?.reb
     || player?.props?.ast

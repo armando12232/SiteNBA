@@ -129,22 +129,29 @@ def _player_from_index_row(headers, row):
     pts = _num(col("PTS"), None)
     reb = _num(col("REB"), None)
     ast = _num(col("AST"), None)
-    return {
+    season_avg = {
+        "pts": pts,
+        "reb": reb,
+        "ast": ast,
+        "fg3m": None,
+    }
+    props = _fallback_props_from_season_avg(season_avg)
+    player = {
         "id": pid,
         "player_id": pid,
         "player_name": f"{first} {last}".strip(),
         "team_abbr": team,
         "team_name": col("TEAM_NAME", default=""),
         "position": col("POSITION", default=""),
-        "season_avg": {
-            "pts": pts,
-            "reb": reb,
-            "ast": ast,
-            "fg3m": None,
-        },
+        "season_avg": season_avg,
+        "props": props,
+        "synthetic_lines": {key: value.get("line") for key, value in props.items()},
+        "sample_seasons": [_season_candidates()[0]],
+        "using_previous_season": False,
         "league": "wnba",
         "photo_url": f"https://cdn.wnba.com/headshots/wnba/latest/1040x760/{pid}.png",
     }
+    return player
 
 def _norm_name(value):
     return "".join(ch.lower() for ch in str(value or "") if ch.isalnum())
@@ -250,6 +257,25 @@ def _line_for(avg, stat):
         return None
     return math.floor(float(avg)) + 0.5
 
+def _fallback_props_from_season_avg(season_avg):
+    props = {}
+    for source_key, target_key in (("PTS", "pts"), ("REB", "reb"), ("AST", "ast"), ("FG3M", "fg3m")):
+        avg = season_avg.get(target_key)
+        line = _line_for(avg, source_key)
+        if line is None:
+            continue
+        projection = round(float(avg), 1)
+        props[target_key] = {
+            "line": line,
+            "projection": projection,
+            "edge": round(projection - line, 1),
+            "hit_rate": None,
+            "l5": None,
+            "l10": None,
+            "source": "season_estimate",
+        }
+    return props
+
 def _build_props(rows, season_avg):
     props = {}
     last5 = rows[:5]
@@ -271,7 +297,7 @@ def _build_props(rows, season_avg):
             "edge": round((l5_avg or 0) - line, 1) if l5_avg is not None else None,
             "projection": l5_avg if l5_avg is not None else base,
         }
-    return props
+    return props or _fallback_props_from_season_avg(season_avg)
 
 def get_pregame(player_id):
     cached = _cache_get(f"pregame_{player_id}")
