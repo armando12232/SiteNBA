@@ -11,6 +11,8 @@ Este projeto está padronizado para rodar na Vercel.
 ## APIs
 
 As APIs ficam em `api/` e rodam como Serverless Functions da Vercel.
+Arquivos auxiliares devem usar prefixo `_` ou ficar fora de `api/`.
+Coletores locais, scripts de Telethon e endpoints legados devem ficar em `scripts/` ou `server/legacy_api/`, nunca em `api/`, para nao virar funcao publica nem estourar o limite do plano Hobby.
 
 ## Railway
 

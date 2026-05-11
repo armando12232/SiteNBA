@@ -14,12 +14,6 @@
     "api/checkout.py": {
       "maxDuration": 10
     },
-    "api/analyze.py": {
-      "maxDuration": 10
-    },
-    "api/lines.py": {
-      "maxDuration": 10
-    },
     "api/sports.py": {
       "maxDuration": 10
     },
