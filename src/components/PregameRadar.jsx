@@ -920,12 +920,11 @@ function mergeProps(nbaProps, bpProps) {
 
 function scheduleDates(games) {
   const dates = (Array.isArray(games) ? games : []).map((game) => game.gameDateLabel).filter(Boolean);
-  const today = new Date().toISOString().slice(0, 10);
-  return dates.length ? dates : [today];
+  return dates.length ? dates : [localDateKey()];
 }
 
 function formatPropsDay(value) {
-  const raw = value || new Date().toISOString().slice(0, 10);
+  const raw = value || localDateKey();
   const match = String(raw).match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!match) return 'Hoje';
   const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
@@ -933,6 +932,13 @@ function formatPropsDay(value) {
   const isToday = date.toDateString() === today.toDateString();
   const day = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   return isToday ? `Hoje ${day}` : day;
+}
+
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function findGameForTeam(games, teamAbbr) {

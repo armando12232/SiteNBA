@@ -49,6 +49,27 @@ def _parse_nba_date(value):
             continue
     return datetime.min
 
+
+def _game_slate_date(game, fallback=""):
+    """Return the NBA betting slate date, not the UTC calendar date."""
+    for key in ("gameDateEst", "gameDateTimeEst", "gameDate"):
+        text = str((game or {}).get(key) or "").strip()
+        if len(text) >= 10 and text[:4].isdigit():
+            return text[:10]
+
+    utc_text = str((game or {}).get("gameTimeUTC") or (game or {}).get("gameDateTimeUTC") or "").strip()
+    if len(utc_text) >= 19:
+        try:
+            from datetime import timezone
+            from zoneinfo import ZoneInfo
+            dt = datetime.strptime(utc_text[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
+            return dt.astimezone(ZoneInfo("America/New_York")).strftime("%Y-%m-%d")
+        except Exception:
+            pass
+
+    return fallback
+
+
 def _cache_get(key):
     if key in cache:
         data, ts = cache[key]
@@ -499,7 +520,7 @@ def get_upcoming_schedule(days_ahead=7):
                     "status":        g.get("gameStatus", 1),
                     "statusText":    g.get("gameStatusText", ""),
                     "gameTimeUTC":   g.get("gameTimeUTC", ""),
-                    "gameDateLabel": now_utc.strftime("%Y-%m-%d"),
+                    "gameDateLabel": _game_slate_date(g, now_utc.strftime("%Y-%m-%d")),
                     "homeTeam": {"teamId": ht.get("teamId"), "abbr": ht.get("teamTricode","HME"), "name": ht.get("teamName",""), "score": ht.get("score",0)},
                     "awayTeam": {"teamId": at.get("teamId"), "abbr": at.get("teamTricode","AWY"), "name": at.get("teamName",""), "score": at.get("score",0)},
                 })
@@ -540,7 +561,7 @@ def get_upcoming_schedule(days_ahead=7):
                         "status":        1,
                         "statusText":    "Agendado",
                         "gameTimeUTC":   game_time_str,
-                        "gameDateLabel": game_dt.strftime("%Y-%m-%d"),
+                        "gameDateLabel": _game_slate_date(g, game_dt.strftime("%Y-%m-%d")),
                         "homeTeam": {"teamId": ht.get("teamId"), "abbr": ht.get("teamTricode","HME"), "name": ht.get("teamCityName",""), "score": 0},
                         "awayTeam": {"teamId": at.get("teamId"), "abbr": at.get("teamTricode","AWY"), "name": at.get("teamCityName",""), "score": 0},
                     })
