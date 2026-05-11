@@ -4478,6 +4478,9 @@ select {
   position: absolute;
   right: 0;
   top: -15px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .68);
   color: var(--text);
   font-size: 10px;
   font-weight: 800;
@@ -4556,6 +4559,25 @@ select {
   color: var(--text3);
   font-size: 10px;
   font-weight: 700;
+}
+
+.performance-chart.estimated {
+  border-color: rgba(255, 184, 28, .22);
+  background:
+    radial-gradient(circle at 92% 8%, rgba(255, 184, 28, .08), transparent 32%),
+    var(--bg2);
+}
+
+.performance-chart.estimated .chart-bar {
+  opacity: .82;
+}
+
+.performance-chart.estimated .chart-bar-item span {
+  color: var(--gold);
+}
+
+.performance-chart.estimated .chart-footer span:first-child {
+  color: var(--gold);
 }
 
 .gameRow {

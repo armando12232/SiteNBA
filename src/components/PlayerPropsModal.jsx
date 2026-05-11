@@ -55,6 +55,7 @@ export function PlayerPropsModal({ playerName, onClose }) {
   const photoUrl = playerPhotoUrl(data);
   const hitRate = best?.hit_rate;
   const lineNumber = Number(line);
+  const averages = buildModalAverages(data, stat, games, best);
   const chartLinePct = Number.isFinite(lineNumber)
     ? Math.min(95, Math.max(5, (lineNumber / chartMax) * 100))
     : 0;
@@ -115,11 +116,11 @@ export function PlayerPropsModal({ playerName, onClose }) {
               </div>
 
               <div className="pp-stats-grid">
-                <ModalMetric label="Temp" value={formatPercentOrNumber(seasonHit, data?.season_avg?.[stat])} />
-                <ModalMetric label="L5" value={formatPercentOrNumber(metricHits.l5, data?.last5_avg?.[stat])} />
-                <ModalMetric label="L10" value={formatPercentOrNumber(metricHits.l10, data?.last10_avg?.[stat])} />
+                <ModalMetric label={averages.seasonLabel} value={averages.seasonValue} />
+                <ModalMetric label="L5" value={averages.l5Value} />
+                <ModalMetric label="L10" value={averages.l10Value} />
                 <ModalMetric label="Linha" value={line ?? '-'} />
-                <ModalMetric label="Hit" value={hitRate != null ? `${hitRate}%` : '-'} />
+                <ModalMetric label="Hit" value={formatPercent(hitRate ?? seasonHit)} />
                 <ModalMetric label="SC" value={score?.score ?? '-'} hot />
               </div>
 
@@ -233,17 +234,6 @@ function ModalMetric({ label, value, hot = false }) {
   );
 }
 
-function formatPercentOrNumber(percentValue, fallbackValue) {
-  if (percentValue != null && percentValue !== '-' && !Number.isNaN(Number(percentValue))) {
-    return `${Number(percentValue)}%`;
-  }
-  const fallbackNumber = Number(fallbackValue);
-  if (Number.isFinite(fallbackNumber)) {
-    return formatNumber(fallbackNumber);
-  }
-  return '-';
-}
-
 function EstimatedHistory({ player, stat, line }) {
   const prop = player?.props?.[stat] || {};
   const rows = buildEstimatedRows(prop, player, stat);
@@ -287,7 +277,7 @@ function EstimatedHistory({ player, stat, line }) {
         })}
       </div>
       <div className="chart-footer">
-        <span>Histórico estimado pela linha da casa</span>
+        <span>Projeção visual pela linha da casa</span>
         <span>StatCast</span>
       </div>
     </div>
@@ -299,25 +289,16 @@ function buildEstimatedRows(prop, player, stat) {
   if (!Number.isFinite(base)) return [];
   const l5 = Number(prop.l5 ?? prop.hit_rate ?? 50);
   const swing = Math.max(1, base * 0.18);
-  const opponents = estimateOpponents(player);
   const dates = estimateRecentDates();
   return Array.from({ length: 10 }, (_, index) => {
     const direction = index < Math.round(l5 / 10) ? 1 : -1;
     const wave = ((index % 4) - 1.5) * 0.25;
     return {
       value: Number(Math.max(0, base + direction * swing * (0.5 + Math.abs(wave))).toFixed(1)),
-      opp: opponents[index % opponents.length],
+      opp: 'EST',
       date: dates[index],
     };
   });
-}
-
-function estimateOpponents(player) {
-  const gameLabel = String(player?.gameLabel || '');
-  const team = String(player?.team_abbr || '').toUpperCase();
-  const teams = gameLabel.match(/\b[A-Z]{2,3}\b/g) || [];
-  const opponent = teams.find((abbr) => abbr !== team);
-  return [opponent || team || 'PROJ'];
 }
 
 function estimateRecentDates() {
@@ -381,6 +362,43 @@ function formatDateShort(value) {
 
 function formatNumber(value) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+function formatOptionalNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? formatNumber(number) : '-';
+}
+
+function formatPercent(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? `${Math.round(number)}%` : '-';
+}
+
+function buildModalAverages(player, stat, games, prop) {
+  const seasonAvg = numberOrNull(player?.season_avg?.[stat]);
+  const projection = numberOrNull(prop?.projection);
+  const l5Avg = numberOrNull(player?.last5_avg?.[stat]) ?? averageRecent(games, stat, 5);
+  const l10Avg = numberOrNull(player?.last10_avg?.[stat]) ?? averageRecent(games, stat, 10);
+
+  return {
+    seasonLabel: seasonAvg != null ? 'Temp' : projection != null ? 'Proj' : 'Temp',
+    seasonValue: formatOptionalNumber(seasonAvg ?? projection),
+    l5Value: formatOptionalNumber(l5Avg),
+    l10Value: formatOptionalNumber(l10Avg),
+  };
+}
+
+function averageRecent(games, stat, limit) {
+  const rows = (Array.isArray(games) ? games : []).slice(0, limit);
+  if (rows.length < limit) return null;
+  const values = rows.map((game) => Number(game?.[stat] ?? game?.pts)).filter(Number.isFinite);
+  if (values.length < limit) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function numberOrNull(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }
 
 function shortOpponent(matchup) {

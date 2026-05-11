@@ -7,7 +7,7 @@ export function buildPregameScore({ player, stat, prop, line, games = [] }) {
   const l10Hit = numberOrNull(prop?.l10 ?? prop?.hit_rate);
   const l20Hit = hitPercent(recentGames, stat, numericLine, 20);
   const seasonAvg = numberOrNull(player?.season_avg?.[stat]);
-  const sample = Math.min(recentGames.length, 20);
+  const sample = sampleConfidence(recentGames, prop);
 
   const factors = [
     {
@@ -41,8 +41,8 @@ export function buildPregameScore({ player, stat, prop, line, games = [] }) {
     {
       id: 'sample',
       label: 'Confiança',
-      value: Math.min(100, Math.round((sample / 20) * 100)),
-      note: `${sample}/20 jogos`,
+      value: Math.min(100, Math.round((sample.count / 20) * 100)),
+      note: sample.note,
       weight: 0.10,
     },
   ];
@@ -176,6 +176,17 @@ function hitPercent(games, stat, line, limit) {
   if (!rows.length) return null;
   const hits = rows.filter((game) => Number(game?.[stat] ?? game?.pts ?? 0) >= line).length;
   return Math.round((hits / rows.length) * 100);
+}
+
+function sampleConfidence(games, prop) {
+  const gameCount = Math.min(Array.isArray(games) ? games.length : 0, 20);
+  if (gameCount) return { count: gameCount, note: `${gameCount}/20 jogos` };
+  if (prop?.l20 != null) return { count: 20, note: 'L20 da tabela' };
+  if (prop?.l15 != null) return { count: 15, note: 'L15 da tabela' };
+  if (prop?.l10 != null) return { count: 10, note: 'L10 da tabela' };
+  if (prop?.l5 != null) return { count: 5, note: 'L5 da tabela' };
+  if (prop?.hit_rate != null) return { count: 10, note: 'hit-rate da tabela' };
+  return { count: 0, note: 'sem amostra' };
 }
 
 function normalizePct(value) {

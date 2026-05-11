@@ -48,6 +48,25 @@ test('buildPregameScore returns UNDER side when edge is negative', () => {
   assert.equal(result.label.startsWith('UNDER'), true);
 });
 
+test('buildPregameScore uses table hit windows when real game log is unavailable', () => {
+  const result = buildPregameScore({
+    stat: 'pts',
+    line: 19.5,
+    prop: {
+      edge: -1.1,
+      projection: 17.4,
+      l5: 100,
+      l10: 80,
+    },
+    player: {},
+    games: [],
+  });
+
+  const confidence = result.factors.find((factor) => factor.id === 'sample');
+  assert.equal(confidence.value, 50);
+  assert.equal(confidence.note, 'L10 da tabela');
+});
+
 test('buildLiveScore flags risk when context says blowout risk', () => {
   const result = buildLiveScore({
     player: { pts: 18, reb: 3, ast: 5, mins: 24 },
