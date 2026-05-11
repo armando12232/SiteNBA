@@ -2,6 +2,7 @@ import {
   parseTelegramUpdate,
   scoreIntelMatch,
 } from './_telegramIntel.js';
+import { verifySupabaseToken } from './_supabaseAuth.js';
 
 const DEFAULT_SUPABASE_URL = 'https://dhirxfoxcswctxcjzvhf.supabase.co';
 const SUPABASE_URL = normalizeSupabaseUrl(process.env.SUPABASE_URL);
@@ -9,6 +10,7 @@ const SUPABASE_SERVICE_KEY = String(process.env.SUPABASE_SERVICE_KEY || '').trim
 const SITE_URL = String(process.env.SITE_URL || 'https://site-nba-ten.vercel.app').trim();
 const TELEGRAM_WEBHOOK_SECRET = String(process.env.TELEGRAM_WEBHOOK_SECRET || '').trim();
 const TELEGRAM_CHAT_ID = String(process.env.TELEGRAM_CHAT_ID || '').trim();
+const PLAN_RANK = { free: 0, basic: 1, pro: 2, premium: 3 };
 
 export default async function handler(req, res) {
   setCors(res);
@@ -57,6 +59,9 @@ async function handleWebhook(req, res) {
 }
 
 async function handleLookup(req, res) {
+  const access = await requireFootballAccess(req, res);
+  if (!access) return;
+
   const home = String(req.query?.home || '').trim();
   const away = String(req.query?.away || '').trim();
   if (!home && !away) return res.status(400).json({ error: 'home or away required' });
@@ -79,6 +84,39 @@ async function handleLookup(req, res) {
     count: matches.length,
     runtime: 'node-telegram',
   });
+}
+
+async function requireFootballAccess(req, res) {
+  try {
+    const user = await verifySupabaseToken(SUPABASE_URL, SUPABASE_SERVICE_KEY, req.headers.authorization);
+    const rows = await supabaseFetch(`/rest/v1/subscriptions?select=plan,status,role&user_id=eq.${encodeURIComponent(user.id)}&limit=1`, {
+      headers: serviceHeaders(),
+    });
+    const row = Array.isArray(rows) && rows.length ? rows[0] : {};
+    const plan = row.plan || 'free';
+    const status = row.status || 'active';
+    const role = row.role || 'user';
+
+    if (role === 'admin') return { user, plan, status, role };
+    if (!['active', 'trialing'].includes(status)) {
+      res.status(403).json({ error: 'subscription inactive', feature: 'football', runtime: 'node-telegram' });
+      return null;
+    }
+    if ((PLAN_RANK[plan] || 0) < PLAN_RANK.pro) {
+      res.status(403).json({
+        error: 'plan upgrade required',
+        feature: 'football',
+        required_plan: 'pro',
+        current_plan: plan,
+        runtime: 'node-telegram',
+      });
+      return null;
+    }
+    return { user, plan, status, role };
+  } catch (error) {
+    res.status(error.status || 500).json({ error: formatError(error), feature: 'football', runtime: 'node-telegram' });
+    return null;
+  }
 }
 
 async function insertIntel(parsed, rawUpdate) {

@@ -20,7 +20,7 @@ export function getTeamLast(abbr) {
 }
 
 export function getBoxscore(gameId) {
-  return fetchJson(`/api/nba?type=boxscore&gameId=${encodeURIComponent(gameId)}`);
+  return fetchJson(`/api/nba?type=boxscore&gameId=${encodeURIComponent(gameId)}`, { auth: true });
 }
 
 export function getPregame(playerId) {
@@ -54,7 +54,7 @@ export function getPregameByName(name) {
   const stored = readStored(storageKey, PREGAME_TTL_MS);
   if (stored) return Promise.resolve(stored);
 
-  return fetchJson(`/api/nba?type=pregame_by_name&name=${encodeURIComponent(name)}`)
+  return fetchJson(`/api/nba?type=pregame_by_name&name=${encodeURIComponent(name)}`, { auth: true })
     .then((data) => {
       writeStored(storageKey, data);
       if (data?.player_id) {

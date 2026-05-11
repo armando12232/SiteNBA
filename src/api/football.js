@@ -19,27 +19,27 @@ export const FOOTBALL_LEAGUES = [
 
 export function getFootballFixtures() {
   return cachedFetch('statcast:v1:football:fixtures', FOOTBALL_TTL_MS, () => (
-    fetchJson('/api/football?type=fixtures', {}, 15000)
+    fetchJson('/api/football?type=fixtures', { auth: true }, 15000)
   ));
 }
 
 export function getFootballLive() {
   return cachedFetch('statcast:v1:football:live', FOOTBALL_LIVE_TTL_MS, () => (
-    fetchJson('/api/football?type=live', {}, 12000)
+    fetchJson('/api/football?type=live', { auth: true }, 12000)
   ));
 }
 
 export function getFootballStats(gameId, leagueKey) {
   const qs = new URLSearchParams({ type: 'stats', gameId, leagueKey });
   return cachedFetch(`statcast:v1:football:stats:${leagueKey}:${gameId}`, FOOTBALL_STATS_TTL_MS, () => (
-    fetchJson(`/api/football?${qs}`, {}, 12000)
+    fetchJson(`/api/football?${qs}`, { auth: true }, 12000)
   ));
 }
 
 export function getFootballPregame(gameId, leagueKey) {
   const qs = new URLSearchParams({ type: 'pregame', gameId, leagueKey });
   return cachedFetch(`statcast:v1:football:pregame:${leagueKey}:${gameId}`, 5 * 60 * 1000, () => (
-    fetchJson(`/api/football?${qs}`, {}, 12000)
+    fetchJson(`/api/football?${qs}`, { auth: true }, 12000)
   ));
 }
 
@@ -51,7 +51,7 @@ export function getFootballBet365Odds(fixture) {
     leagueKey: fixture.league_key || '',
   });
   return cachedFetch(`statcast:v1:football:bet365:${fixture.id}`, 5 * 60 * 1000, () => (
-    fetchJson(`/api/football?${qs}`, {}, 12000)
+    fetchJson(`/api/football?${qs}`, { auth: true }, 12000)
   ));
 }
 
@@ -64,6 +64,6 @@ export function getFootballReferee(fixture) {
     leagueKey: fixture.league_key || '',
   });
   return cachedFetch(`statcast:v1:football:referee:${fixture.id}`, 10 * 60 * 1000, () => (
-    fetchJson(`/api/football?${qs}`, {}, 15000)
+    fetchJson(`/api/football?${qs}`, { auth: true }, 15000)
   ));
 }

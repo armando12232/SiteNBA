@@ -7,6 +7,7 @@ try:
         rate_limit_check, get_client_ip,
         is_valid_id, is_valid_date, is_valid_league, sanitize_team_name,
     )
+    from _plan_guard import check_feature
 except ImportError:
     def rate_limit_check(ip): return True
     def get_client_ip(h): return '0.0.0.0'
@@ -14,6 +15,7 @@ except ImportError:
     def is_valid_date(s): return bool(s) and len(s) <= 30
     def is_valid_league(s): return bool(s) and s.isalpha() and len(s) <= 20
     def sanitize_team_name(s): return str(s or '')[:60]
+    def check_feature(headers, feature): return True, 200, {}
 
 ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer'
 SITE_URL = os.environ.get('SITE_URL', 'https://site-nba-ten.vercel.app').rstrip('/')
@@ -893,6 +895,11 @@ class handler(BaseHTTPRequestHandler):
         VALID_TYPES = {'fixtures','live','stats','pregame','form','lineup','referee','bet365odds'}
         if t not in VALID_TYPES:
             self._json(json.dumps({'error': 'invalid type'}).encode(), 400)
+            return
+
+        ok, status, payload = check_feature(self.headers, 'football')
+        if not ok:
+            self._json(json.dumps(payload).encode(), status)
             return
 
         # ── Bet365 Odds ────────────────────────────────────────────────────────

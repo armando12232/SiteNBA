@@ -10,6 +10,6 @@ export function getTelegramFootballIntel(fixture) {
   const cacheKey = `statcast:v1:telegram:intel:${home}:${away}`.toLowerCase();
 
   return cachedFetch(cacheKey, TELEGRAM_INTEL_TTL_MS, () => (
-    fetchJson(`/api/telegram?${qs}`, {}, 12000)
+    fetchJson(`/api/telegram?${qs}`, { auth: true }, 12000)
   ));
 }

@@ -7,11 +7,13 @@ sys.path.insert(0, API_DIR)
 sys.path.insert(0, ROOT_DIR)
 try:
     from _security import rate_limit_check, get_client_ip, sanitize_team_name, is_valid_id
+    from _plan_guard import check_feature
 except ImportError:
     def rate_limit_check(ip): return True
     def get_client_ip(h): return '0.0.0.0'
     def sanitize_team_name(s): return (s or '')[:60]
     def is_valid_id(s): return bool(s) and len(s) <= 40
+    def check_feature(headers, feature): return True, 200, {}
 
 try:
     from server.wnba_data import get_players as get_wnba_players, get_pregame as get_wnba_pregame, get_player_by_name as get_wnba_player_by_name
@@ -210,6 +212,11 @@ class handler(BaseHTTPRequestHandler):
             self._json(400, {'error': f'invalid league: {lg}'})
             return
 
+        ok, status, payload = check_feature(self.headers, 'sports')
+        if not ok:
+            self._json(status, payload)
+            return
+
         if lg == 'wnba' and t == 'players':
             if not get_wnba_players:
                 self._json(500, {'error': 'internal server error'})
@@ -255,7 +262,7 @@ class handler(BaseHTTPRequestHandler):
         origin = os.environ.get('SITE_URL', 'https://site-nba-ten.vercel.app')
         self.send_header('Access-Control-Allow-Origin',  origin)
         self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
     def _json(self, status, data):
         body = json.dumps(data).encode()

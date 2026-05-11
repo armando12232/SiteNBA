@@ -23,6 +23,7 @@ try:
         rate_limit_check, get_client_ip,
         is_valid_abbr, is_valid_id, is_valid_stat, is_valid_position,
     )
+    from _plan_guard import check_feature
 except ImportError:
     # Fallback caso módulo não esteja disponível
     def rate_limit_check(ip): return True
@@ -31,6 +32,7 @@ except ImportError:
     def is_valid_id(s): return bool(s) and len(s) <= 40
     def is_valid_stat(s): return s in ('pts','reb','ast','fg3m','stl','blk')
     def is_valid_position(s): return bool(s) and len(s) <= 5
+    def check_feature(headers, feature): return True, 200, {}
 
 cache = {}
 CACHE_TTL = 300
@@ -734,6 +736,9 @@ class handler(BaseHTTPRequestHandler):
                 self._send(200, {"games": get_live_games()})
 
             elif req_type == "boxscore":
+                ok, status, payload = check_feature(self.headers, "live")
+                if not ok:
+                    self._send(status, payload); return
                 game_id = params.get("gameId", [""])[0]
                 if not is_valid_id(game_id):
                     self._send(400, {"error": "invalid gameId"}); return
@@ -752,6 +757,9 @@ class handler(BaseHTTPRequestHandler):
                 self._send(200, get_pregame(int(player_id)))
 
             elif req_type == "debug_gamelog":
+                ok, status, payload = check_feature(self.headers, "modal")
+                if not ok:
+                    self._send(status, payload); return
                 player_id = params.get("playerId", [""])[0]
                 if not is_valid_id(player_id) or not player_id.isdigit():
                     self._send(400, {"error": "invalid playerId"}); return
@@ -765,6 +773,9 @@ class handler(BaseHTTPRequestHandler):
                 })
 
             elif req_type == "pregame_by_name":
+                ok, status, payload = check_feature(self.headers, "modal")
+                if not ok:
+                    self._send(status, payload); return
                 player_name = params.get("name", [""])[0].strip()
                 if not player_name or len(player_name) > 60:
                     self._send(400, {"error": "invalid name"}); return

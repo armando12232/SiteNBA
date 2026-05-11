@@ -6,9 +6,11 @@ SITE_URL = os.environ.get('SITE_URL', 'https://site-nba-ten.vercel.app').rstrip(
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 try:
     from _security import rate_limit_check, get_client_ip
+    from _plan_guard import check_feature
 except ImportError:
     def rate_limit_check(ip): return True
     def get_client_ip(h): return '0.0.0.0'
+    def check_feature(headers, feature): return True, 200, {}
 
 # ── Cache ──────────────────────────────────────────────────────────────────────
 _cache = {}
@@ -274,6 +276,10 @@ class handler(BaseHTTPRequestHandler):
         if not rate_limit_check(ip):
             self._send(429, {'error': 'rate limited'}); return
 
+        ok, status, payload = check_feature(self.headers, 'injuries')
+        if not ok:
+            self._send(status, payload); return
+
         try:
             data = get_all_injuries()
             self._send(200, data)
@@ -296,7 +302,7 @@ class handler(BaseHTTPRequestHandler):
     def _cors(self):
         self.send_header('Access-Control-Allow-Origin', SITE_URL)
         self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
     def log_message(self, f, *a):
         pass
