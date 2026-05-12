@@ -20,6 +20,7 @@ test('free plan keeps the most restrictive access profile', () => {
   assert.equal(access.live, false);
   assert.equal(access.injuries, false);
   assert.equal(access.football, false);
+  assert.equal(access.cs2, false);
   assert.equal(access.sports, false);
 });
 
@@ -29,6 +30,7 @@ test('basic unlocks modal but not live or extra sports', () => {
   assert.equal(access.modal, true);
   assert.equal(access.live, false);
   assert.equal(access.football, false);
+  assert.equal(access.cs2, false);
 });
 
 test('pro and premium unlock all gated modules', () => {
@@ -39,6 +41,7 @@ test('pro and premium unlock all gated modules', () => {
     assert.equal(access.live, true);
     assert.equal(access.injuries, true);
     assert.equal(access.football, true);
+    assert.equal(access.cs2, true);
     assert.equal(access.sports, true);
   }
 });

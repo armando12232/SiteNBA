@@ -164,12 +164,12 @@ function PricingModal({ currentPlan, hasSession, onNeedAuth, onClose }) {
         <button type="button" className="subClose" onClick={onClose}>x</button>
         <div className="subKicker">Assinaturas</div>
         <h3>Escolha seu plano</h3>
-        <p className="pricingLead">Free mostra uma amostra. Basic libera estudo NBA. Pro libera a operação completa. Premium adiciona leitura por confronto.</p>
+        <p className="pricingLead">Free mostra uma amostra. Basic libera estudo NBA. Pro libera NBA, futebol, CS2 e esportes extras. Premium adiciona leitura por confronto.</p>
         {error ? <div className="authMessage pricingError">{error}</div> : null}
         <div className="pricingCompare">
           <CompareItem title="Free" text="Preview limitado" />
           <CompareItem title="Basic" text="Modal + histórico" />
-          <CompareItem title="Pro" text="NBA + Futebol + Live" />
+          <CompareItem title="Pro" text="NBA + Futebol + CS2" />
           <CompareItem title="Premium" text="Melhores Props" hot />
         </div>
         <div className="pricingGrid">

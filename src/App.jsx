@@ -9,6 +9,7 @@ import { SportsPage } from './components/SportsPage.jsx';
 import { SubscriptionWidget } from './components/SubscriptionWidget.jsx';
 import { AdminPage } from './components/AdminPage.jsx';
 import { WnbaPage } from './components/WnbaPage.jsx';
+import { Cs2Page } from './components/Cs2Page.jsx';
 import { getPlanAccess } from './api/subscriptions.js';
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
 
   function canOpenPage(nextPage) {
     if (nextPage === 'football') return access.football;
+    if (nextPage === 'cs2') return access.cs2;
     if (['wnba', 'nfl', 'nhl', 'mlb'].includes(nextPage)) return access.sports;
     return true;
   }
@@ -78,7 +80,7 @@ export default function App() {
       </header>
       <main className={`main page-${page}`}>
         <nav className="page-nav main-nav">
-          {['home', 'nba', 'wnba', 'nfl', 'nhl', 'mlb', 'football'].map((item) => (
+          {['home', 'nba', 'wnba', 'football', 'cs2', 'nfl', 'nhl', 'mlb'].map((item) => (
             <button
               className={`page-nav-btn ${page === item ? 'active' : ''}`}
               key={item}
@@ -108,6 +110,7 @@ export default function App() {
         ) : null}
 
         {page === 'football' && access.football ? <FootballPage /> : null}
+        {page === 'cs2' && access.cs2 ? <Cs2Page /> : null}
         {page === 'wnba' && access.sports ? <WnbaPage onSelectPlayer={selectPlayer} /> : null}
         {['nfl', 'nhl', 'mlb'].includes(page) && access.sports ? <SportsPage league={page} /> : null}
         {lockedFeature && page !== 'nba' ? <PlanPaywall feature={lockedFeature} plan={account.subscription?.plan} /> : null}
@@ -160,6 +163,11 @@ function featureAccessDetails(feature) {
       description: 'Jogos do dia, odds, árbitro, estatísticas e leitura por score ficam disponíveis em plano superior.',
       plan: 'Libera no Pro+',
     },
+    cs2: {
+      title: 'CS2 bloqueado',
+      description: 'Radar de confrontos, mapas, forma recente e leitura premium de Counter-Strike faz parte do pacote multi-esportes.',
+      plan: 'Libera no Pro+',
+    },
     nfl: {
       title: 'NFL bloqueado',
       description: 'Placar e agenda de esportes extras fazem parte do pacote multi-esportes.',
@@ -197,6 +205,7 @@ function navLabel(page) {
     home: 'Home',
     nba: 'NBA',
     wnba: 'WNBA',
+    cs2: 'CS2',
     nfl: 'NFL',
     nhl: 'NHL',
     mlb: 'MLB',
@@ -207,6 +216,7 @@ function navLabel(page) {
 function navIcon(page) {
   return {
     wnba: '🏀',
+    cs2: '🎮',
     home: '🏠',
     nba: '🏀',
     nfl: '🏈',

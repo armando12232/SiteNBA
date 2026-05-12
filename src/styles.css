@@ -107,6 +107,25 @@ body {
   right: max(-130px, calc(50vw - 780px));
 }
 
+.field-bg-cs2 {
+  background:
+    linear-gradient(90deg, transparent 0 49.86%, rgba(77,216,255,.12) 49.9% 50.1%, transparent 50.14%),
+    linear-gradient(0deg, transparent 0 49.86%, rgba(77,216,255,.08) 49.9% 50.1%, transparent 50.14%),
+    radial-gradient(circle at 50% 50%, transparent 0 5.5%, rgba(77,216,255,.13) 5.8% 6.1%, transparent 6.4%),
+    radial-gradient(circle at 18% 24%, rgba(77,216,255,.12), transparent 24%),
+    radial-gradient(circle at 82% 76%, rgba(255,138,61,.10), transparent 26%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 1px, transparent 1px 24px);
+}
+
+.field-bg-cs2::before,
+.field-bg-cs2::after {
+  width: 170px;
+  height: 170px;
+  border: 2px solid rgba(77,216,255,.09);
+  border-radius: 18px;
+  transform: translateY(-50%) rotate(45deg);
+}
+
 body::after {
   content: "";
   position: fixed;
@@ -1153,7 +1172,7 @@ select {
 
 .quickActionGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
   gap: 8px;
 }
 
@@ -1268,6 +1287,10 @@ select {
 
 .module-football {
   --cardGlow: rgba(0,230,118,.13);
+}
+
+.module-cs2 {
+  --cardGlow: rgba(77,216,255,.14);
 }
 
 .module-wnba {
@@ -1972,6 +1995,432 @@ select {
 .sportsMeta em {
   color: var(--gold);
   font-style: normal;
+}
+
+.cs2Page {
+  display: grid;
+  gap: 14px;
+}
+
+.cs2Hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid rgba(77,216,255,.22);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 88% 14%, rgba(77,216,255,.14), transparent 30%),
+    radial-gradient(circle at 12% 80%, rgba(255,138,61,.10), transparent 30%),
+    var(--bg2);
+}
+
+.cs2Hero span,
+.cs2SectionTitle {
+  color: var(--cyan);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.cs2Hero strong {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--display);
+  font-size: clamp(34px, 6vw, 58px);
+  font-weight: 900;
+  line-height: .92;
+  text-transform: uppercase;
+}
+
+.cs2Hero em,
+.cs2Card p,
+.cs2ModalHero em,
+.cs2ModalScore p {
+  display: block;
+  color: var(--text2);
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.45;
+}
+
+.cs2HeroStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(86px, 1fr));
+  gap: 8px;
+  min-width: 310px;
+}
+
+.cs2Metric {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(0,0,0,.20);
+  text-align: center;
+}
+
+.cs2Metric span {
+  display: block;
+  color: var(--text3);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.cs2Metric strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--cyan);
+  font-family: var(--display);
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.cs2Metric.hot strong {
+  color: var(--green);
+}
+
+.cs2Filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cs2Filters button {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: var(--bg2);
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.cs2Filters button.active {
+  border-color: rgba(77,216,255,.35);
+  background: rgba(77,216,255,.10);
+  color: var(--cyan);
+}
+
+.cs2Grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cs2Card {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 90% 12%, rgba(77,216,255,.08), transparent 28%),
+    var(--bg2);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: transform .15s, border-color .15s, background .15s;
+}
+
+.cs2Card:hover {
+  border-color: rgba(77,216,255,.35);
+  transform: translateY(-2px);
+}
+
+.cs2Card.high {
+  border-color: rgba(0,230,118,.22);
+}
+
+.cs2CardTop,
+.cs2Odds,
+.cs2PickStrip,
+.cs2ModalScore,
+.cs2PickRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cs2CardTop span,
+.cs2CardTop em,
+.cs2Odds span,
+.cs2PickStrip span {
+  color: var(--text3);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.cs2CardTop span {
+  color: var(--cyan);
+}
+
+.cs2Matchup {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 74px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.cs2Team.right {
+  text-align: right;
+}
+
+.cs2Team span,
+.cs2Team em,
+.cs2TeamPanel span,
+.cs2TeamPanel em {
+  display: block;
+  color: var(--text3);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.cs2Team strong,
+.cs2TeamPanel strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cs2Vs {
+  border: 1px solid rgba(77,216,255,.25);
+  border-radius: 14px;
+  padding: 8px;
+  background: rgba(77,216,255,.08);
+  text-align: center;
+}
+
+.cs2Vs strong {
+  display: block;
+  color: var(--cyan);
+  font-family: var(--display);
+  font-size: 34px;
+  font-weight: 900;
+  line-height: .9;
+}
+
+.cs2Vs span {
+  color: var(--text3);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.cs2Odds {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 9px 10px;
+  background: rgba(0,0,0,.20);
+}
+
+.cs2Odds b,
+.cs2PickStrip b {
+  color: var(--gold);
+}
+
+.cs2PickStrip {
+  align-items: stretch;
+}
+
+.cs2PickStrip span {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(255,255,255,.025);
+}
+
+.cs2ModalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1005;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0,0,0,.84);
+  backdrop-filter: blur(10px);
+}
+
+.cs2Modal {
+  position: relative;
+  width: min(760px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--border2);
+  border-radius: 24px;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 88% 10%, rgba(77,216,255,.14), transparent 28%),
+    var(--bg2);
+  box-shadow: 0 30px 90px rgba(0,0,0,.55);
+}
+
+.cs2ModalHero {
+  padding-right: 36px;
+}
+
+.cs2ModalHero span {
+  color: var(--cyan);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.cs2ModalHero strong {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--display);
+  font-size: clamp(34px, 6vw, 56px);
+  font-weight: 900;
+  line-height: .95;
+  text-transform: uppercase;
+}
+
+.cs2ModalScore {
+  margin: 18px 0;
+  border: 1px solid rgba(77,216,255,.20);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(77,216,255,.06);
+}
+
+.cs2ModalScore span {
+  color: var(--cyan);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.cs2ModalScore strong {
+  display: grid;
+  place-items: center;
+  min-width: 82px;
+  height: 82px;
+  border: 1px solid rgba(77,216,255,.28);
+  border-radius: 18px;
+  color: var(--cyan);
+  font-family: var(--display);
+  font-size: 46px;
+  font-weight: 900;
+}
+
+.cs2TeamCompare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.cs2TeamPanel {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(0,0,0,.18);
+}
+
+.cs2Form,
+.cs2Maps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.cs2Form i,
+.cs2Maps b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  border-radius: 999px;
+  padding: 5px 8px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.cs2Form i.win {
+  border: 1px solid rgba(0,230,118,.25);
+  color: var(--green);
+  background: rgba(0,230,118,.09);
+}
+
+.cs2Form i.loss {
+  border: 1px solid rgba(255,23,68,.25);
+  color: var(--danger);
+  background: rgba(255,23,68,.09);
+}
+
+.cs2Maps b {
+  border: 1px solid rgba(77,216,255,.20);
+  color: var(--cyan);
+  background: rgba(77,216,255,.07);
+}
+
+.cs2SectionTitle {
+  margin-bottom: 8px;
+}
+
+.cs2PickList {
+  display: grid;
+  gap: 8px;
+}
+
+.cs2PickRow {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(0,0,0,.18);
+}
+
+.cs2PickRow span {
+  color: var(--text3);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.cs2PickRow strong {
+  flex: 1;
+  color: var(--text);
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.cs2PickRow em {
+  color: var(--gold);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.cs2PickRow b {
+  color: var(--green);
+  font-family: var(--display);
+  font-size: 22px;
 }
 
 .teamLine {
@@ -5565,8 +6014,44 @@ h2 {
   .footballTools,
   .footballHighlightRail,
   .footballLeagueSummary,
-  .ftReadSignals {
+  .ftReadSignals,
+  .cs2Hero,
+  .cs2Grid,
+  .cs2TeamCompare {
     grid-template-columns: 1fr;
+  }
+
+  .cs2Hero {
+    display: grid;
+  }
+
+  .cs2HeroStats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    min-width: 0;
+  }
+
+  .cs2Matchup {
+    grid-template-columns: minmax(0, 1fr) 58px minmax(0, 1fr);
+  }
+
+  .cs2Vs strong {
+    font-size: 28px;
+  }
+
+  .cs2ModalOverlay {
+    align-items: flex-end;
+    place-items: end center;
+    padding: 10px;
+  }
+
+  .cs2Modal {
+    max-height: 92vh;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .cs2ModalScore,
+  .cs2PickRow {
+    display: grid;
   }
 
   .footballStatusFilters {
