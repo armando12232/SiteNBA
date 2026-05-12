@@ -2090,6 +2090,13 @@ select {
   gap: 8px;
 }
 
+.cs2Toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .cs2Filters button {
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -2341,11 +2348,27 @@ select {
 }
 
 .cs2Form,
-.cs2Maps {
+.cs2Maps,
+.cs2StatRow {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 12px;
+}
+
+.cs2StatRow span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 8px;
+  background: rgba(0,0,0,.16);
+  color: var(--text3);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.cs2StatRow b {
+  color: var(--cyan);
 }
 
 .cs2Form i,
@@ -2380,7 +2403,59 @@ select {
 }
 
 .cs2SectionTitle {
-  margin-bottom: 8px;
+  margin: 16px 0 8px;
+}
+
+.cs2FactorGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cs2Factor {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(0,0,0,.18);
+}
+
+.cs2Factor span,
+.cs2Factor em {
+  display: block;
+  overflow: hidden;
+  color: var(--text3);
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cs2Factor strong {
+  display: block;
+  margin: 6px 0;
+  color: var(--text);
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.cs2Factor i {
+  display: block;
+  overflow: hidden;
+  height: 6px;
+  margin-bottom: 7px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+}
+
+.cs2Factor i b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--orange), var(--gold), var(--cyan));
 }
 
 .cs2PickList {
@@ -6050,8 +6125,14 @@ h2 {
   }
 
   .cs2ModalScore,
-  .cs2PickRow {
+  .cs2PickRow,
+  .cs2Toolbar,
+  .cs2FactorGrid {
     display: grid;
+  }
+
+  .cs2FactorGrid {
+    grid-template-columns: 1fr;
   }
 
   .footballStatusFilters {

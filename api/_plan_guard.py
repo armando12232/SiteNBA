@@ -21,6 +21,7 @@ FEATURE_MIN_PLAN = {
     "injuries": "pro",
     "football": "pro",
     "sports": "pro",
+    "cs2": "pro",
     "props_by_game": "premium",
 }
 _CACHE = {}

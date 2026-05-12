@@ -20,6 +20,11 @@ try:
 except ImportError:
     get_wnba_players = get_wnba_pregame = get_wnba_player_by_name = None
 
+try:
+    from server.cs2_data import get_cs2_scoreboard
+except ImportError:
+    get_cs2_scoreboard = None
+
 # ── ESPN Base ──────────────────────────────────────────────────────────────────
 ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports'
 
@@ -184,7 +189,7 @@ def get_news(league, limit=10):
     } for a in articles[:limit]]
 
 # ── Handler ───────────────────────────────────────────────────────────────────
-VALID_LEAGUES = {'nfl', 'nhl', 'mlb', 'nba', 'wnba'}
+VALID_LEAGUES = {'nfl', 'nhl', 'mlb', 'nba', 'wnba', 'cs2'}
 VALID_TYPES   = {'scoreboard', 'game', 'standings', 'news', 'players', 'pregame', 'pregame_by_name'}
 
 class handler(BaseHTTPRequestHandler):
@@ -212,12 +217,23 @@ class handler(BaseHTTPRequestHandler):
             self._json(400, {'error': f'invalid league: {lg}'})
             return
 
-        ok, status, payload = check_feature(self.headers, 'sports')
+        ok, status, payload = check_feature(self.headers, 'cs2' if lg == 'cs2' else 'sports')
         if not ok:
             self._json(status, payload)
             return
 
-        if lg == 'wnba' and t == 'players':
+        if lg == 'cs2' and t == 'scoreboard':
+            if not get_cs2_scoreboard:
+                self._json(500, {'error': 'internal server error'})
+                return
+            try:
+                limit = int(qs.get('limit', ['24'])[0] or 24)
+            except ValueError:
+                limit = 24
+            self._json(200, get_cs2_scoreboard(limit))
+        elif lg == 'cs2':
+            self._json(400, {'error': f'unsupported cs2 type: {t}'})
+        elif lg == 'wnba' and t == 'players':
             if not get_wnba_players:
                 self._json(500, {'error': 'internal server error'})
                 return

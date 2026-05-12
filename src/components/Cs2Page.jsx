@@ -1,79 +1,6 @@
-import { useMemo, useState } from 'react';
-
-const MATCHES = [
-  {
-    id: 'cs2-1',
-    league: 'IEM Dallas',
-    stage: 'Upper bracket',
-    start: 'Hoje 14:00',
-    status: 'high',
-    format: 'BO3',
-    teamA: { name: 'NAVI', rank: 3, form: 'WWLWW', maps: ['Mirage', 'Nuke', 'Ancient'] },
-    teamB: { name: 'Vitality', rank: 1, form: 'WLWWW', maps: ['Inferno', 'Dust2', 'Anubis'] },
-    odds: { a: 2.08, b: 1.74 },
-    score: 82,
-    read: 'Vitality chega com melhor map pool e rating recente, mas NAVI tem valor se abrir Mirage.',
-    picks: [
-      { market: 'Vencedor', side: 'Vitality', edge: '+6.4', confidence: 78 },
-      { market: 'Total mapas', side: 'Over 2.5', edge: '+3.1', confidence: 63 },
-      { market: 'Mapa 1 rounds', side: 'Over 20.5', edge: '+4.2', confidence: 70 },
-    ],
-  },
-  {
-    id: 'cs2-2',
-    league: 'ESL Pro League',
-    stage: 'Group stage',
-    start: 'Hoje 16:30',
-    status: 'watch',
-    format: 'BO3',
-    teamA: { name: 'FaZe', rank: 5, form: 'LWWLW', maps: ['Ancient', 'Mirage', 'Inferno'] },
-    teamB: { name: 'G2', rank: 6, form: 'WWLLW', maps: ['Nuke', 'Anubis', 'Dust2'] },
-    odds: { a: 1.91, b: 1.88 },
-    score: 68,
-    read: 'Confronto equilibrado. Melhor leitura está em mapa/rounds, não no vencedor seco.',
-    picks: [
-      { market: 'Mapa 1 rounds', side: 'Over 21.5', edge: '+5.0', confidence: 74 },
-      { market: 'Handicap', side: 'G2 +1.5', edge: '+2.7', confidence: 66 },
-      { market: 'Pistol rounds', side: 'FaZe', edge: '+1.9', confidence: 58 },
-    ],
-  },
-  {
-    id: 'cs2-3',
-    league: 'BLAST Premier',
-    stage: 'Play-in',
-    start: 'Amanhã 12:00',
-    status: 'low',
-    format: 'BO1',
-    teamA: { name: 'MOUZ', rank: 2, form: 'WWWWW', maps: ['Nuke', 'Mirage', 'Vertigo'] },
-    teamB: { name: 'Liquid', rank: 14, form: 'LWLLW', maps: ['Inferno', 'Ancient', 'Anubis'] },
-    odds: { a: 1.42, b: 2.86 },
-    score: 59,
-    read: 'Favoritismo forte do MOUZ, mas preço baixo reduz o valor. Melhor esperar mercado de rounds.',
-    picks: [
-      { market: 'Vencedor', side: 'MOUZ', edge: '+1.5', confidence: 60 },
-      { market: 'Handicap rounds', side: 'Liquid +4.5', edge: '+2.2', confidence: 57 },
-      { market: 'Total rounds', side: 'Under 21.5', edge: '+0.8', confidence: 52 },
-    ],
-  },
-  {
-    id: 'cs2-4',
-    league: 'CCT Global',
-    stage: 'Quarterfinal',
-    start: 'Amanhã 15:00',
-    status: 'high',
-    format: 'BO3',
-    teamA: { name: 'Aurora', rank: 18, form: 'WWWLW', maps: ['Anubis', 'Ancient', 'Dust2'] },
-    teamB: { name: 'BIG', rank: 24, form: 'LWLWW', maps: ['Nuke', 'Vertigo', 'Mirage'] },
-    odds: { a: 1.77, b: 2.02 },
-    score: 75,
-    read: 'Aurora tem sequência melhor e veto favorável. BIG depende muito do primeiro mapa.',
-    picks: [
-      { market: 'Vencedor', side: 'Aurora', edge: '+4.8', confidence: 73 },
-      { market: 'Mapa 1', side: 'Aurora', edge: '+3.6', confidence: 68 },
-      { market: 'Total mapas', side: 'Over 2.5', edge: '+2.5', confidence: 61 },
-    ],
-  },
-];
+import { useEffect, useMemo, useState } from 'react';
+import { getCs2Scoreboard } from '../api/cs2.js';
+import { userErrorMessage } from '../utils/errors.js';
 
 const FILTERS = [
   { key: 'all', label: 'Todos' },
@@ -85,8 +12,26 @@ const FILTERS = [
 export function Cs2Page() {
   const [filter, setFilter] = useState('all');
   const [selectedMatch, setSelectedMatch] = useState(null);
-  const matches = useMemo(() => filterMatches(MATCHES, filter), [filter]);
-  const top = MATCHES.slice().sort((a, b) => b.score - a.score)[0];
+  const [refresh, setRefresh] = useState(0);
+  const [state, setState] = useState({ loading: true, error: null, matches: [] });
+
+  useEffect(() => {
+    let alive = true;
+    setState((current) => ({ ...current, loading: true, error: null }));
+    getCs2Scoreboard()
+      .then((data) => {
+        if (alive) setState({ loading: false, error: null, matches: data.games || [] });
+      })
+      .catch((error) => {
+        if (alive) setState({ loading: false, error, matches: [] });
+      });
+    return () => {
+      alive = false;
+    };
+  }, [refresh]);
+
+  const matches = useMemo(() => filterMatches(state.matches, filter), [state.matches, filter]);
+  const top = useMemo(() => state.matches.slice().sort((a, b) => (b.score || 0) - (a.score || 0))[0], [state.matches]);
 
   return (
     <section className="cs2Page">
@@ -97,30 +42,53 @@ export function Cs2Page() {
           <em>Leitura de partidas, odds, forma recente e mercados por mapa.</em>
         </div>
         <div className="cs2HeroStats">
-          <Cs2Metric label="Jogos" value={MATCHES.length} />
-          <Cs2Metric label="Forte" value={MATCHES.filter((match) => match.status === 'high').length} hot />
+          <Cs2Metric label="Jogos" value={state.matches.length} />
+          <Cs2Metric label="Forte" value={state.matches.filter((match) => match.status === 'high').length} hot />
           <Cs2Metric label="Top SC" value={top?.score || '-'} />
         </div>
       </div>
 
-      <nav className="cs2Filters">
-        {FILTERS.map((item) => (
-          <button
-            className={filter === item.key ? 'active' : ''}
-            type="button"
-            key={item.key}
-            onClick={() => setFilter(item.key)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </nav>
-
-      <div className="cs2Grid">
-        {matches.map((match) => (
-          <Cs2MatchCard match={match} key={match.id} onOpen={() => setSelectedMatch(match)} />
-        ))}
+      <div className="cs2Toolbar">
+        <nav className="cs2Filters">
+          {FILTERS.map((item) => (
+            <button
+              className={filter === item.key ? 'active' : ''}
+              type="button"
+              key={item.key}
+              onClick={() => setFilter(item.key)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+        <button className="footballRefresh" type="button" onClick={() => setRefresh((value) => value + 1)}>
+          Atualizar
+        </button>
       </div>
+
+      {state.error ? (
+        <div className="alertBox actionAlert">
+          <strong>Não foi possível carregar CS2 agora.</strong>
+          <span>{userErrorMessage(state.error, 'Não foi possível carregar CS2 agora.')}</span>
+          <button type="button" onClick={() => setRefresh((value) => value + 1)}>Tentar novamente</button>
+        </div>
+      ) : null}
+
+      {state.loading ? <div className="state-box compact">Buscando confrontos CS2...</div> : null}
+
+      {!state.loading ? (
+        <div className="cs2Grid">
+          {matches.map((match) => (
+            <Cs2MatchCard match={match} key={match.id} onOpen={() => setSelectedMatch(match)} />
+          ))}
+          {!matches.length ? (
+            <div className="emptyState richEmptyState">
+              <strong>Nenhum confronto encontrado</strong>
+              <span>Troque o filtro ou atualize para buscar a próxima janela de partidas.</span>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {selectedMatch ? <Cs2MatchModal match={selectedMatch} onClose={() => setSelectedMatch(null)} /> : null}
     </section>
@@ -132,23 +100,23 @@ function Cs2MatchCard({ match, onOpen }) {
     <button type="button" className={`cs2Card ${match.status}`} onClick={onOpen}>
       <div className="cs2CardTop">
         <span>{match.league}</span>
-        <em>{match.format} · {match.start}</em>
+        <em>{match.format} · {formatStart(match.start)}</em>
       </div>
       <div className="cs2Matchup">
         <Cs2Team team={match.teamA} />
         <div className="cs2Vs">
-          <strong>{match.score}</strong>
+          <strong>{match.score ?? '-'}</strong>
           <span>SC</span>
         </div>
         <Cs2Team team={match.teamB} align="right" />
       </div>
       <div className="cs2Odds">
-        <span>{match.teamA.name} <b>{match.odds.a}</b></span>
-        <span>{match.teamB.name} <b>{match.odds.b}</b></span>
+        <span>{match.teamA?.name || '-'} <b>{formatOdd(match.odds?.a)}</b></span>
+        <span>{match.teamB?.name || '-'} <b>{formatOdd(match.odds?.b)}</b></span>
       </div>
       <p>{match.read}</p>
       <div className="cs2PickStrip">
-        {match.picks.slice(0, 2).map((pick) => (
+        {(match.picks || []).slice(0, 2).map((pick) => (
           <span key={`${match.id}-${pick.market}`}>{pick.market}: <b>{pick.side}</b></span>
         ))}
       </div>
@@ -163,8 +131,8 @@ function Cs2MatchModal({ match, onClose }) {
         <button type="button" className="pp-modal-close" onClick={onClose}>x</button>
         <div className="cs2ModalHero">
           <span>{match.league} · {match.stage}</span>
-          <strong>{match.teamA.name} x {match.teamB.name}</strong>
-          <em>{match.format} · {match.start}</em>
+          <strong>{match.teamA?.name || '-'} x {match.teamB?.name || '-'}</strong>
+          <em>{match.format} · {formatStart(match.start)}</em>
         </div>
 
         <div className="cs2ModalScore">
@@ -172,17 +140,29 @@ function Cs2MatchModal({ match, onClose }) {
             <span>Leitura StatCast</span>
             <p>{match.read}</p>
           </div>
-          <strong>{match.score}</strong>
+          <strong>{match.score ?? '-'}</strong>
         </div>
 
         <div className="cs2TeamCompare">
-          <Cs2TeamPanel team={match.teamA} odds={match.odds.a} />
-          <Cs2TeamPanel team={match.teamB} odds={match.odds.b} />
+          <Cs2TeamPanel team={match.teamA} odds={match.odds?.a} />
+          <Cs2TeamPanel team={match.teamB} odds={match.odds?.b} />
+        </div>
+
+        <div className="cs2SectionTitle">Fatores do score</div>
+        <div className="cs2FactorGrid">
+          {(match.factors || []).map((factor) => (
+            <div className="cs2Factor" key={factor.label}>
+              <span>{factor.label}</span>
+              <strong>{factor.value}</strong>
+              <i><b style={{ width: `${factor.value}%` }} /></i>
+              <em>{factor.note}</em>
+            </div>
+          ))}
         </div>
 
         <div className="cs2SectionTitle">Mercados monitorados</div>
         <div className="cs2PickList">
-          {match.picks.map((pick) => (
+          {(match.picks || []).map((pick) => (
             <div className="cs2PickRow" key={`${match.id}-${pick.market}`}>
               <span>{pick.market}</span>
               <strong>{pick.side}</strong>
@@ -196,32 +176,37 @@ function Cs2MatchModal({ match, onClose }) {
   );
 }
 
-function Cs2TeamPanel({ team, odds }) {
+function Cs2TeamPanel({ team = {}, odds }) {
   return (
     <div className="cs2TeamPanel">
       <div>
-        <span>#{team.rank}</span>
-        <strong>{team.name}</strong>
-        <em>Odd {odds}</em>
+        <span>#{team.rank || '-'}</span>
+        <strong>{team.name || '-'}</strong>
+        <em>Odd {formatOdd(odds)}</em>
+      </div>
+      <div className="cs2StatRow">
+        <span>Rating <b>{formatStat(team.stats?.rating)}</b></span>
+        <span>ADR <b>{formatStat(team.stats?.adr)}</b></span>
+        <span>KAST <b>{formatPercent(team.stats?.kast)}</b></span>
       </div>
       <div className="cs2Form">
-        {team.form.split('').map((letter, index) => (
+        {String(team.form || '').split('').map((letter, index) => (
           <i className={letter === 'W' ? 'win' : 'loss'} key={`${team.name}-${index}`}>{letter}</i>
         ))}
       </div>
       <div className="cs2Maps">
-        {team.maps.map((map) => <b key={map}>{map}</b>)}
+        {(team.maps || []).map((map) => <b key={mapKey(map)}>{mapLabel(map)}</b>)}
       </div>
     </div>
   );
 }
 
-function Cs2Team({ team, align = 'left' }) {
+function Cs2Team({ team = {}, align = 'left' }) {
   return (
     <div className={`cs2Team ${align}`}>
-      <span>#{team.rank}</span>
-      <strong>{team.name}</strong>
-      <em>{team.form}</em>
+      <span>#{team.rank || '-'}</span>
+      <strong>{team.name || '-'}</strong>
+      <em>{team.form || '-'}</em>
     </div>
   );
 }
@@ -237,6 +222,35 @@ function Cs2Metric({ label, value, hot = false }) {
 
 function filterMatches(matches, filter) {
   if (filter === 'all') return matches;
-  if (filter === 'today') return matches.filter((match) => match.start.toLowerCase().includes('hoje'));
+  if (filter === 'today') return matches.filter((match) => String(match.start || '').toLowerCase().includes('hoje'));
   return matches.filter((match) => match.status === filter);
+}
+
+function mapKey(map) {
+  return typeof map === 'string' ? map : `${map.name}-${map.winRate || map.win_rate || ''}`;
+}
+
+function mapLabel(map) {
+  if (typeof map === 'string') return map;
+  const winRate = map.winRate ?? map.win_rate;
+  return winRate != null ? `${map.name} ${winRate}%` : map.name;
+}
+
+function formatStart(value) {
+  return String(value || 'Agendado').replace('Amanha', 'Amanhã');
+}
+
+function formatOdd(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toFixed(2) : '-';
+}
+
+function formatStat(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toFixed(number < 10 ? 2 : 1) : '-';
+}
+
+function formatPercent(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? `${Math.round(number)}%` : '-';
 }
