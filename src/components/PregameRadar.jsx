@@ -282,7 +282,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
               />
             ))}
             {previewRows.map((row) => (
-              <LockedPreviewRow key={row.id} row={row} activeStat={activeStat} />
+              <LockedPreviewRow key={row.id} row={row} />
             ))}
           </div>
         ) : (
@@ -685,36 +685,36 @@ function GamePropsModal({ activeStat, group, onClose, onSelectPlayer }) {
   );
 }
 
-function LockedPreviewRow({ row, activeStat }) {
+function LockedPreviewRow({ row }) {
   return (
-    <button type="button" className="props-table-row locked-preview-row" onClick={openPricingModal}>
+    <button type="button" aria-label="Conteúdo bloqueado. Ver planos." className="props-table-row locked-preview-row" onClick={openPricingModal}>
       <div className="props-player-cell">
         <div className="locked-preview-avatar" />
         <div className="props-player-meta">
-          <div className="props-player-name">{row.name}</div>
-          <div className="props-player-sub">{row.team} / {statLabels[activeStat]} / <span>O {row.line}</span></div>
+          <div className="props-player-name">Conteúdo do plano</div>
+          <div className="props-player-sub">Dados liberados após assinatura</div>
         </div>
       </div>
-      <LockedPreviewCell value={row.h2h} tone="mid" />
-      <LockedPreviewCell value={row.l5} tone={row.l5 >= 70 ? 'high' : row.l5 >= 50 ? 'mid' : 'low'} />
-      <LockedPreviewCell value={row.l10} tone={row.l10 >= 70 ? 'high' : row.l10 >= 50 ? 'mid' : 'low'} />
+      <LockedPreviewCell />
+      <LockedPreviewCell />
+      <LockedPreviewCell />
       <div className="hide-mobile">
-        <LockedPreviewCell value={row.season} tone={row.season >= 70 ? 'high' : row.season >= 50 ? 'mid' : 'low'} />
+        <LockedPreviewCell />
       </div>
       <div className="projection-cell">
-        <strong className="statcast-score strong">{row.score}</strong>
-        <small>Proj {row.proj}</small>
+        <strong className="statcast-score">-</strong>
+        <small>Bloqueado</small>
       </div>
       <div className="line-cell">
-        <strong>O {row.line}</strong>
-        <small>{row.edge > 0 ? '+' : ''}{row.edge} edge</small>
+        <strong>-</strong>
+        <small>Bloqueado</small>
       </div>
     </button>
   );
 }
 
-function LockedPreviewCell({ value, tone }) {
-  return <div className={`hit-rate-cell ${tone}`}>{value}%</div>;
+function LockedPreviewCell() {
+  return <div className="hit-rate-cell none">-</div>;
 }
 
 function PregameRow({ player, activeStat, onSelectPlayer }) {
@@ -836,24 +836,7 @@ function normalizeGameLabel(gameLabel) {
 }
 
 function buildLockedPreviewRows(count) {
-  const names = ['Premium Guard', 'Sharp Wing', 'Elite Center', 'Hot Shooter', 'Value Forward', 'Late Steam', 'Court Edge', 'Model Pick'];
-  const teams = ['BOS', 'LAL', 'NYK', 'OKC', 'DEN', 'MIN', 'DAL', 'PHX'];
-  return Array.from({ length: count }, (_, index) => {
-    const seed = index + 1;
-    return {
-      id: `locked-${seed}`,
-      name: names[index % names.length],
-      team: teams[index % teams.length],
-      line: `${[8.5, 10.5, 12.5, 15.5, 18.5, 20.5][index % 6]}`,
-      h2h: [60, 67, 72, 50, 80, 58][index % 6],
-      l5: [80, 60, 75, 40, 85, 70][index % 6],
-      l10: [70, 55, 80, 50, 65, 90][index % 6],
-      season: [81, 62, 74, 58, 93, 68][index % 6],
-      score: [78, 71, 86, 64, 82, 69][index % 6],
-      proj: [11.2, 14.8, 19.4, 22.1, 9.7, 16.6][index % 6],
-      edge: [1.4, -0.3, 2.1, 0.8, 1.9, -0.6][index % 6],
-    };
-  });
+  return Array.from({ length: count }, (_, index) => ({ id: `locked-${index + 1}` }));
 }
 
 function playerPhotoUrl(player) {
