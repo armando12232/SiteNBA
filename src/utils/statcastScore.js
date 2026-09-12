@@ -1,4 +1,4 @@
-export function buildPregameScore({ player, stat, prop, line, games = [] }) {
+export function buildPregameScore({ player, stat, prop, line, games = [], marketLine = true }) {
   const recentGames = Array.isArray(games) ? games : [];
   const numericLine = numberOrNull(line);
   const projection = numberOrNull(prop?.projection ?? player?.last5_avg?.[stat] ?? player?.season_avg?.[stat]);
@@ -26,7 +26,7 @@ export function buildPregameScore({ player, stat, prop, line, games = [] }) {
     },
     {
       id: 'edge',
-      label: 'Edge da linha',
+      label: marketLine ? 'Edge da linha' : 'Diferença da referência',
       value: scoreEdge(edge),
       note: edge != null ? `${edge > 0 ? '+' : ''}${edge}` : 'sem edge',
       weight: 0.22,
@@ -58,10 +58,15 @@ export function buildPregameScore({ player, stat, prop, line, games = [] }) {
     score,
     side,
     tier: scoreTier(score, side),
-    label: hasEvidence ? scoreLabel(score, side) : 'Sem dados suficientes',
+    label: hasEvidence ? (marketLine ? scoreLabel(score, side) : historicalScoreLabel(score, side)) : 'Sem dados suficientes',
     factors,
-    summary: hasEvidence ? pregameSummary(score, side, edge, l5Hit, l10Hit, projection, numericLine) : 'Linha ou histórico indisponível para esta estatística.',
+    summary: hasEvidence
+      ? (marketLine
+        ? pregameSummary(score, side, edge, l5Hit, l10Hit, projection, numericLine)
+        : historicalSummary(score, side, l5Hit, l10Hit, projection, numericLine))
+      : 'Referência ou histórico indisponível para esta estatística.',
     seasonAvg,
+    marketLine,
   };
 }
 
@@ -145,6 +150,14 @@ function scoreLabel(score, side) {
   return 'Fraco';
 }
 
+function historicalScoreLabel(score, side) {
+  if (side === 'NEUTRO') return 'Tendência equilibrada';
+  const direction = side === 'UNDER' ? 'abaixo' : 'acima';
+  if (score >= 78) return `Tendência forte ${direction}`;
+  if (score >= 64) return `Tendência ${direction}`;
+  return `Referência ${direction}`;
+}
+
 function pregameSummary(score, side, edge, l5Hit, l10Hit, projection, line) {
   const parts = [];
   parts.push(`${side} com StatCast Score ${score}.`);
@@ -152,6 +165,15 @@ function pregameSummary(score, side, edge, l5Hit, l10Hit, projection, line) {
   if (l5Hit != null) parts.push(`L5 bateu ${l5Hit}%.`);
   if (l10Hit != null) parts.push(`L10 bateu ${l10Hit}%.`);
   if (projection != null && Number.isFinite(line)) parts.push(`Projeção ${projection.toFixed(1)} contra linha ${line}.`);
+  return parts.join(' ');
+}
+
+function historicalSummary(score, side, l5Hit, l10Hit, projection, reference) {
+  const parts = [`Índice histórico ${score}.`];
+  if (side !== 'NEUTRO') parts.push(`Tendência ${side === 'OVER' ? 'acima' : 'abaixo'} da referência.`);
+  if (l5Hit != null) parts.push(`L5 ficou acima em ${l5Hit}%.`);
+  if (l10Hit != null) parts.push(`L10 ficou acima em ${l10Hit}%.`);
+  if (projection != null && Number.isFinite(reference)) parts.push(`Projeção ${projection.toFixed(1)} contra referência ${reference}.`);
   return parts.join(' ');
 }
 
@@ -207,3 +229,4 @@ function numberOrNull(value) {
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
+

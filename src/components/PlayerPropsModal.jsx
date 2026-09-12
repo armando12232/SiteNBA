@@ -92,6 +92,7 @@ export function PlayerPropsModal({ playerName, onClose }) {
   const photoUrl = playerPhotoUrl(data);
   const hitRate = best?.hit_rate;
   const lineNumber = numberOrNull(line);
+  const marketLine = best?.source === 'BettingPros';
   const averages = buildModalAverages(data, stat, games, best);
   const chartLinePct = Number.isFinite(lineNumber)
     ? Math.min(95, Math.max(5, (lineNumber / chartMax) * 100))
@@ -106,7 +107,7 @@ export function PlayerPropsModal({ playerName, onClose }) {
   const seasonHit = activeProp?.hit_rate ?? hitPercent(games, stat, lineNumber, games.length);
   const currentStreak = streakOver(games, stat, lineNumber);
   const score = data && best && !state.loading && !state.error
-    ? buildPregameScore({ player: data, stat, prop: best, line, games })
+    ? buildPregameScore({ player: data, stat, prop: best, line, games, marketLine })
     : null;
 
   return (
@@ -119,14 +120,14 @@ export function PlayerPropsModal({ playerName, onClose }) {
             <div className="pp-player-meta">
               <div id={titleId} className="pp-player-name">{displayName}</div>
               <div className="pp-player-team">
-                {state.loading ? 'Carregando histórico...' : `${teamAbbr || '-'} / ${statLabels[stat]} / Linha ${line ?? '-'}`}
+                {state.loading ? 'Carregando histórico...' : `${teamAbbr || '-'} / ${statLabels[stat]} / ${marketLine ? 'Linha' : 'Referência'} ${line ?? '-'}`}
               </div>
               {!state.loading && !state.error && sampleLabel(data) ? (
                 <div className="pp-player-sample">{sampleLabel(data)}</div>
               ) : null}
               {score ? (
                 <div className={`pp-rec-badge ${score.side === 'UNDER' ? 'under' : 'over'}`}>
-                  {score.side === 'NEUTRO' ? 'Leitura neutra' : `${score.side} recomendado`}
+                  {marketLine ? (score.side === 'NEUTRO' ? 'Leitura neutra' : `${score.side} recomendado`) : score.label}
                 </div>
               ) : null}
             </div>
@@ -157,7 +158,7 @@ export function PlayerPropsModal({ playerName, onClose }) {
                 <ModalMetric label={averages.seasonLabel} value={averages.seasonValue} />
                 <ModalMetric label="L5" value={averages.l5Value} />
                 <ModalMetric label="L10" value={averages.l10Value} />
-                <ModalMetric label="Linha" value={line ?? '-'} />
+                <ModalMetric label={marketLine ? 'Linha' : 'Referência'} value={line ?? '-'} />
                 <ModalMetric label="Hit" value={formatPercent(hitRate ?? seasonHit)} />
                 <ModalMetric label="SC" value={score?.score ?? '-'} hot />
               </div>
@@ -166,7 +167,7 @@ export function PlayerPropsModal({ playerName, onClose }) {
                 <ScoreDiagnostic score={score} />
               ) : null}
 
-              <div className="pp-section-title">Acertos OVER na linha atual</div>
+              <div className="pp-section-title">{marketLine ? 'Acertos OVER na linha atual' : 'Jogos acima da referência histórica'}</div>
               <div className="performance-strip">
                 <MetricInline label={best?.source === 'BettingPros' ? 'Temp' : 'Amostra'} value={seasonHit} />
                 <MetricInline label="H2H" value={metricHits.h2h} />
@@ -188,7 +189,7 @@ export function PlayerPropsModal({ playerName, onClose }) {
                     className="chart-line"
                     style={{ bottom: `${chartLinePct}%`, display: Number.isFinite(lineNumber) ? undefined : 'none' }}
                   >
-                    <span>Linha {line ?? '-'}</span>
+                    <span>{marketLine ? 'Linha' : 'Ref.'} {line ?? '-'}</span>
                   </div>
                   <div className="chart-bars">
                     {chartGames.map((game) => {
@@ -207,7 +208,7 @@ export function PlayerPropsModal({ playerName, onClose }) {
                   </div>
                   <div className="chart-footer">
                     <span>Mais antigo → mais recente</span>
-                    <span>{currentStreak ? `Streak: ${currentStreak}x OVER` : 'Streak: -'}</span>
+                    <span>{currentStreak ? `${marketLine ? 'Streak OVER' : 'Sequência acima'}: ${currentStreak}x` : 'Sequência: -'}</span>
                   </div>
                 </div>
               ) : <div className="state-box compact">Histórico de jogos indisponível para este jogador.</div>}
@@ -276,7 +277,7 @@ function ScoreDiagnostic({ score }) {
     <section className={`score-diagnostic ${score.tier}`}>
       <div className="score-diagnostic-head">
         <div>
-          <div className="pp-section-title compact">StatCast Score</div>
+          <div className="pp-section-title compact">{score.marketLine ? 'StatCast Score' : 'Índice histórico'}</div>
           <p>{score.summary}</p>
         </div>
         <strong>{score.score}</strong>
@@ -402,3 +403,4 @@ function sampleLabel(player) {
   if (!seasons.length) return '';
   return player?.using_previous_season ? `Amostra ${seasons.join(' + ')}` : `Temporada ${seasons[0]}`;
 }
+

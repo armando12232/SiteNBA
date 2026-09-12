@@ -107,3 +107,20 @@ test('integer line equality is a push, not an OVER hit', () => {
   const result = buildPregameScore({ stat: 'reb', line: 5, prop: {}, player: {}, games: Array.from({ length: 20 }, (_, i) => ({ reb: i % 2 ? 5 : 6 })) });
   assert.equal(result.factors.find((factor) => factor.id === 'hit').note, 'L20 50%');
 });
+
+test('historical reference never presents a betting recommendation', () => {
+  const result = buildPregameScore({
+    stat: 'pts',
+    line: 20.5,
+    marketLine: false,
+    prop: { edge: 2.5, projection: 23, l5: 80, l10: 70 },
+    player: {},
+    games: [],
+  });
+
+  assert.equal(result.marketLine, false);
+  assert.match(result.label, /Tendência|Referência/);
+  assert.match(result.summary, /referência/i);
+  assert.doesNotMatch(`${result.label} ${result.summary}`, /recomendado|linha/i);
+});
+

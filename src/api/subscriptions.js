@@ -7,7 +7,7 @@ export const PLANS = {
     price: 0,
     label: 'R$0',
     summary: 'Para testar o radar antes de assinar.',
-    features: ['5 props reais', 'Preview embaçado da lista', 'Sem modal detalhado'],
+    features: ['5 análises visíveis', 'Preview embaçado da lista', 'Sem modal detalhado'],
   },
   basic: {
     name: 'Basic',
@@ -156,6 +156,17 @@ export async function signUp(email, password) {
   return supabase.auth.signUp({ email, password });
 }
 
+export async function requestPasswordReset(email) {
+  if (!SUPABASE_CONFIGURED) return authConfigError();
+  const redirectTo = typeof window === 'undefined' ? undefined : `${window.location.origin}/`;
+  return supabase.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
+}
+
+export async function updatePassword(password) {
+  if (!SUPABASE_CONFIGURED) return authConfigError();
+  return supabase.auth.updateUser({ password });
+}
+
 export async function signOut() {
   if (!SUPABASE_CONFIGURED) return { error: null };
   return supabase.auth.signOut({ scope: 'local' });
@@ -192,3 +203,4 @@ export function freeSubscription() {
 function authConfigError() {
   return { data: null, error: new Error(SUPABASE_CONFIG_ERROR) };
 }
+

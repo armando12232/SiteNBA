@@ -491,6 +491,13 @@ select {
   font-weight: 900;
 }
 
+.authLinks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 14px;
+}
+
 .pricingGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -6183,3 +6190,4 @@ h2 {
     grid-template-columns: 1fr;
   }
 }
+

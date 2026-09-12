@@ -224,7 +224,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
           className={`view-mode-btn premium ${viewMode === 'games' ? 'active' : ''}`}
           onClick={() => setViewMode('games')}
         >
-          Melhores Props <small>{propsDayLabel}</small><span>Premium</span>
+          {bpCount ? 'Melhores Props' : 'Props por confronto'} {bpCount ? <small>{propsDayLabel}</small> : null}<span>Premium</span>
         </button>
       </div>
 
@@ -248,6 +248,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
             activeStat={activeStat}
             dayLabel={propsDayLabel}
             groups={gameGroups}
+            hasMarket={bpCount > 0}
             loading={state.loading}
             onSelectPlayer={onSelectPlayer}
           />
@@ -261,7 +262,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
           <div className="props-table-wrap">
             <div className="props-table-game-header">
               <span>{bpCount ? 'Agenda de props' : 'Histórico recente'}</span>
-              <span>{state.loading ? `carregando ${state.loadedCount}/${PREGAME_PLAYERS.length}` : `${visiblePlayers.length} jogadores`} {bpCount ? '/ linhas reais' : '/ linhas estimadas'}</span>
+              <span>{state.loading ? `carregando ${state.loadedCount}/${PREGAME_PLAYERS.length}` : `${visiblePlayers.length} jogadores`} {bpCount ? '/ linhas atuais' : '/ referências históricas'}</span>
             </div>
             <div className="props-table-header">
               <div>Jogador</div>
@@ -270,7 +271,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
               <div style={{ textAlign: 'center' }}>L10</div>
               <div className="hide-mobile" style={{ textAlign: 'center' }}>{bpCount ? 'Temp' : 'Amostra'}</div>
               <div style={{ textAlign: 'center' }}>SC</div>
-              <div style={{ textAlign: 'right' }}>Linha</div>
+              <div style={{ textAlign: 'right' }}>{bpCount ? 'Linha' : 'Referência'}</div>
             </div>
             {visiblePlayers.map((player) => (
               <PregameRow
@@ -354,7 +355,7 @@ function StatCastBoard({ activeStat, scoreFilter, summary, onExplain, onFilter, 
           <div className="statcast-board-label">StatCast Board</div>
           <div className="statcast-board-pick">
             <strong>{top?.player.player_name || '-'}</strong>
-            <span>{statLabels[top?.stat || activeStat]} / Linha {top?.line ?? '-'} / {top?.score.side || '-'}</span>
+            <span>{statLabels[top?.stat || activeStat]} / {top?.score.marketLine ? 'Linha' : 'Ref.'} {top?.line ?? '-'} / {top?.score.label || '-'}</span>
           </div>
         </div>
         <div className="statcast-board-metrics">
@@ -397,7 +398,7 @@ function StatCastBoard({ activeStat, scoreFilter, summary, onExplain, onFilter, 
             >
               <b>{entry.score.score}</b>
               <span>{entry.player.player_name}</span>
-              <em>{statLabels[entry.stat]} O {entry.line ?? '-'}</em>
+              <em>{statLabels[entry.stat]} {entry.score.marketLine ? 'O' : 'Ref.'} {entry.line ?? '-'}</em>
             </button>
           ))}
         </div>
@@ -489,14 +490,18 @@ function InfoFactor({ weight, title, text }) {
   );
 }
 
-function PropsByGameView({ activeStat, dayLabel, groups, loading, onSelectPlayer }) {
+function PropsByGameView({ activeStat, dayLabel, groups, hasMarket, loading, onSelectPlayer }) {
   const [selectedGame, setSelectedGame] = useState(null);
   const selectedGroup = groups.find((group) => group.key === selectedGame);
 
   if (!groups.length) {
     return (
       <div className="state-box compact">
-        {loading ? 'Montando melhores props...' : 'Nenhum jogo identificado para as melhores props de hoje.'}
+        {loading
+          ? 'Montando a leitura por confronto...'
+          : hasMarket
+            ? 'Nenhum confronto identificado para as props atuais.'
+            : 'Nenhuma linha atual por confronto disponível. Use a lista geral para consultar o histórico recente.'}
       </div>
     );
   }
@@ -721,12 +726,14 @@ function PregameRow({ player, activeStat, onSelectPlayer }) {
   const edge = best?.edge;
   const teamAbbr = player.team_abbr || inferTeamFromGames(player.last5_games || []);
   const odds = best?.odds;
+  const marketLine = best?.source === 'BettingPros';
   const score = best ? buildPregameScore({
     player,
     stat,
     prop: best,
     line,
     games: player.last5_games || [],
+    marketLine,
   }) : null;
 
   return (
@@ -741,8 +748,8 @@ function PregameRow({ player, activeStat, onSelectPlayer }) {
         <div className="props-player-meta">
           <div className="props-player-name">{player.player_name}</div>
           <div className="props-player-sub">
-            {teamAbbr ? `${teamAbbr} / ` : ''}{statLabels[stat]} / <span>O {line ?? '-'}</span>
-            {edge != null ? <em className={edge >= 0 ? 'edge-up' : 'edge-down'}>{edge >= 0 ? ' up' : ' down'}</em> : null}
+            {teamAbbr ? `${teamAbbr} / ` : ''}{statLabels[stat]} / <span>{marketLine ? 'O' : 'Ref.'} {line ?? '-'}</span>
+            {edge != null ? <em className={edge >= 0 ? 'edge-up' : 'edge-down'}>{marketLine ? (edge >= 0 ? ' up' : ' down') : (edge >= 0 ? ' acima' : ' abaixo')}</em> : null}
           </div>
         </div>
       </div>
@@ -757,8 +764,8 @@ function PregameRow({ player, activeStat, onSelectPlayer }) {
         <small>{projection != null ? `Proj ${Number(projection).toFixed(1)}` : score?.label || 'Sem linha disponível'}</small>
       </div>
       <div className="line-cell">
-        <strong>O {line ?? '-'}</strong>
-        <small>{odds ? `${odds} odds` : best?.hit_rate != null ? `${best.hit_rate}% hit` : 'Linha principal'}</small>
+        <strong>{marketLine ? 'O' : 'Ref.'} {line ?? '-'}</strong>
+        <small>{marketLine ? (odds ? `${odds} odds` : best?.hit_rate != null ? `${best.hit_rate}% hit` : 'Linha atual') : 'Referência histórica'}</small>
       </div>
     </div>
   );
@@ -786,7 +793,7 @@ function pregameSortScore(player, stat) {
   const prop = propForStat(player, stat);
   if (!prop) return -1;
   const line = prop.line;
-  return buildPregameScore({ player, stat, prop, line, games: player.last5_games || [] }).score;
+  return buildPregameScore({ player, stat, prop, line, games: player.last5_games || [], marketLine: prop.source === 'BettingPros' }).score;
 }
 
 function buildGameGroups(players, activeStat) {
@@ -911,6 +918,7 @@ function scoreEntry(player, activeStat) {
     prop: best,
     line,
     games: player.last5_games || [],
+    marketLine: best.source === 'BettingPros',
   });
   return { player, stat, line, score, prop: best };
 }
@@ -1025,3 +1033,4 @@ function HitCell({ value }) {
   const cls = n >= 70 ? 'high' : n >= 50 ? 'mid' : 'low';
   return <div className={`hit-rate-cell ${cls}`}>{n}%</div>;
 }
+

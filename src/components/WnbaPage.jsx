@@ -105,8 +105,8 @@ export function WnbaPage({ onSelectPlayer }) {
           <strong>{topEntry?.player?.player_name || 'Jogadoras em destaque'}</strong>
           <em>
             {topEntry
-              ? `${statLabels[topEntry.stat]} / Linha ${topEntry.line ?? '-'} / SC ${topEntry.score.score} / ${sampleLabel(topEntry.player)}`
-              : 'L5, L10, linha e últimos jogos'}
+              ? `${statLabels[topEntry.stat]} / Ref. ${topEntry.line ?? '-'} / SC ${topEntry.score.score} / ${sampleLabel(topEntry.player)}`
+              : 'L5, L10, referência e últimos jogos'}
           </em>
         </div>
         <button
@@ -186,7 +186,7 @@ export function WnbaPage({ onSelectPlayer }) {
               <div style={{ textAlign: 'center' }}>L10</div>
               <div className="hide-mobile" style={{ textAlign: 'center' }}>Amostra</div>
               <div style={{ textAlign: 'center' }}>SC</div>
-              <div style={{ textAlign: 'right' }}>Linha</div>
+              <div style={{ textAlign: 'right' }}>Referência</div>
             </div>
             {filteredPlayers.map((player) => (
               <WnbaRow
@@ -257,8 +257,8 @@ function WnbaRow({ player, activeStat, onSelectPlayer }) {
         <div className="props-player-meta">
           <div className="props-player-name">{player.player_name}</div>
           <div className="props-player-sub">
-            {player.team_abbr || '-'} / {statLabels[stat]} / <span>O {line}</span>
-            {prop.edge != null ? <em className={prop.edge >= 0 ? 'edge-up' : 'edge-down'}>{prop.edge >= 0 ? ' up' : ' down'}</em> : null}
+            {player.team_abbr || '-'} / {statLabels[stat]} / <span>Ref. {line}</span>
+            {prop.edge != null ? <em className={prop.edge >= 0 ? 'edge-up' : 'edge-down'}>{prop.edge >= 0 ? ' acima' : ' abaixo'}</em> : null}
           </div>
           <div className="props-player-sample">{sampleLabel(player)}</div>
         </div>
@@ -281,11 +281,11 @@ function WnbaRow({ player, activeStat, onSelectPlayer }) {
       <div className="line-cell">
         {loaded ? (
           <>
-            <strong>O {line}</strong>
-            <small>{prop.edge != null ? `${prop.edge > 0 ? '+' : ''}${prop.edge} edge` : 'Linha principal'}</small>
+            <strong>Ref. {line}</strong>
+            <small>Referência histórica</small>
           </>
         ) : (
-          <LoadingMetric label="Linha" align="right" />
+          <LoadingMetric label="Ref." align="right" />
         )}
       </div>
     </div>
@@ -304,6 +304,7 @@ function scoreEntry(player, activeStat) {
     prop: best,
     line,
     games: player.last5_games || [],
+    marketLine: false,
   });
   return { player, stat, line, prop: best, score };
 }
@@ -373,3 +374,4 @@ function isPlayerLoaded(player) {
     || player?.props?.fg3m
   );
 }
+

@@ -1,7 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SUPABASE_CONFIGURED, SUPABASE_CONFIG_ERROR } from '../src/api/supabase.js';
-import { getCurrentSession, signIn, signOut, startCheckout } from '../src/api/subscriptions.js';
+import {
+  getCurrentSession,
+  requestPasswordReset,
+  signIn,
+  signOut,
+  startCheckout,
+  updatePassword,
+} from '../src/api/subscriptions.js';
 
 test('frontend Supabase client requires explicit Vite env', async () => {
   assert.equal(SUPABASE_CONFIGURED, false);
@@ -14,5 +21,12 @@ test('frontend Supabase client requires explicit Vite env', async () => {
   const logout = await signOut();
   assert.equal(logout.error, null);
 
+  const reset = await requestPasswordReset('user@test.com');
+  assert.equal(reset.error.message, SUPABASE_CONFIG_ERROR);
+
+  const update = await updatePassword('new-password');
+  assert.equal(update.error.message, SUPABASE_CONFIG_ERROR);
+
   await assert.rejects(() => startCheckout('pro'), { message: SUPABASE_CONFIG_ERROR });
 });
+
