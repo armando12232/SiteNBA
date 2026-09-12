@@ -3,11 +3,11 @@ import { fetchJson } from './http.js';
 
 const SPORTS_TTL_MS = 2 * 60 * 1000;
 
-export function getSportsScoreboard(league) {
+export function getSportsScoreboard(league, { force = false } = {}) {
   return cachedFetch(`statcast:v1:sports:${league}:scoreboard`, SPORTS_TTL_MS, () => {
     const qs = new URLSearchParams({ type: 'scoreboard', league });
     return fetchJson(`/api/sports?${qs}`, { auth: true }, 12000);
-  });
+  }, { force });
 }
 
 export function getSportsStandings(league) {

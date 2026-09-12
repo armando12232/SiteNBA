@@ -25,12 +25,14 @@ export default async function handler(req, res) {
   if (!access.ok) return res.status(access.status).json(access.payload);
 
   if (type === 'stats' || type === 'pregame') {
-    const gameId = requiredId(req.query?.gameId, 'gameId');
-    const league = LEAGUES.find((item) => item.key === String(req.query?.leagueKey || '')) || LEAGUES.find((item) => item.key === 'premier');
     try {
+      const gameId = requiredId(req.query?.gameId, 'gameId');
+      const league = LEAGUES.find((item) => item.key === String(req.query?.leagueKey || 'premier'));
+      if (!league) return res.status(400).json({ error: 'invalid leagueKey' });
       const data = await fetchJson(`${BASE}/${league.slug}/summary?event=${encodeURIComponent(gameId)}`);
       return res.status(200).json(type === 'stats' ? parseStats(data) : parsePregame(data));
-    } catch {
+    } catch (error) {
+      if (error.status === 400) return res.status(400).json({ error: error.message });
       return res.status(503).json({ error: 'football detail provider unavailable', runtime: 'node-football' });
     }
   }
@@ -40,12 +42,14 @@ export default async function handler(req, res) {
   try {
     const payloads = await Promise.all(LEAGUES.map(async (league) => {
       try { return { league, data: await fetchJson(`${BASE}/${league.slug}/scoreboard`) }; }
-      catch { return { league, data: { events: [] } }; }
+      catch { return { league, data: null }; }
     }));
-    const fixtures = payloads.flatMap(({ league, data }) => (data.events || []).map((event) => parseFixture(event, league)))
+    const unavailableLeagues = payloads.filter(({ data }) => !data).map(({ league }) => league.key);
+    if (unavailableLeagues.length === LEAGUES.length) throw new Error('all football providers unavailable');
+    const fixtures = payloads.flatMap(({ league, data }) => (data?.events || []).map((event) => parseFixture(event, league)))
       .filter((fixture) => type !== 'live' || fixture.live)
       .sort((a, b) => String(a.date).localeCompare(String(b.date)));
-    return res.status(200).json({ fixtures, count: fixtures.length, ...(type === 'live' ? { live: true } : {}) });
+    return res.status(200).json({ fixtures, count: fixtures.length, unavailable_leagues: unavailableLeagues, ...(type === 'live' ? { live: true } : {}) });
   } catch {
     return res.status(503).json({ error: 'football provider unavailable', runtime: 'node-football' });
   }
@@ -75,19 +79,19 @@ function parseFixture(event, league) {
     live: state === 'in', finished: state === 'post', venue: competition.venue?.fullName || '' };
 }
 
-function parseStats(data) {
+export function parseStats(data) {
   const wanted = new Set(['possessionPct', 'totalShots', 'shotsOnTarget', 'wonCorners', 'foulsCommitted', 'yellowCards', 'redCards',
     'offsides', 'saves', 'passPct', 'accuratePasses', 'totalPasses', 'effectiveTackles', 'interceptions', 'expectedGoals', 'xG', 'xg',
     'totalExpectedGoals', 'shotsInsideBox', 'shotsOutsideBox', 'bigChancesCreated', 'bigChancesMissed']);
   const teams = (data.boxscore?.teams || []).map((item) => ({ team: item.team?.displayName || '', abbreviation: item.team?.abbreviation || '',
-    stats: Object.fromEntries((item.statistics || []).filter((stat) => wanted.has(stat.name)).map((stat) => [stat.name, stat.displayValue ?? stat.value ?? ''])) }));
+    homeAway: item.homeAway || '', stats: Object.fromEntries((item.statistics || []).filter((stat) => wanted.has(stat.name)).map((stat) => [stat.name, stat.displayValue ?? stat.value ?? ''])) }));
   const important = new Set(['Goal', 'Yellow Card', 'Red Card', 'Penalty', 'Own Goal', 'Substitution']);
   const events = (data.keyEvents || []).filter((event) => important.has(event.type?.text)).slice(0, 20).map((event) => ({
     type: event.type?.text || '', clock: event.clock?.displayValue || '', text: eventText(event), team: event.team?.displayName || '' }));
   const playerStats = new Set(['totalGoals', 'goalAssists', 'totalShots', 'shotsOnTarget', 'yellowCards', 'redCards', 'foulsCommitted',
-    'foulsSuffered', 'offsides', 'subIns', 'shotsFaced', 'goalsConceded']);
+    'foulsSuffered', 'offsides', 'subIns', 'shotsFaced', 'goalsConceded', 'saves']);
   const rosters = (data.rosters || []).map((roster) => ({ team: roster.team?.displayName || '', homeAway: roster.homeAway || '',
-    formation: typeof roster.formation === 'object' ? roster.formation?.name || '' : '', players: (roster.roster || []).map((item) => ({
+    formation: typeof roster.formation === 'object' ? roster.formation?.name || '' : String(roster.formation || ''), players: (roster.roster || []).map((item) => ({
       name: item.athlete?.displayName || '', short: item.athlete?.shortName || '', jersey: item.jersey || '',
       position: item.position?.abbreviation || '', positionFull: item.position?.displayName || '', starter: Boolean(item.starter),
       subbedIn: Boolean(item.subbedIn), subbedOut: Boolean(item.subbedOut), stats: Object.fromEntries((item.stats || [])
@@ -96,7 +100,7 @@ function parseStats(data) {
   return { teams, events, rosters, ...(odds ? { odds: { spread: odds.spread, overUnder: odds.overUnder, provider: odds.provider?.name || '' } } : {}) };
 }
 
-function parsePregame(data) {
+export function parsePregame(data) {
   const competition = data.header?.competitions?.[0] || {};
   const competitors = competition.competitors || [];
   const teams = competitors.map((item) => ({ team: item.team?.displayName || '', logo: item.team?.logo || '', homeAway: item.homeAway || '',
@@ -105,7 +109,7 @@ function parsePregame(data) {
   const groups = data.standings?.groups || [];
   const entries = groups[0]?.standings?.entries || [];
   const stat = (entry, name) => (entry.stats || []).find((item) => item.name === name)?.displayValue || '';
-  const standings = entries.map((entry) => ({ team: String(entry.team || ''), rank: stat(entry, 'rank'), pts: stat(entry, 'points'),
+  const standings = entries.map((entry) => ({ team: typeof entry.team === 'object' ? entry.team?.displayName || entry.team?.name || '' : String(entry.team || ''), rank: stat(entry, 'rank'), pts: stat(entry, 'points'),
     wins: stat(entry, 'wins'), draws: stat(entry, 'ties'), losses: stat(entry, 'losses'), gp: stat(entry, 'gamesPlayed') }));
   const leaders = [];
   for (const category of data.leaders || []) {
@@ -125,7 +129,8 @@ function parsePregame(data) {
   const odds = data.odds?.[0];
   return { teams, venue: data.gameInfo?.venue?.fullName || '', city: data.gameInfo?.venue?.address?.city || '', standings, leaders, h2h,
     ...(odds ? { odds: { spread: odds.spread, overUnder: odds.overUnder, homeML: odds.homeTeamOdds?.moneyLine,
-      awayML: odds.awayTeamOdds?.moneyLine, drawOdds: odds.drawOdds?.moneyLine, provider: odds.provider?.name || '' } } : {}) };
+      awayML: odds.awayTeamOdds?.moneyLine, drawOdds: typeof odds.drawOdds === 'object' ? odds.drawOdds?.moneyLine : odds.drawOdds,
+      format: 'american', provider: odds.provider?.name || '' } } : {}) };
 }
 
 function eventText(event) {
@@ -158,4 +163,3 @@ function translateStatus(value) {
 
 function requiredId(value, field) { const text = String(value || ''); if (!/^[a-zA-Z0-9_-]{1,40}$/.test(text)) throw Object.assign(new Error(`invalid ${field}`), { status: 400 }); return text; }
 function setCors(res) { res.setHeader('Access-Control-Allow-Origin', SITE_URL); res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); res.setHeader('Cache-Control', 'no-store'); }
-

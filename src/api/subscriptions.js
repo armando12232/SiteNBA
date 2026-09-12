@@ -80,8 +80,47 @@ export const PLAN_ACCESS = {
   },
 };
 
-export function getPlanAccess(plan) {
-  return PLAN_ACCESS[plan] || PLAN_ACCESS.free;
+export function getPlanAccess(subscription) {
+  if (typeof subscription === 'string') return PLAN_ACCESS[subscription] || PLAN_ACCESS.free;
+  if (subscription?.role === 'admin') return PLAN_ACCESS.premium;
+  if (!isSubscriptionActive(subscription)) return PLAN_ACCESS.free;
+  return PLAN_ACCESS[subscription?.plan] || PLAN_ACCESS.free;
+}
+
+export function isSubscriptionActive(subscription) {
+  return ['active', 'trialing'].includes(subscription?.status);
+}
+
+// Only the latest session may publish its plan after an asynchronous lookup.
+export function createSubscriptionSync(onChange, load = loadSubscriptionDetails) {
+  let revision = 0;
+  let current = { session: null, subscription: freeSubscription(), loading: false, error: null };
+  return {
+    async refresh(session) {
+      const requestRevision = ++revision;
+      const sameUser = Boolean(session?.user?.id && session.user.id === current.session?.user?.id);
+      current = {
+        session,
+        subscription: sameUser ? current.subscription : freeSubscription(),
+        loading: Boolean(session?.access_token),
+        error: null,
+      };
+      onChange(current);
+      if (!session?.access_token) return;
+      try {
+        const row = await load(session.access_token);
+        if (requestRevision !== revision) return;
+        current = { ...current, subscription: normalizeSubscription(row), loading: false };
+      } catch (error) {
+        if (requestRevision !== revision) return;
+        current = { ...current, loading: false, error };
+      }
+      onChange(current);
+    },
+    stop() {
+      revision += 1;
+    },
+  };
 }
 
 export async function getCurrentSession() {

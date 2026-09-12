@@ -163,23 +163,26 @@ SEED_MATCHES = [
 
 
 def get_cs2_scoreboard(limit=24):
-    cached = _cache_get("cs2_scoreboard")
+    limit = max(1, min(int(limit or 24), 50))
+    cache_key = f"cs2_scoreboard:{limit}"
+    cached = _cache_get(cache_key)
     if cached is not None:
         return cached
 
     rows = _load_supabase_matches(limit)
-    raw_matches = rows if rows else SEED_MATCHES
-    matches = [_with_score(_normalize_match(row)) for row in raw_matches[:limit]]
+    if rows is None:
+        return {"games": [], "error": "cs2 data provider unavailable", "meta": {"count": 0, "source": "unavailable"}}
+    matches = [_with_score(_normalize_match(row)) for row in rows[:limit]]
     matches.sort(key=lambda match: (-int(match.get("score") or 0), str(match.get("start") or "")))
-    payload = {"games": matches, "meta": {"count": len(matches), "source": "stored" if rows else "baseline"}}
-    _cache_set("cs2_scoreboard", payload, _CACHE_TTL)
+    payload = {"games": matches, "meta": {"count": len(matches), "source": "stored" if rows else "empty"}}
+    _cache_set(cache_key, payload, _CACHE_TTL)
     return payload
 
 
 def _load_supabase_matches(limit):
     service_key = os.environ.get("SUPABASE_SERVICE_KEY", "").strip()
     if not service_key:
-        return []
+        return None
     supabase_url = _normalize_supabase_url(os.environ.get("SUPABASE_URL", ""))
     query = urllib.parse.urlencode({
         "select": "*",
@@ -198,9 +201,9 @@ def _load_supabase_matches(limit):
         with urllib.request.urlopen(req, timeout=6) as response:
             raw = response.read().decode("utf-8", errors="replace")
             data = json.loads(raw) if raw else []
-            return data if isinstance(data, list) else []
+            return data if isinstance(data, list) else None
     except Exception:
-        return []
+        return None
 
 
 def _normalize_match(row):

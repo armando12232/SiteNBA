@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { cachedFetch, readStored, writeStored } from '../src/api/cache.js';
+import { cachedFetch, clearCachedPrefix, readStored, writeStored } from '../src/api/cache.js';
+import { clearPregameCache, getPregame } from '../src/api/nba.js';
+import { clearWnbaCache, getWnbaPlayers, getWnbaPregame, getWnbaPregameByName } from '../src/api/wnba.js';
 
 test('writeStored and readStored persist valid localStorage entries', () => {
   const storage = createStorage();
@@ -71,6 +73,81 @@ test('cachedFetch reuses stored value without calling loader', async () => {
   assert.deepEqual(result, { source: 'storage' });
 
   delete global.window;
+});
+
+test('promoting stored data to memory preserves its original expiry', async (t) => {
+  const originalNow = Date.now;
+  const originalWindow = global.window;
+  t.after(() => { Date.now = originalNow; global.window = originalWindow; });
+  global.window = { localStorage: createStorage() };
+  let now = 1000;
+  Date.now = () => now;
+  writeStored('cache:test:original-age', { generation: 1 });
+  now = 60500;
+  let calls = 0;
+  const loader = async () => ({ generation: ++calls + 1 });
+  assert.deepEqual(await cachedFetch('cache:test:original-age', 60000, loader), { generation: 1 });
+  now = 62000;
+  assert.deepEqual(await cachedFetch('cache:test:original-age', 60000, loader), { generation: 2 });
+  assert.equal(calls, 1);
+});
+
+test('forcing a refresh bypasses fresh cache and deduplicates concurrent refreshes', async () => {
+  const key = 'cache:test:force-refresh';
+  let calls = 0;
+  const loader = async () => ({ generation: ++calls });
+  await cachedFetch(key, 60000, loader);
+  const [first, second] = await Promise.all([
+    cachedFetch(key, 60000, loader, { force: true }),
+    cachedFetch(key, 60000, loader, { force: true }),
+  ]);
+  assert.deepEqual(first, { generation: 2 });
+  assert.deepEqual(second, first);
+  assert.equal(calls, 2);
+});
+
+test('clearing a cache prevents its pending old request from restoring stale data', async () => {
+  const key = 'cache:test:clear-inflight';
+  let resolveOld;
+  const oldRequest = cachedFetch(key, 60000, () => new Promise((resolve) => { resolveOld = resolve; }));
+  await Promise.resolve();
+  clearCachedPrefix(key);
+  await cachedFetch(key, 60000, async () => ({ generation: 2 }));
+  resolveOld({ generation: 1 });
+  await oldRequest;
+  const result = await cachedFetch(key, 60000, async () => ({ generation: 3 }));
+  assert.deepEqual(result, { generation: 2 });
+});
+
+test('NBA and WNBA caches expire in memory even when storage is unavailable', async (t) => {
+  const originalNow = Date.now;
+  const originalFetch = global.fetch;
+  const originalWindow = global.window;
+  t.after(() => {
+    Date.now = originalNow;
+    global.fetch = originalFetch;
+    global.window = originalWindow;
+    clearPregameCache();
+    clearWnbaCache();
+  });
+  delete global.window;
+  let now = 1000;
+  Date.now = () => now;
+  let calls = 0;
+  global.fetch = async () => ({ ok: true, json: async () => ({ generation: ++calls }) });
+  for (const [load, ttl] of [
+    [() => getPregame('ttl-test'), 5 * 60000],
+    [() => getWnbaPlayers(37), 10 * 60000],
+    [() => getWnbaPregame('ttl-test'), 10 * 60000],
+    [() => getWnbaPregameByName('TTL Test'), 10 * 60000],
+  ]) {
+    const initial = await load();
+    assert.deepEqual(await load(), initial);
+    now += ttl;
+    const refreshed = await load();
+    assert.equal(refreshed.generation, initial.generation + 1);
+  }
+  assert.equal(calls, 8);
 });
 
 function createStorage() {

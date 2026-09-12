@@ -130,17 +130,29 @@ class handler(BaseHTTPRequestHandler):
         event_type = event.get('type', '')
         obj = event.get('data', {}).get('object', {})
         meta = obj.get('metadata', {}) or {}
+        if event_type.startswith('invoice.'):
+            # Stripe stores subscription metadata on the invoice's parent;
+            # older webhook API versions expose subscription_details directly.
+            details = (obj.get('parent') or {}).get('subscription_details') or obj.get('subscription_details') or {}
+            meta = {**meta, **(details.get('metadata') or {})}
         user_id = meta.get('user_id') or obj.get('client_reference_id')
         plan = meta.get('plan')
 
-        if event_type == 'checkout.session.completed' and user_id and plan:
-            self._upsert_subscription(user_id, plan, 'active')
-        elif event_type == 'customer.subscription.deleted' and user_id:
-            self._upsert_subscription(user_id, 'free', 'active')
-        elif event_type == 'invoice.payment_failed' and user_id:
-            self._upsert_subscription(user_id, plan or 'free', 'past_due')
-        elif event_type == 'invoice.payment_succeeded' and user_id and plan:
-            self._upsert_subscription(user_id, plan, 'active')
+        try:
+            if event_type == 'checkout.session.completed' and user_id and plan in PLAN_PRICES:
+                if obj.get('payment_status') in {'paid', 'no_payment_required'}:
+                    self._upsert_subscription(user_id, plan, 'active')
+            elif event_type == 'customer.subscription.deleted' and user_id:
+                self._upsert_subscription(user_id, 'free', 'active')
+            elif event_type == 'invoice.payment_failed' and user_id and plan in PLAN_PRICES:
+                self._upsert_subscription(user_id, plan, 'past_due')
+            elif event_type in {'invoice.payment_succeeded', 'invoice.paid'} and user_id and plan in PLAN_PRICES:
+                self._upsert_subscription(user_id, plan, 'active')
+        except Exception:
+            # A non-2xx response lets Stripe retry delivery instead of losing
+            # a successful payment during a temporary database outage.
+            self._json(503, {'error': 'subscription update unavailable'})
+            return
 
         self._json(200, {'received': True})
 
@@ -193,8 +205,8 @@ class handler(BaseHTTPRequestHandler):
 
     def _upsert_subscription(self, user_id, plan, status):
         if not SUPABASE_SERVICE_KEY:
-            return
-        exists = self._subscription_exists(user_id)
+            raise RuntimeError('subscription storage unavailable')
+        exists = self._subscription_exists(user_id, strict=True)
         path = f'/rest/v1/subscriptions?user_id=eq.{urllib.parse.quote(user_id)}' if exists else '/rest/v1/subscriptions'
         method = 'PATCH' if exists else 'POST'
         req = urllib.request.Request(
@@ -209,11 +221,12 @@ class handler(BaseHTTPRequestHandler):
             },
         )
         try:
-            urllib.request.urlopen(req, timeout=12)
+            with urllib.request.urlopen(req, timeout=6):
+                pass
         except Exception as exc:
-            print(f'Supabase subscription upsert error: {exc}')
+            raise RuntimeError('subscription update unavailable') from exc
 
-    def _subscription_exists(self, user_id):
+    def _subscription_exists(self, user_id, strict=False):
         req = urllib.request.Request(
             f'{SUPABASE_URL}/rest/v1/subscriptions?select=user_id&user_id=eq.{urllib.parse.quote(user_id)}&limit=1',
             headers={
@@ -226,6 +239,8 @@ class handler(BaseHTTPRequestHandler):
                 rows = json.loads(resp.read() or b'[]')
             return bool(rows)
         except Exception as exc:
+            if strict:
+                raise RuntimeError('subscription lookup unavailable') from exc
             print(f'Supabase subscription lookup error: {exc}')
             return False
 
@@ -256,4 +271,3 @@ class handler(BaseHTTPRequestHandler):
 
     def log_message(self, *args):
         pass
-

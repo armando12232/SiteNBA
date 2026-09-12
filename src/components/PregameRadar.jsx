@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getBettingProsForDates } from '../api/bettingpros.js';
 import { clearPregameCache, getPregame, getSchedule } from '../api/nba.js';
 import { PREGAME_PLAYERS } from '../data/pregamePlayers.js';
-import { ensureHalfLine, getBestProp } from '../utils/props.js';
+import { numberOrNull, propForStat } from '../utils/props.js';
 import { buildPregameScore } from '../utils/statcastScore.js';
 import { userErrorMessage } from '../utils/errors.js';
 
@@ -57,6 +57,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
           .catch(() => {});
 
         await progressivePool(PREGAME_PLAYERS, 4, async (player) => {
+          if (!alive) return;
           const data = await getPregame(player.id).catch(() => null);
           if (!alive) return;
           setState((current) => {
@@ -136,6 +137,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
         <span className="search-icon">⌕</span>
         <input
           className="search-bar"
+          aria-label="Buscar jogador NBA"
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
@@ -147,6 +149,8 @@ export function PregameRadar({ access, onSelectPlayer }) {
         <button
           type="button"
           className={`search-clear ${query ? 'visible' : ''}`}
+          aria-label="Limpar busca"
+          disabled={!query}
           onClick={() => {
             setQuery('');
             setScoreFilter('all');
@@ -162,6 +166,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
             type="button"
             key={stat}
             className={`prop-filter-btn ${activeStat === stat ? 'active' : ''}`}
+            aria-pressed={activeStat === stat}
             onClick={() => {
               setActiveStat(stat);
               setScoreFilter('all');
@@ -185,6 +190,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
             type="button"
             key={key}
             className={`period-filter-btn ${sortBy === key ? 'active' : ''}`}
+            aria-pressed={sortBy === key}
             onClick={() => setSortBy(key)}
           >
             {label}
@@ -262,7 +268,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
               <div style={{ textAlign: 'center' }}>H2H</div>
               <div style={{ textAlign: 'center' }}>L5</div>
               <div style={{ textAlign: 'center' }}>L10</div>
-              <div className="hide-mobile" style={{ textAlign: 'center' }}>Temp</div>
+              <div className="hide-mobile" style={{ textAlign: 'center' }}>{bpCount ? 'Temp' : 'Amostra'}</div>
               <div style={{ textAlign: 'center' }}>SC</div>
               <div style={{ textAlign: 'right' }}>Linha</div>
             </div>
@@ -412,8 +418,8 @@ function BoardMetric({ label, value, tier = '' }) {
 function ScoreInfoModal({ onClose }) {
   return (
     <div className="score-info-overlay" onMouseDown={onClose}>
-      <section className="score-info-modal" onMouseDown={(event) => event.stopPropagation()}>
-        <button type="button" className="pp-modal-close" onClick={onClose}>x</button>
+      <PropsDialog className="score-info-modal" label="Como calculamos a leitura" onClose={onClose}>
+        <button type="button" aria-label="Fechar explicação" className="pp-modal-close" onClick={onClose}>x</button>
         <div className="score-info-kicker">StatCast Score</div>
         <h3>Como calculamos a leitura</h3>
         <p>
@@ -430,9 +436,47 @@ function ScoreInfoModal({ onClose }) {
         <div className="score-info-note">
           Regra prática: 78+ = elite, 64+ = forte, 50+ = monitorar, abaixo disso tem baixa prioridade.
         </div>
-      </section>
+      </PropsDialog>
     </div>
   );
+}
+
+function PropsDialog({ className, label, onClose, children }) {
+  const dialogRef = useRef(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialog?.querySelector('button')?.focus();
+    const handleKey = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        closeRef.current?.();
+      }
+      if (event.key !== 'Tab' || !dialog) return;
+      const buttons = [...dialog.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), [tabindex="0"]')];
+      const first = buttons[0];
+      const last = buttons[buttons.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    dialog?.addEventListener('keydown', handleKey);
+    return () => {
+      dialog?.removeEventListener('keydown', handleKey);
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus?.();
+    };
+  }, []);
+  return <section ref={dialogRef} role="dialog" aria-modal="true" aria-label={label} className={className} onMouseDown={(event) => event.stopPropagation()}>{children}</section>;
 }
 
 function InfoFactor({ weight, title, text }) {
@@ -447,6 +491,7 @@ function InfoFactor({ weight, title, text }) {
 
 function PropsByGameView({ activeStat, dayLabel, groups, loading, onSelectPlayer }) {
   const [selectedGame, setSelectedGame] = useState(null);
+  const selectedGroup = groups.find((group) => group.key === selectedGame);
 
   if (!groups.length) {
     return (
@@ -468,7 +513,7 @@ function PropsByGameView({ activeStat, dayLabel, groups, loading, onSelectPlayer
       </div>
       {groups.map((group) => (
         <section className="game-props-card" key={group.key}>
-          <button type="button" className="game-props-card-head" onClick={() => setSelectedGame(group)}>
+          <button type="button" className="game-props-card-head" onClick={() => setSelectedGame(group.key)}>
             <div>
               <span>{group.date || 'Hoje'}</span>
               <strong>{group.label}</strong>
@@ -497,22 +542,22 @@ function PropsByGameView({ activeStat, dayLabel, groups, loading, onSelectPlayer
                   </span>
                   <em>O {entry?.line ?? '-'}</em>
                   <strong className={`statcast-score ${entry?.score?.tier || ''}`}>{entry?.score?.score ?? '-'}</strong>
-                  <i>{prop.l10 ?? prop.hit_rate ?? '-'}%</i>
+                  <i>{prop.l10 != null ? `${prop.l10}%` : '-'}</i>
                 </button>
               );
             })}
           </div>
           {group.players.length > 6 ? (
-            <button type="button" className="game-props-more" onClick={() => setSelectedGame(group)}>
+            <button type="button" className="game-props-more" onClick={() => setSelectedGame(group.key)}>
               Ver {group.players.length} props do jogo
             </button>
           ) : null}
         </section>
       ))}
-      {selectedGame ? (
+      {selectedGroup ? (
         <GamePropsModal
           activeStat={activeStat}
-          group={selectedGame}
+          group={selectedGroup}
           onClose={() => setSelectedGame(null)}
           onSelectPlayer={onSelectPlayer}
         />
@@ -556,11 +601,15 @@ function openPricingModal() {
 function GamePropsModal({ activeStat, group, onClose, onSelectPlayer }) {
   const teamCounts = countTeams(group.players);
   const topPlayers = group.players.slice(0, 3);
+  const selectPlayer = (player) => {
+    onClose();
+    onSelectPlayer?.(player);
+  };
 
   return (
     <div className="game-props-modal-overlay" onMouseDown={onClose}>
-      <section className="game-props-modal" onMouseDown={(event) => event.stopPropagation()}>
-        <button type="button" className="pp-modal-close" onClick={onClose}>x</button>
+      <PropsDialog className="game-props-modal" label={`Props de ${group.label}`} onClose={onClose}>
+        <button type="button" aria-label="Fechar props do jogo" className="pp-modal-close" onClick={onClose}>x</button>
         <div className="game-props-modal-hero">
           <span>Premium / Melhores Props</span>
           <h3>{group.label}</h3>
@@ -582,7 +631,7 @@ function GamePropsModal({ activeStat, group, onClose, onSelectPlayer }) {
                   type="button"
                   className="game-props-feature-card"
                   key={`featured-${player.player_id || player.player_name}`}
-                  onClick={() => onSelectPlayer?.(player)}
+                  onClick={() => selectPlayer(player)}
                 >
                   <img src={playerPhotoUrl(player)} alt="" />
                   <span>{player.team_abbr || inferTeamFromGames(player.last5_games || []) || '-'}</span>
@@ -610,7 +659,7 @@ function GamePropsModal({ activeStat, group, onClose, onSelectPlayer }) {
                   type="button"
                   className="game-props-modal-row"
                   key={`modal-${player.player_id || player.player_name}-${entry?.stat || activeStat}`}
-                  onClick={() => onSelectPlayer?.(player)}
+                  onClick={() => selectPlayer(player)}
                 >
                   <span>
                     <img src={playerPhotoUrl(player)} alt="" />
@@ -618,7 +667,7 @@ function GamePropsModal({ activeStat, group, onClose, onSelectPlayer }) {
                     <small>{player.team_abbr || inferTeamFromGames(player.last5_games || []) || '-'}</small>
                   </span>
                   <em>O {entry?.line ?? '-'}</em>
-                  <em>{prop.l10 ?? prop.hit_rate ?? '-'}%</em>
+                  <em>{prop.l10 != null ? `${prop.l10}%` : '-'}</em>
                   <em className={(prop.edge ?? 0) >= 0 ? 'edge-up' : 'edge-down'}>{prop.edge ?? '-'}</em>
                   <strong className={`statcast-score ${entry?.score?.tier || ''}`}>{entry?.score?.score ?? '-'}</strong>
                 </button>
@@ -626,7 +675,7 @@ function GamePropsModal({ activeStat, group, onClose, onSelectPlayer }) {
             })}
           </div>
         </div>
-      </section>
+      </PropsDialog>
     </div>
   );
 }
@@ -664,25 +713,29 @@ function LockedPreviewCell({ value, tone }) {
 }
 
 function PregameRow({ player, activeStat, onSelectPlayer }) {
-  const activeProp = player.props?.[activeStat];
-  const best = activeProp?.line != null ? { stat: activeStat, ...activeProp } : getBestProp(player);
-  const stat = best?.stat || activeStat || 'pts';
-  const line = ensureHalfLine(best?.line ?? player.synthetic_lines?.pts);
+  const best = propForStat(player, activeStat);
+  const stat = activeStat;
+  const line = best?.line ?? null;
   const photoUrl = playerPhotoUrl(player);
   const projection = best?.projection ?? player.last5_avg?.[stat] ?? player.season_avg?.[stat];
   const edge = best?.edge;
   const teamAbbr = player.team_abbr || inferTeamFromGames(player.last5_games || []);
   const odds = best?.odds;
-  const score = buildPregameScore({
+  const score = best ? buildPregameScore({
     player,
     stat,
     prop: best,
     line,
     games: player.last5_games || [],
-  });
+  }) : null;
 
   return (
-    <div className="props-table-row" onClick={() => onSelectPlayer?.(player)}>
+    <div className="props-table-row" role="button" tabIndex={0} aria-label={`Ver ${statLabels[stat]} de ${player.player_name}`} onClick={() => onSelectPlayer?.(player)} onKeyDown={(event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        onSelectPlayer?.(player);
+      }
+    }}>
       <div className="props-player-cell">
         <img src={photoUrl} alt="" className="player-img-mobile props-player-img" />
         <div className="props-player-meta">
@@ -694,14 +747,14 @@ function PregameRow({ player, activeStat, onSelectPlayer }) {
         </div>
       </div>
       <HitCell value={best?.h2h} />
-      <HitCell value={best?.l5 ?? best?.hit_rate} />
-      <HitCell value={best?.l10 ?? best?.hit_rate} />
+      <HitCell value={best?.l5} />
+      <HitCell value={best?.l10} />
       <div className="hide-mobile">
         <HitCell value={best?.hit_rate} />
       </div>
       <div className="projection-cell">
-        <strong className={`statcast-score ${score.tier}`}>{score.score}</strong>
-        <small>{projection != null ? `Proj ${Number(projection).toFixed(1)}` : score.label}</small>
+        <strong className={`statcast-score ${score?.tier || ''}`}>{score?.score ?? '-'}</strong>
+        <small>{projection != null ? `Proj ${Number(projection).toFixed(1)}` : score?.label || 'Sem linha disponível'}</small>
       </div>
       <div className="line-cell">
         <strong>O {line ?? '-'}</strong>
@@ -720,18 +773,19 @@ function sortPlayers(players, stat, sortBy) {
   return [...players].sort((a, b) => {
     const aProp = a.props?.[stat] || {};
     const bProp = b.props?.[stat] || {};
-    if (sortBy === 'hit') return (bProp.l10 ?? bProp.hit_rate ?? -1) - (aProp.l10 ?? aProp.hit_rate ?? -1);
+    if (sortBy === 'hit') return (bProp.l10 ?? -1) - (aProp.l10 ?? -1);
     if (sortBy === 'h2h') return (bProp.h2h ?? -1) - (aProp.h2h ?? -1);
     if (sortBy === 'season') return (bProp.hit_rate ?? -1) - (aProp.hit_rate ?? -1);
-    if (sortBy === 'l5') return (bProp.l5 ?? b.last5_avg?.[stat] ?? -1) - (aProp.l5 ?? a.last5_avg?.[stat] ?? -1);
+    if (sortBy === 'l5') return (bProp.l5 ?? -1) - (aProp.l5 ?? -1);
     if (sortBy === 'score') return pregameSortScore(b, stat) - pregameSortScore(a, stat);
     return (bProp.edge ?? -999) - (aProp.edge ?? -999);
   });
 }
 
 function pregameSortScore(player, stat) {
-  const prop = player.props?.[stat] || {};
-  const line = ensureHalfLine(prop.line ?? player.synthetic_lines?.pts);
+  const prop = propForStat(player, stat);
+  if (!prop) return -1;
+  const line = prop.line;
   return buildPregameScore({ player, stat, prop, line, games: player.last5_games || [] }).score;
 }
 
@@ -847,10 +901,10 @@ function filterByScoreTier(players, activeStat, filter) {
 
 function scoreEntry(player, activeStat) {
   if (!player) return null;
-  const activeProp = player.props?.[activeStat];
-  const best = activeProp?.line != null ? { stat: activeStat, ...activeProp } : getBestProp(player);
-  const stat = best?.stat || activeStat || 'pts';
-  const line = ensureHalfLine(best?.line ?? player.synthetic_lines?.pts);
+  const best = propForStat(player, activeStat);
+  if (!best) return null;
+  const stat = activeStat;
+  const line = best.line;
   const score = buildPregameScore({
     player,
     stat,
@@ -906,9 +960,9 @@ function mergeProps(nbaProps, bpProps) {
       l15: prop.l15,
       l20: prop.l20,
       h2h: prop.h2h,
-      hit_rate: prop.season ?? nbaProps[stat]?.hit_rate,
+      hit_rate: prop.season,
       projection: prop.projection,
-      edge: prop.diff ?? prop.ev ?? nbaProps[stat]?.edge,
+      edge: numberOrNull(prop.diff) ?? (numberOrNull(prop.projection) != null && numberOrNull(prop.line) != null ? Number(prop.projection) - Number(prop.line) : null),
       ev: prop.ev,
       rec_side: prop.rec_side,
       streak: prop.streak,
@@ -966,9 +1020,8 @@ function averageHitRate(players, stat) {
 }
 
 function HitCell({ value }) {
-  if (value == null || value === '') return <div className="hit-rate-cell none">-</div>;
-  const n = Number(value);
-  if (Number.isNaN(n)) return <div className="hit-rate-cell none">-</div>;
+  const n = numberOrNull(value);
+  if (n == null || n < 0 || n > 100) return <div className="hit-rate-cell none">-</div>;
   const cls = n >= 70 ? 'high' : n >= 50 ? 'mid' : 'low';
   return <div className={`hit-rate-cell ${cls}`}>{n}%</div>;
 }

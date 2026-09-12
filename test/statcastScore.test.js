@@ -88,3 +88,22 @@ test('scoreTier preserves qualitative thresholds', () => {
   assert.equal(scoreTier(40, 'UNDER'), 'under');
   assert.equal(scoreTier(40, 'OVER'), 'cold');
 });
+
+test('missing values never become zero or a directional recommendation', () => {
+  const result = buildPregameScore({ stat: 'reb', line: null, prop: { edge: null, l5: '', l10: null }, player: { edge_points: 8, season_avg: { reb: null } } });
+  assert.equal(result.side, 'NEUTRO');
+  assert.equal(result.seasonAvg, null);
+  assert.equal(result.label, 'Sem dados suficientes');
+  assert.equal(result.factors.find((factor) => factor.id === 'edge').note, 'sem edge');
+});
+
+test('rebound consistency never substitutes points for missing rebounds', () => {
+  const result = buildPregameScore({ stat: 'reb', line: 5, prop: {}, player: {}, games: [{ pts: 30 }, { pts: 20 }] });
+  assert.equal(result.factors.find((factor) => factor.id === 'hit').note, 'neutro');
+  assert.equal(result.factors.find((factor) => factor.id === 'sample').note, 'sem amostra');
+});
+
+test('integer line equality is a push, not an OVER hit', () => {
+  const result = buildPregameScore({ stat: 'reb', line: 5, prop: {}, player: {}, games: Array.from({ length: 20 }, (_, i) => ({ reb: i % 2 ? 5 : 6 })) });
+  assert.equal(result.factors.find((factor) => factor.id === 'hit').note, 'L20 50%');
+});

@@ -1,13 +1,13 @@
 export function buildPregameScore({ player, stat, prop, line, games = [] }) {
   const recentGames = Array.isArray(games) ? games : [];
-  const numericLine = Number(line);
+  const numericLine = numberOrNull(line);
   const projection = numberOrNull(prop?.projection ?? player?.last5_avg?.[stat] ?? player?.season_avg?.[stat]);
-  const edge = numberOrNull(prop?.edge ?? player?.edge_points);
+  const edge = numberOrNull(prop?.edge ?? (stat === 'pts' ? player?.edge_points : null));
   const l5Hit = numberOrNull(prop?.l5);
   const l10Hit = numberOrNull(prop?.l10 ?? prop?.hit_rate);
   const l20Hit = hitPercent(recentGames, stat, numericLine, 20);
   const seasonAvg = numberOrNull(player?.season_avg?.[stat]);
-  const sample = sampleConfidence(recentGames, prop);
+  const sample = sampleConfidence(recentGames.filter((game) => numberOrNull(game?.[stat]) != null), prop);
 
   const factors = [
     {
@@ -49,7 +49,8 @@ export function buildPregameScore({ player, stat, prop, line, games = [] }) {
 
   const rawScore = factors.reduce((sum, factor) => sum + factor.value * factor.weight, 0);
   const score = clamp(Math.round(rawScore), 1, 99);
-  const side = edge == null
+  const hasEvidence = numericLine != null && (edge != null || projection != null || l5Hit != null || l10Hit != null || l20Hit != null);
+  const side = !hasEvidence ? 'NEUTRO' : edge == null
     ? score >= 58 ? 'OVER' : score <= 42 ? 'UNDER' : 'NEUTRO'
     : edge >= 0 ? 'OVER' : 'UNDER';
 
@@ -57,9 +58,9 @@ export function buildPregameScore({ player, stat, prop, line, games = [] }) {
     score,
     side,
     tier: scoreTier(score, side),
-    label: scoreLabel(score, side),
+    label: hasEvidence ? scoreLabel(score, side) : 'Sem dados suficientes',
     factors,
-    summary: pregameSummary(score, side, edge, l5Hit, l10Hit, projection, numericLine),
+    summary: hasEvidence ? pregameSummary(score, side, edge, l5Hit, l10Hit, projection, numericLine) : 'Linha ou histórico indisponível para esta estatística.',
     seasonAvg,
   };
 }
@@ -173,8 +174,10 @@ function scoreEdge(edge) {
 function hitPercent(games, stat, line, limit) {
   if (!Number.isFinite(line)) return null;
   const rows = games.slice(0, limit);
-  if (!rows.length) return null;
-  const hits = rows.filter((game) => Number(game?.[stat] ?? game?.pts ?? 0) >= line).length;
+  if (rows.length !== limit) return null;
+  const values = rows.map((game) => numberOrNull(game?.[stat]));
+  if (values.some((value) => value == null)) return null;
+  const hits = values.filter((value) => value > line).length;
   return Math.round((hits / rows.length) * 100);
 }
 
@@ -195,6 +198,8 @@ function normalizePct(value) {
 }
 
 function numberOrNull(value) {
+  if (value == null || typeof value === 'boolean' || (typeof value === 'string' && !value.trim())) return null;
+  if (typeof value !== 'number' && typeof value !== 'string') return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
 }

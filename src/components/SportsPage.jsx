@@ -17,7 +17,7 @@ export function SportsPage({ league }) {
   useEffect(() => {
     let alive = true;
     setState((current) => ({ ...current, loading: true, error: null }));
-    getSportsScoreboard(league)
+    getSportsScoreboard(league, { force: refresh > 0 })
       .then((data) => {
         if (alive) setState({ loading: false, error: null, games: data.games || [] });
       })
@@ -37,8 +37,8 @@ export function SportsPage({ league }) {
           <p className="sectionLead visible">{meta.subtitle}, com placar, horário e local do jogo.</p>
         </div>
         <div className="footballHeaderActions">
-          <button className="footballRefresh" type="button" onClick={() => setRefresh((value) => value + 1)}>🔄 Atualizar</button>
-          <span className="statusPill">📅 {state.games.length} jogos</span>
+          <button className="footballRefresh" type="button" disabled={state.loading} onClick={() => setRefresh((value) => value + 1)}>{state.loading ? 'Atualizando...' : '🔄 Atualizar'}</button>
+          <span className="statusPill">📅 {state.loading ? 'Carregando' : `${state.games.length} jogos`}</span>
         </div>
       </div>
 
@@ -51,7 +51,7 @@ export function SportsPage({ league }) {
       ) : null}
       {state.loading ? <div className="loadingGrid">Carregando {meta.title}...</div> : null}
 
-      {!state.loading ? (
+      {!state.loading && !state.error ? (
         <div className="sportsGrid">
           {state.games.map((game) => (
             <SportsCard game={game} color={meta.color} key={game.id} />
@@ -73,10 +73,10 @@ function SportsCard({ game, color }) {
     <article className="sportsCard">
       <div className="sportsMeta">
         <span>{game.league}</span>
-        <em style={{ color }}>{game.state === 'in' ? '🔴 Ao vivo' : `🕒 ${game.detail || 'Agendado'}`}</em>
+        <em style={{ color }}>{game.state === 'in' ? `🔴 ${game.detail || 'Ao vivo'}` : game.state === 'post' ? '✅ Encerrado' : '🕒 Agendado'}</em>
       </div>
-      <SportsTeam team={game.away} />
-      <SportsTeam team={game.home} />
+      <SportsTeam team={game.away} scheduled={game.state === 'pre'} />
+      <SportsTeam team={game.home} scheduled={game.state === 'pre'} />
       <div className="footballFooter">
         <span>📅 {formatDate(game.date)}</span>
         <span>📍 {game.venue || '-'}</span>
@@ -85,12 +85,12 @@ function SportsCard({ game, color }) {
   );
 }
 
-function SportsTeam({ team }) {
+function SportsTeam({ team, scheduled }) {
   return (
     <div className="teamLine">
       {team?.logo ? <img src={team.logo} alt="" /> : <span className="teamLogoFallback" />}
       <strong>{team?.abbr || team?.name || '-'}</strong>
-      <em>{team?.score ?? '-'}</em>
+      <em>{scheduled ? '—' : team?.score ?? '-'}</em>
     </div>
   );
 }

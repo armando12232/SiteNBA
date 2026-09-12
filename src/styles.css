@@ -28,6 +28,35 @@
   padding: 0;
 }
 
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--gold) !important;
+  outline-offset: 4px;
+}
+
+.skipLink {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 10000;
+  padding: 12px 18px;
+  background: var(--gold);
+  color: var(--bg);
+  transform: translateY(-150%);
+}
+
+.skipLink:focus {
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 body {
   min-height: 100vh;
   overflow-x: hidden;

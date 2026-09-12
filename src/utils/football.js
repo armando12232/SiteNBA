@@ -7,8 +7,8 @@ export function filterByFootballStatus(fixtures, statusFilter) {
 
 export function filterFootballFixtures(fixtures, { activeTab = 'fixtures', league = 'all', query = '', statusFilter = 'all' } = {}) {
   const cleaned = normalizeFootballSearch(query);
-  const rows = activeTab === 'fixtures'
-    ? fixtures.filter((item) => !item.live)
+  const rows = activeTab === 'live'
+    ? fixtures.filter((item) => item.live)
     : fixtures;
   const byLeague = league === 'all' ? rows : rows.filter((item) => item.league_key === league);
   const byStatus = filterByFootballStatus(byLeague, statusFilter);
@@ -21,7 +21,7 @@ export function sortFootballFixtures(fixtures, sortMode) {
   if (sortMode === 'read') {
     return rows.sort((a, b) => {
       if (a.live !== b.live) return a.live ? -1 : 1;
-      return buildFootballRead(b, {}).score - buildFootballRead(a, {}).score;
+      return new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime();
     });
   }
   if (sortMode === 'league') {
@@ -73,10 +73,10 @@ export function buildFootballSummary(fixtures) {
 
 export function buildFootballHighlights(fixtures) {
   return (Array.isArray(fixtures) ? fixtures : [])
+    .filter((fixture) => !fixture.finished)
     .map((fixture) => ({ fixture, read: buildFootballRead(fixture, {}) }))
     .sort((a, b) => {
       if (a.fixture.live !== b.fixture.live) return a.fixture.live ? -1 : 1;
-      if (a.read.score !== b.read.score) return b.read.score - a.read.score;
       return new Date(a.fixture.date || 0).getTime() - new Date(b.fixture.date || 0).getTime();
     })
     .slice(0, 5);
@@ -119,33 +119,33 @@ export function buildFootballRead(fixture, data = {}) {
   const awayShots = parseFootballStat(awayStats?.stats?.totalShots);
   const homeTarget = parseFootballStat(homeStats?.stats?.shotsOnTarget);
   const awayTarget = parseFootballStat(awayStats?.stats?.shotsOnTarget);
-  const over25 = decimalOdd(odds?.over25 || odds?.overUnder);
-  const btts = decimalOdd(odds?.bttsYes);
+  const over25 = decimalOdd(odds?.over25, 'decimal');
+  const goalLine = data.pregame?.odds?.overUnder ?? data.stats?.odds?.overUnder;
   const cardAvg = Number.parseFloat(referee.avg_cards);
   const tempo = fixture.live ? 'Ao vivo' : fixture.finished ? 'Final' : 'Pré-jogo';
-  const hasStats = Boolean(homeStats || awayStats);
-  const hasPregame = Boolean(homePregame || awayPregame);
-  const hasMarket = Boolean(over25 || btts);
-  const attacking = homeShots + awayShots + (homeTarget + awayTarget) * 1.8;
-  const market = (over25 ? Math.max(0, 70 - over25 * 18) : 0) + (btts ? Math.max(0, 55 - btts * 12) : 0);
-  const tableInfo = hasPregame && (homePregame?.record || awayPregame?.record || homePregame?.points || awayPregame?.points) ? 10 : 0;
-  const liveBoost = fixture.live ? 12 : 0;
-  const dataBonus = (hasStats ? 5 : 0) + (hasMarket ? 8 : 0) + (hasPregame ? 4 : 0);
-  const score = clamp(Math.round(38 + attacking * 1.2 + market + tableInfo + liveBoost + dataBonus), 1, 99);
-  const tier = score >= 78 ? 'elite' : score >= 64 ? 'strong' : score >= 50 ? 'watch' : 'cold';
-  const title = score >= 78 ? 'Elite read' : score >= 64 ? 'Leitura forte' : score >= 50 ? 'Monitorar' : 'Leitura inicial';
+  const hasShots = hasFootballStat(homeStats?.stats?.totalShots) && hasFootballStat(awayStats?.stats?.totalShots);
+  const hasTarget = hasFootballStat(homeStats?.stats?.shotsOnTarget) && hasFootballStat(awayStats?.stats?.shotsOnTarget);
+  const hasPregame = Boolean(homePregame?.record || awayPregame?.record || homePregame?.points || awayPregame?.points);
+  const hasData = hasShots || hasPregame || over25 || goalLine != null || Number.isFinite(cardAvg);
+  const title = fixture.finished ? 'Resumo final' : hasData ? (fixture.live ? 'Resumo ao vivo' : 'Contexto pré-jogo') : 'Sem dados suficientes';
   const signals = [
     { label: 'Status', value: tempo, note: fixture.status_long || fixture.status || '-' },
-    { label: 'Pressão', value: homeShots + awayShots || '-', note: `${homeTarget + awayTarget || 0} no alvo` },
-    { label: 'Over 2.5', value: over25 ? over25.toFixed(2) : '-', note: over25 ? marketNote(over25) : 'sem odd' },
+    { label: 'Chutes', value: hasShots ? homeShots + awayShots : '-', note: hasTarget ? `${homeTarget + awayTarget} no alvo` : 'dados no alvo indisponíveis' },
+    over25
+      ? { label: 'Over 2.5', value: over25.toFixed(2), note: fixture.finished ? 'odd histórica' : 'odd decimal' }
+      : { label: 'Linha de gols', value: goalLine ?? '-', note: goalLine != null ? 'total de gols do mercado' : 'linha indisponível' },
     { label: 'Árbitro', value: Number.isFinite(cardAvg) ? cardAvg.toFixed(1) : '-', note: 'cartões/jogo' },
   ];
 
   return {
-    score,
-    tier,
+    score: null,
+    tier: 'cold',
     title,
-    summary: `${fixture.home} x ${fixture.away}: leitura baseada em ritmo do jogo, mercado e contexto pré-jogo disponível.`,
+    summary: fixture.finished
+      ? 'Partida encerrada. Estatísticas e odds históricas disponíveis para consulta.'
+      : hasData
+        ? 'Dados disponíveis da partida. Este resumo não estima a chance de uma aposta vencer.'
+        : 'Abra os detalhes para consultar as informações disponíveis desta partida.',
     signals,
   };
 }
@@ -156,27 +156,37 @@ export function parseFootballStat(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export function decimalOdd(value) {
+export function decimalOdd(value, format = 'auto') {
   if (value == null || value === '') return null;
   const parsed = Number.parseFloat(String(value).replace(',', '.'));
   if (!Number.isFinite(parsed)) return null;
-  if (Math.abs(parsed) > 10) {
+  if (format === 'american' || (format === 'auto' && (/^[+-]/.test(String(value)) || Math.abs(parsed) >= 100))) {
+    if (Math.abs(parsed) < 100) return null;
     return parsed > 0 ? (parsed / 100) + 1 : (100 / Math.abs(parsed)) + 1;
   }
   return parsed > 1 ? parsed : null;
 }
 
 export function findTeamStats(teams, name) {
-  return teams.find((team) => team.team === name || name?.includes(team.team) || team.team?.includes(name));
+  if (!name) return undefined;
+  return teams.find((team) => team.team && (team.team === name || name.includes(team.team) || team.team.includes(name)));
 }
 
-function marketNote(odd) {
-  if (!Number.isFinite(odd)) return 'sem odd';
-  if (odd <= 1.75) return 'mercado forte';
-  if (odd <= 2.05) return 'mercado equilibrado';
-  return 'mercado frio';
+export function hasFootballStat(value) {
+  return value != null && String(value).trim() !== '' && Number.isFinite(Number.parseFloat(String(value).replace(',', '.')));
 }
 
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
+export function formatFootballStat(value, key) {
+  if (!hasFootballStat(value)) return '-';
+  if (key === 'passPct' || key === 'possessionPct') {
+    const number = parseFootballStat(value);
+    const percent = !String(value).includes('%') && number <= 1 ? number * 100 : number;
+    return `${Number(percent.toFixed(1))}%`;
+  }
+  return String(value);
+}
+
+export function formatFootballOdd(value, format = 'auto') {
+  const odd = decimalOdd(value, format);
+  return odd == null ? '-' : odd.toFixed(2);
 }

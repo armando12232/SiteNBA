@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { clearWnbaCache, getWnbaPlayers, getWnbaPregame } from '../api/wnba.js';
-import { ensureHalfLine, getBestProp } from '../utils/props.js';
+import { numberOrNull, propForStat } from '../utils/props.js';
 import { buildPregameScore } from '../utils/statcastScore.js';
 import { userErrorMessage } from '../utils/errors.js';
 
@@ -44,6 +44,7 @@ export function WnbaPage({ onSelectPlayer }) {
         }));
 
         await progressivePool(basePlayers, 3, async (player) => {
+          if (!alive) return;
           const data = await withTimeout(getWnbaPregame(player.player_id || player.id), 9000).catch(() => null);
           if (!alive) return;
           setState((current) => {
@@ -124,12 +125,13 @@ export function WnbaPage({ onSelectPlayer }) {
         <span className="search-icon">⌕</span>
         <input
           className="search-bar"
+          aria-label="Buscar jogadora WNBA"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Buscar jogadora..."
           maxLength={50}
         />
-        <button type="button" className={`search-clear ${query ? 'visible' : ''}`} onClick={() => setQuery('')}>
+        <button type="button" aria-label="Limpar busca" disabled={!query} className={`search-clear ${query ? 'visible' : ''}`} onClick={() => setQuery('')}>
           x
         </button>
       </div>
@@ -140,6 +142,7 @@ export function WnbaPage({ onSelectPlayer }) {
             type="button"
             key={stat}
             className={`prop-filter-btn ${activeStat === stat ? 'active' : ''}`}
+            aria-pressed={activeStat === stat}
             onClick={() => setActiveStat(stat)}
           >
             {label}
@@ -153,12 +156,13 @@ export function WnbaPage({ onSelectPlayer }) {
           ['score', 'StatCast'],
           ['l5', 'L5'],
           ['hit', 'L10'],
-          ['season', 'Temporada'],
+          ['season', 'Amostra'],
         ].map(([key, label]) => (
           <button
             type="button"
             key={key}
             className={`period-filter-btn ${sortBy === key ? 'active' : ''}`}
+            aria-pressed={sortBy === key}
             onClick={() => setSortBy(key)}
           >
             {label}
@@ -180,7 +184,7 @@ export function WnbaPage({ onSelectPlayer }) {
               <div>Jogadora</div>
               <div style={{ textAlign: 'center' }}>L5</div>
               <div style={{ textAlign: 'center' }}>L10</div>
-              <div className="hide-mobile" style={{ textAlign: 'center' }}>Temp</div>
+              <div className="hide-mobile" style={{ textAlign: 'center' }}>Amostra</div>
               <div style={{ textAlign: 'center' }}>SC</div>
               <div style={{ textAlign: 'right' }}>Linha</div>
             </div>
@@ -214,12 +218,13 @@ async function progressivePool(items, limit, worker) {
 }
 
 function withTimeout(promise, timeoutMs) {
+  let timer;
   return Promise.race([
     promise,
     new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('timeout')), timeoutMs);
+      timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
     }),
-  ]);
+  ]).finally(() => clearTimeout(timer));
 }
 
 function upsertPlayer(players, player) {
@@ -241,7 +246,12 @@ function WnbaRow({ player, activeStat, onSelectPlayer }) {
   const loaded = isPlayerLoaded(player);
 
   return (
-    <div className={`props-table-row ${loaded ? '' : 'is-loading'}`} onClick={() => onSelectPlayer?.({ ...player, league: 'wnba' })}>
+    <div className={`props-table-row ${loaded ? '' : 'is-loading'}`} role="button" tabIndex={0} aria-label={`Ver ${statLabels[stat]} de ${player.player_name}`} onClick={() => onSelectPlayer?.({ ...player, league: 'wnba' })} onKeyDown={(event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        onSelectPlayer?.({ ...player, league: 'wnba' });
+      }
+    }}>
       <div className="props-player-cell">
         <img src={playerPhotoUrl(player)} alt="" className="player-img-mobile props-player-img" />
         <div className="props-player-meta">
@@ -254,7 +264,7 @@ function WnbaRow({ player, activeStat, onSelectPlayer }) {
         </div>
       </div>
       <HitCell value={prop.l5} loading={!loaded} />
-      <HitCell value={prop.l10 ?? prop.hit_rate} loading={!loaded} />
+      <HitCell value={prop.l10} loading={!loaded} />
       <div className="hide-mobile">
         <HitCell value={prop.hit_rate} loading={!loaded} />
       </div>
@@ -284,10 +294,10 @@ function WnbaRow({ player, activeStat, onSelectPlayer }) {
 
 function scoreEntry(player, activeStat) {
   if (!player) return null;
-  const activeProp = player.props?.[activeStat];
-  const best = activeProp?.line != null ? { stat: activeStat, ...activeProp } : getBestProp(player);
-  const stat = best?.stat || activeStat || 'pts';
-  const line = ensureHalfLine(best?.line ?? player.synthetic_lines?.[stat]);
+  const best = propForStat(player, activeStat);
+  if (!best) return null;
+  const stat = activeStat;
+  const line = best.line;
   const score = buildPregameScore({
     player,
     stat,
@@ -307,17 +317,16 @@ function sortPlayers(players, stat, sortBy) {
     const aProp = aEntry?.prop || {};
     const bProp = bEntry?.prop || {};
     if (sortBy === 'score') return (bEntry?.score?.score || 0) - (aEntry?.score?.score || 0);
-    if (sortBy === 'hit') return (bProp.l10 ?? bProp.hit_rate ?? -1) - (aProp.l10 ?? aProp.hit_rate ?? -1);
-    if (sortBy === 'season') return (b.season_avg?.[stat] ?? -1) - (a.season_avg?.[stat] ?? -1);
-    return (bProp.l5 ?? b.last5_avg?.[stat] ?? -1) - (aProp.l5 ?? a.last5_avg?.[stat] ?? -1);
+    if (sortBy === 'hit') return (bProp.l10 ?? -1) - (aProp.l10 ?? -1);
+    if (sortBy === 'season') return (bProp.hit_rate ?? -1) - (aProp.hit_rate ?? -1);
+    return (bProp.l5 ?? -1) - (aProp.l5 ?? -1);
   });
 }
 
 function HitCell({ value, loading = false }) {
   if (loading) return <div className="hit-rate-cell loading-cell" />;
-  if (value == null || value === '') return <div className="hit-rate-cell none">-</div>;
-  const n = Number(value);
-  if (Number.isNaN(n)) return <div className="hit-rate-cell none">-</div>;
+  const n = numberOrNull(value);
+  if (n == null || n < 0 || n > 100) return <div className="hit-rate-cell none">-</div>;
   const cls = n >= 70 ? 'high' : n >= 50 ? 'mid' : 'low';
   return <div className={`hit-rate-cell ${cls}`}>{n}%</div>;
 }

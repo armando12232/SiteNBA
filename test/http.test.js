@@ -30,3 +30,19 @@ test('fetchJson supports auth option without leaking it to fetch', async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test('fetchJson preserves status for actionable authentication errors', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: false, status: 403, json: async () => ({ error: 'subscription inactive' }) });
+  try {
+    await assert.rejects(fetchJson('/api/test'), (error) => error.status === 403 && error.message === 'subscription inactive');
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('fetchJson rejects an HTML or empty success response instead of returning null', async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('not JSON'); } });
+  try {
+    await assert.rejects(fetchJson('/api/test'), (error) => error.status === 502);
+  } finally { globalThis.fetch = originalFetch; }
+});

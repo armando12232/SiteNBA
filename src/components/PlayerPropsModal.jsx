@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { getPregame as getNbaPregame, getPregameByName as getNbaPregameByName } from '../api/nba.js';
 import { getWnbaPregame, getWnbaPregameByName } from '../api/wnba.js';
-import { ensureHalfLine, getBestProp } from '../utils/props.js';
+import { averageRecent, hitPercent, numberOrNull, propForStat, streakOver } from '../utils/props.js';
 import { buildPregameScore } from '../utils/statcastScore.js';
 import { userErrorMessage } from '../utils/errors.js';
 
@@ -10,6 +10,43 @@ export function PlayerPropsModal({ playerName, onClose }) {
   const displayName = tableData?.player_name || String(playerName || '');
   const [activeStat, setActiveStat] = useState('pts');
   const [state, setState] = useState({ loading: true, error: null, data: null });
+  const dialogRef = useRef(null);
+  const closeRef = useRef(onClose);
+  const titleId = useId();
+  closeRef.current = onClose;
+
+  useEffect(() => {
+    if (!playerName) return;
+    const dialog = dialogRef.current;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialog?.querySelector('button')?.focus();
+    const handleKey = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        closeRef.current?.();
+      }
+      if (event.key !== 'Tab' || !dialog) return;
+      const focusable = [...dialog.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), [tabindex="0"]')];
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    dialog?.addEventListener('keydown', handleKey);
+    return () => {
+      dialog?.removeEventListener('keydown', handleKey);
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus?.();
+    };
+  }, [Boolean(playerName)]);
 
   useEffect(() => {
     if (!playerName) return;
@@ -44,52 +81,52 @@ export function PlayerPropsModal({ playerName, onClose }) {
 
   const data = state.data;
   const activeProp = data?.props?.[activeStat];
-  const best = activeProp?.line != null ? { stat: activeStat, ...activeProp } : getBestProp(data);
-  const stat = best?.stat || activeStat || 'pts';
-  const line = ensureHalfLine(best?.line ?? data?.synthetic_lines?.pts);
+  const best = propForStat(data, activeStat);
+  const stat = activeStat;
+  const line = best?.line ?? null;
   const games = sortRecentGames(data?.last5_games || []);
   const chartGames = games.slice(0, 20).reverse();
   const teamAbbr = data?.team_abbr || inferTeamFromGames(games);
-  const maxValue = Math.max(...games.map((game) => Number(game[stat] ?? game.pts ?? 0)), Number(line) || 20, 1);
+  const maxValue = Math.max(...games.map((game) => numberOrNull(game[stat]) ?? 0), line ?? 20, 1);
   const chartMax = Math.ceil(maxValue / 2) * 2;
   const photoUrl = playerPhotoUrl(data);
   const hitRate = best?.hit_rate;
-  const lineNumber = Number(line);
+  const lineNumber = numberOrNull(line);
   const averages = buildModalAverages(data, stat, games, best);
   const chartLinePct = Number.isFinite(lineNumber)
     ? Math.min(95, Math.max(5, (lineNumber / chartMax) * 100))
     : 0;
   const metricHits = {
-    h2h: null,
+    h2h: activeProp?.h2h ?? null,
     l5: activeProp?.l5 ?? hitPercent(games, stat, lineNumber, 5),
     l10: activeProp?.l10 ?? hitPercent(games, stat, lineNumber, 10),
-    l15: hitPercent(games, stat, lineNumber, 15),
-    l20: hitPercent(games, stat, lineNumber, 20),
+    l15: activeProp?.l15 ?? hitPercent(games, stat, lineNumber, 15),
+    l20: activeProp?.l20 ?? hitPercent(games, stat, lineNumber, 20),
   };
   const seasonHit = activeProp?.hit_rate ?? hitPercent(games, stat, lineNumber, games.length);
   const currentStreak = streakOver(games, stat, lineNumber);
-  const score = data && !state.loading && !state.error
+  const score = data && best && !state.loading && !state.error
     ? buildPregameScore({ player: data, stat, prop: best, line, games })
     : null;
 
   return (
     <div className="pp-modal-overlay open" onMouseDown={onClose}>
-      <section className="pp-modal" onMouseDown={(event) => event.stopPropagation()}>
+      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} className="pp-modal" onMouseDown={(event) => event.stopPropagation()}>
         <div className="pp-modal-hero">
-          <button type="button" className="pp-modal-close" onClick={onClose}>x</button>
+          <button type="button" aria-label="Fechar detalhes do jogador" className="pp-modal-close" onClick={onClose}>x</button>
           <div className="pp-hero-inner">
             {photoUrl ? <img src={photoUrl} alt="" className="pp-player-photo" /> : null}
             <div className="pp-player-meta">
-              <div className="pp-player-name">{displayName}</div>
+              <div id={titleId} className="pp-player-name">{displayName}</div>
               <div className="pp-player-team">
                 {state.loading ? 'Carregando histórico...' : `${teamAbbr || '-'} / ${statLabels[stat]} / Linha ${line ?? '-'}`}
               </div>
               {!state.loading && !state.error && sampleLabel(data) ? (
                 <div className="pp-player-sample">{sampleLabel(data)}</div>
               ) : null}
-              {!state.loading && !state.error ? (
-                <div className={`pp-rec-badge ${(best?.edge ?? 0) >= 0 ? 'over' : 'under'}`}>
-                  {(best?.edge ?? 0) >= 0 ? 'OVER recomendado' : 'UNDER recomendado'}
+              {score ? (
+                <div className={`pp-rec-badge ${score.side === 'UNDER' ? 'under' : 'over'}`}>
+                  {score.side === 'NEUTRO' ? 'Leitura neutra' : `${score.side} recomendado`}
                 </div>
               ) : null}
             </div>
@@ -108,6 +145,7 @@ export function PlayerPropsModal({ playerName, onClose }) {
                     type="button"
                     key={key}
                     className={`pp-prop-tab ${stat === key ? 'active' : ''}`}
+                    aria-pressed={stat === key}
                     onClick={() => setActiveStat(key)}
                   >
                     {label}
@@ -128,9 +166,9 @@ export function PlayerPropsModal({ playerName, onClose }) {
                 <ScoreDiagnostic score={score} />
               ) : null}
 
-              <div className="pp-section-title">Performance recente</div>
+              <div className="pp-section-title">Acertos OVER na linha atual</div>
               <div className="performance-strip">
-                <MetricInline label="Temp" value={seasonHit} />
+                <MetricInline label={best?.source === 'BettingPros' ? 'Temp' : 'Amostra'} value={seasonHit} />
                 <MetricInline label="H2H" value={metricHits.h2h} />
                 <MetricInline label="L5" value={metricHits.l5} />
                 <MetricInline label="L10" value={metricHits.l10} />
@@ -154,12 +192,12 @@ export function PlayerPropsModal({ playerName, onClose }) {
                   </div>
                   <div className="chart-bars">
                     {chartGames.map((game) => {
-                      const value = Number(game[stat] ?? game.pts ?? 0);
-                      const pct = Math.max(7, Math.round((value / chartMax) * 100));
-                      const hit = line != null ? value >= lineNumber : false;
+                      const value = numberOrNull(game[stat]);
+                      const pct = value == null ? 0 : Math.max(0, Math.round((value / chartMax) * 100));
+                      const hit = line != null && value != null ? value > lineNumber : false;
                       return (
                         <div className="chart-bar-item" key={`${game.date}-${game.opp}`}>
-                          <strong>{formatNumber(value)}</strong>
+                          <strong>{value == null ? '-' : formatNumber(value)}</strong>
                           <div className={`chart-bar ${hit ? 'hit' : 'miss'}`} style={{ height: `${pct}%` }} />
                           <span>{shortOpponent(game.opp)}</span>
                           <small>{formatDateShort(game.date)}</small>
@@ -172,11 +210,11 @@ export function PlayerPropsModal({ playerName, onClose }) {
                     <span>{currentStreak ? `Streak: ${currentStreak}x OVER` : 'Streak: -'}</span>
                   </div>
                 </div>
-              ) : <EstimatedHistory player={data} stat={stat} line={lineNumber} />}
+              ) : <div className="state-box compact">Histórico de jogos indisponível para este jogador.</div>}
             </>
-          ) : (
+          ) : state.loading ? (
             <div className="state-box compact">Carregando...</div>
-          )}
+          ) : null}
         </div>
       </section>
     </div>
@@ -187,24 +225,23 @@ function mergeModalData(tableData, fetchedData) {
   if (!tableData) return fetchedData;
   if (!fetchedData || fetchedData.error) return tableData;
   return {
-    ...fetchedData,
     ...tableData,
-    season_avg: { ...(fetchedData.season_avg || {}), ...(tableData.season_avg || {}) },
-    last5_avg: { ...(fetchedData.last5_avg || {}), ...(tableData.last5_avg || {}) },
-    last10_avg: { ...(fetchedData.last10_avg || {}), ...(tableData.last10_avg || {}) },
-    synthetic_lines: { ...(fetchedData.synthetic_lines || {}), ...(tableData.synthetic_lines || {}) },
+    ...fetchedData,
+    season_avg: { ...(tableData.season_avg || {}), ...(fetchedData.season_avg || {}) },
+    last5_avg: { ...(tableData.last5_avg || {}), ...(fetchedData.last5_avg || {}) },
+    last10_avg: { ...(tableData.last10_avg || {}), ...(fetchedData.last10_avg || {}) },
+    synthetic_lines: { ...(tableData.synthetic_lines || {}), ...(fetchedData.synthetic_lines || {}) },
     props: mergePropMaps(fetchedData.props, tableData.props),
-    last5_games: tableData.last5_games?.length ? tableData.last5_games : fetchedData.last5_games,
+    last5_games: fetchedData.last5_games?.length ? fetchedData.last5_games : tableData.last5_games,
   };
 }
 
 function mergePropMaps(fetchedProps = {}, tableProps = {}) {
   const result = { ...fetchedProps };
   for (const [stat, tableProp] of Object.entries(tableProps || {})) {
-    result[stat] = {
-      ...(fetchedProps?.[stat] || {}),
-      ...tableProp,
-    };
+    result[stat] = tableProp?.source === 'BettingPros'
+      ? { ...(fetchedProps?.[stat] || {}), ...tableProp }
+      : { ...tableProp, ...(fetchedProps?.[stat] || {}) };
   }
   return result;
 }
@@ -232,82 +269,6 @@ function ModalMetric({ label, value, hot = false }) {
       <div className="pp-stat-val">{value}</div>
     </div>
   );
-}
-
-function EstimatedHistory({ player, stat, line }) {
-  const prop = player?.props?.[stat] || {};
-  const rows = buildEstimatedRows(prop, player, stat);
-  if (!rows.length) {
-    return <div className="state-box compact">Histórico real indisponível. Mantendo leitura pela linha e hit rate da tabela.</div>;
-  }
-
-  const chartMax = Math.max(Math.ceil(Math.max(...rows.map((row) => row.value), Number(line) || 1) / 2) * 2, 2);
-  const chartLinePct = Number.isFinite(line)
-    ? Math.min(95, Math.max(5, (line / chartMax) * 100))
-    : 0;
-
-  return (
-    <div className="performance-chart estimated">
-      <div className="chart-grid">
-        {[1, 0.8, 0.6, 0.4, 0.2, 0].map((ratio) => (
-          <div className="chart-grid-line" key={ratio}>
-            <span>{Math.round(chartMax * ratio)}</span>
-          </div>
-        ))}
-      </div>
-      <div
-        className="chart-line"
-        style={{ bottom: `${chartLinePct}%`, display: Number.isFinite(line) ? undefined : 'none' }}
-      >
-        <span>Linha {line ?? '-'}</span>
-      </div>
-      <div className="chart-bars">
-        {rows.map((row, index) => {
-          const value = row.value;
-          const pct = Math.max(7, Math.round((value / chartMax) * 100));
-          const hit = Number.isFinite(line) ? value >= line : false;
-          return (
-            <div className="chart-bar-item" key={`${row.date}-${row.opp}-${index}`}>
-              <strong>{formatNumber(value)}</strong>
-              <div className={`chart-bar ${hit ? 'hit' : 'miss'}`} style={{ height: `${pct}%` }} />
-              <span>{row.opp}</span>
-              <small>{formatDateShort(row.date)}</small>
-            </div>
-          );
-        })}
-      </div>
-      <div className="chart-footer">
-        <span>Projeção visual pela linha da casa</span>
-        <span>StatCast</span>
-      </div>
-    </div>
-  );
-}
-
-function buildEstimatedRows(prop, player, stat) {
-  const base = Number(prop.projection ?? player?.last5_avg?.[stat] ?? player?.season_avg?.[stat] ?? prop.line);
-  if (!Number.isFinite(base)) return [];
-  const l5 = Number(prop.l5 ?? prop.hit_rate ?? 50);
-  const swing = Math.max(1, base * 0.18);
-  const dates = estimateRecentDates();
-  return Array.from({ length: 10 }, (_, index) => {
-    const direction = index < Math.round(l5 / 10) ? 1 : -1;
-    const wave = ((index % 4) - 1.5) * 0.25;
-    return {
-      value: Number(Math.max(0, base + direction * swing * (0.5 + Math.abs(wave))).toFixed(1)),
-      opp: 'EST',
-      date: dates[index],
-    };
-  });
-}
-
-function estimateRecentDates() {
-  const base = new Date();
-  return Array.from({ length: 10 }, (_, index) => {
-    const date = new Date(base);
-    date.setDate(base.getDate() - ((9 - index) * 2));
-    return date.toISOString().slice(0, 10);
-  });
 }
 
 function ScoreDiagnostic({ score }) {
@@ -365,13 +326,13 @@ function formatNumber(value) {
 }
 
 function formatOptionalNumber(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? formatNumber(number) : '-';
+  const number = numberOrNull(value);
+  return number == null ? '-' : formatNumber(number);
 }
 
 function formatPercent(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? `${Math.round(number)}%` : '-';
+  const number = numberOrNull(value);
+  return number == null ? '-' : `${Math.round(number)}%`;
 }
 
 function buildModalAverages(player, stat, games, prop) {
@@ -388,19 +349,6 @@ function buildModalAverages(player, stat, games, prop) {
   };
 }
 
-function averageRecent(games, stat, limit) {
-  const rows = (Array.isArray(games) ? games : []).slice(0, limit);
-  if (rows.length < limit) return null;
-  const values = rows.map((game) => Number(game?.[stat] ?? game?.pts)).filter(Number.isFinite);
-  if (values.length < limit) return null;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function numberOrNull(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
-}
-
 function shortOpponent(matchup) {
   const text = String(matchup || '');
   const parts = text.split(/\s+/);
@@ -410,24 +358,6 @@ function shortOpponent(matchup) {
 function inferTeamFromGames(games) {
   const matchup = games?.[0]?.opp || '';
   return String(matchup).split(/\s+/)[0]?.toUpperCase() || '';
-}
-
-function hitPercent(games, stat, line, limit) {
-  if (!Number.isFinite(line)) return null;
-  const rows = games.slice(0, limit);
-  if (rows.length < limit) return null;
-  const hits = rows.filter((game) => Number(game[stat] ?? game.pts ?? 0) >= line).length;
-  return Math.round((hits / rows.length) * 100);
-}
-
-function streakOver(games, stat, line) {
-  if (!Number.isFinite(line)) return 0;
-  let count = 0;
-  for (const game of games) {
-    if (Number(game[stat] ?? game.pts ?? 0) < line) break;
-    count += 1;
-  }
-  return count;
 }
 
 function sortRecentGames(games) {

@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   PLANS,
+  createSubscriptionSync,
+  freeSubscription,
   getCurrentSession,
-  loadSubscription,
+  isSubscriptionActive,
   signIn,
   signOut,
   signUp,
@@ -12,36 +14,38 @@ import { SUPABASE_CONFIGURED, supabase } from '../api/supabase.js';
 import { userErrorMessage } from '../utils/errors.js';
 
 export function SubscriptionWidget({ onSubscriptionChange }) {
-  const [session, setSession] = useState(null);
-  const [subscription, setSubscription] = useState({ plan: 'free', status: 'active', role: 'guest', label: 'Free' });
+  const [{ session, subscription, loading, error }, setAccount] = useState({
+    session: null, subscription: freeSubscription(), loading: true, error: null,
+  });
   const [modal, setModal] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const syncRef = useRef(null);
 
   useEffect(() => {
     let alive = true;
-    async function boot() {
-      if (!SUPABASE_CONFIGURED) {
-        if (alive) setLoading(false);
-        return;
-      }
-      const nextSession = await getCurrentSession();
-      if (!alive) return;
-      setSession(nextSession);
-      await refreshSubscription(nextSession, setSubscription);
-      setLoading(false);
-    }
-    boot();
+    let receivedAuthEvent = false;
+    const sync = createSubscriptionSync((account) => { if (alive) setAccount(account); });
+    syncRef.current = sync;
     if (!SUPABASE_CONFIGURED) {
+      void sync.refresh(null);
       return () => {
         alive = false;
+        sync.stop();
+        syncRef.current = null;
       };
     }
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      refreshSubscription(nextSession, setSubscription);
+      receivedAuthEvent = true;
+      void sync.refresh(nextSession);
+    });
+    getCurrentSession().then((nextSession) => {
+      if (alive && !receivedAuthEvent) void sync.refresh(nextSession);
+    }).catch(() => {
+      if (alive && !receivedAuthEvent) void sync.refresh(null);
     });
     return () => {
       alive = false;
+      sync.stop();
+      syncRef.current = null;
       data.subscription.unsubscribe();
     };
   }, []);
@@ -59,12 +63,14 @@ export function SubscriptionWidget({ onSubscriptionChange }) {
   }, [onSubscriptionChange, session, subscription]);
 
   const plan = PLANS[subscription.plan] || PLANS.free;
+  const active = isSubscriptionActive(subscription);
 
   return (
     <div className="subWidget">
       <button type="button" className={`planBadge plan-${subscription.plan}`} onClick={() => setModal('pricing')}>
-        {loading ? 'Plano' : plan.name}
+        {loading ? 'Plano' : `${plan.name}${active ? '' : ' (inativo)'}`}
       </button>
+      {error ? <button type="button" className="subBtn ghost" onClick={() => syncRef.current?.refresh(session)} title="Não foi possível atualizar sua assinatura. Tente novamente.">Recarregar plano</button> : null}
       {session ? (
         <>
           <span className="subEmail">{session.user?.email}</span>
@@ -76,7 +82,7 @@ export function SubscriptionWidget({ onSubscriptionChange }) {
       {modal === 'auth' ? <AuthModal onClose={() => setModal(null)} /> : null}
       {modal === 'pricing' ? (
         <PricingModal
-          currentPlan={subscription.plan}
+          currentPlan={active ? subscription.plan : 'free'}
           hasSession={Boolean(session)}
           onNeedAuth={() => setModal('auth')}
           onClose={() => setModal(null)}
@@ -84,15 +90,6 @@ export function SubscriptionWidget({ onSubscriptionChange }) {
       ) : null}
     </div>
   );
-}
-
-async function refreshSubscription(session, setSubscription) {
-  try {
-    const next = await loadSubscription(session?.user?.id);
-    setSubscription(next);
-  } catch {
-    setSubscription({ plan: 'free', status: 'active', role: session ? 'user' : 'guest', label: 'Free' });
-  }
 }
 
 function AuthModal({ onClose }) {
@@ -104,17 +101,20 @@ function AuthModal({ onClose }) {
 
   async function submit(event) {
     event.preventDefault();
+    if (busy) return;
     setBusy(true);
     setMessage('');
-    const action = mode === 'login' ? signIn : signUp;
-    const { error } = await action(email.trim(), password);
-    setBusy(false);
-    if (error) {
+    try {
+      const action = mode === 'login' ? signIn : signUp;
+      const { error } = await action(email.trim(), password);
+      if (error) throw error;
+      setMessage(mode === 'login' ? 'Login feito.' : 'Conta criada. Confirme o e-mail se solicitado.');
+      if (mode === 'login') setTimeout(onClose, 500);
+    } catch (error) {
       setMessage(userErrorMessage(error, mode === 'login' ? 'Não foi possível entrar agora.' : 'Não foi possível criar a conta agora.'));
-      return;
+    } finally {
+      setBusy(false);
     }
-    setMessage(mode === 'login' ? 'Login feito.' : 'Conta criada. Confirme o e-mail se solicitado.');
-    setTimeout(onClose, 500);
   }
 
   return (
@@ -124,12 +124,12 @@ function AuthModal({ onClose }) {
         <div className="subKicker">Conta</div>
         <h3>{mode === 'login' ? 'Entrar' : 'Criar conta'}</h3>
         <form className="authForm" onSubmit={submit}>
-          <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="email" required />
-          <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="senha" minLength={6} required />
+          <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="email" aria-label="E-mail" autoComplete="email" required />
+          <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="senha" aria-label="Senha" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={6} required />
           {message ? <div className="authMessage">{message}</div> : null}
           <button type="submit" disabled={busy}>{busy ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}</button>
         </form>
-        <button type="button" className="linkBtn" onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}>
+        <button type="button" className="linkBtn" disabled={busy} onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setMessage(''); }}>
           {mode === 'login' ? 'Criar conta nova' : 'Já tenho conta'}
         </button>
       </section>
@@ -143,6 +143,7 @@ function PricingModal({ currentPlan, hasSession, onNeedAuth, onClose }) {
   const paidPlans = useMemo(() => Object.entries(PLANS).filter(([key]) => key !== 'free'), []);
 
   async function selectPlan(plan) {
+    if (busyPlan) return;
     setError('');
     if (!hasSession) {
       onNeedAuth();
@@ -151,7 +152,8 @@ function PricingModal({ currentPlan, hasSession, onNeedAuth, onClose }) {
     setBusyPlan(plan);
     try {
       const data = await startCheckout(plan);
-      if (data?.url) window.location.href = data.url;
+      if (!data?.url) throw new Error('Não foi possível abrir o checkout agora.');
+      window.location.href = data.url;
     } catch (error) {
       setError(userErrorMessage(error, 'Não foi possível abrir o checkout agora.'));
       setBusyPlan('');
@@ -187,7 +189,7 @@ function PricingModal({ currentPlan, hasSession, onNeedAuth, onClose }) {
                 <ul>
                   {plan.features.map((feature) => <li key={feature}>{feature}</li>)}
                 </ul>
-                <button type="button" disabled={current || busyPlan === key} onClick={() => selectPlan(key)}>
+                <button type="button" disabled={current || Boolean(busyPlan)} onClick={() => selectPlan(key)}>
                   {current ? 'Plano atual' : busyPlan === key ? 'Abrindo Stripe...' : 'Assinar'}
                 </button>
               </article>

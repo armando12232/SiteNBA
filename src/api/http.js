@@ -17,7 +17,10 @@ export async function fetchJson(url, options = {}, timeoutMs = 10000) {
 
     if (!response.ok || data?.error) {
       const message = data?.error || `HTTP ${response.status}`;
-      throw new Error(message);
+      throw Object.assign(new Error(message), { status: response.status });
+    }
+    if (data == null) {
+      throw Object.assign(new Error('invalid server response'), { status: 502 });
     }
 
     return data;
@@ -32,4 +35,3 @@ async function authHeader() {
   const token = data?.session?.access_token;
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
-

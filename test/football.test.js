@@ -12,6 +12,8 @@ import {
   filterByFootballStatus,
   footballFilterHasConstraints,
   footballStatusLabel,
+  formatFootballOdd,
+  formatFootballStat,
   normalizeFootballSearch,
   parseFootballStat,
   sortFootballFixtures,
@@ -125,7 +127,7 @@ test('findTeamStats matches exact and contained ESPN team names', () => {
   assert.equal(findTeamStats(teams, 'Chelsea')?.stats.totalShots, '9');
 });
 
-test('buildFootballRead raises score when live stats, market and pregame data exist', () => {
+test('buildFootballRead reports facts without manufacturing a betting score', () => {
   const read = buildFootballRead(fixtures[1], {
     stats: {
       teams: [
@@ -143,13 +145,13 @@ test('buildFootballRead raises score when live stats, market and pregame data ex
     referee: { referee_stats: { avg_cards: '4.8' } },
   });
 
-  assert.equal(read.tier, 'elite');
-  assert.equal(read.title, 'Elite read');
-  assert.equal(read.signals.find((item) => item.label === 'Pressão').value, 21);
+  assert.equal(read.score, null);
+  assert.equal(read.title, 'Resumo ao vivo');
+  assert.equal(read.signals.find((item) => item.label === 'Chutes').value, 21);
   assert.equal(read.signals.find((item) => item.label === 'Árbitro').value, '4.8');
 });
 
-test('buildFootballHighlights returns the top five sorted by read strength', () => {
+test('buildFootballHighlights puts live and upcoming games before finished games', () => {
   const manyFixtures = Array.from({ length: 7 }, (_, index) => ({
     ...fixtures[index % fixtures.length],
     id: String(index + 1),
@@ -161,4 +163,52 @@ test('buildFootballHighlights returns the top five sorted by read strength', () 
 
   assert.equal(highlights.length, 5);
   assert.equal(highlights[0].fixture.id, '5');
+  assert.equal(highlights.some(({ fixture }) => fixture.finished), false);
+  assert.deepEqual(buildFootballHighlights([fixtures[2]]), []);
+});
+
+test('all-games tab includes live games and live filter remains usable', () => {
+  assert.equal(filterFootballFixtures(fixtures).length, 3);
+  assert.deepEqual(filterFootballFixtures(fixtures, { statusFilter: 'live' }).map((item) => item.id), ['2']);
+  assert.deepEqual(filterFootballFixtures(fixtures, { activeTab: 'live' }).map((item) => item.id), ['2']);
+});
+
+test('missing match data does not become a score or zero-shot statistic', () => {
+  const read = buildFootballRead(fixtures[0]);
+  assert.equal(read.score, null);
+  assert.equal(read.title, 'Sem dados suficientes');
+  assert.equal(read.signals.find((item) => item.label === 'Chutes').value, '-');
+});
+
+test('a goal total is a market line, never a decimal over-2.5 odd', () => {
+  const read = buildFootballRead(fixtures[0], { pregame: { odds: { overUnder: 2.5 } } });
+  assert.equal(read.signals.find((item) => item.label === 'Over 2.5'), undefined);
+  assert.equal(read.signals.find((item) => item.label === 'Linha de gols').value, 2.5);
+});
+
+test('finished matches have a historical summary even with large attacking totals', () => {
+  const read = buildFootballRead(fixtures[2], { stats: { teams: [
+    { team: 'Milan', stats: { totalShots: 28, shotsOnTarget: 12 } },
+    { team: 'Inter', stats: { totalShots: 25, shotsOnTarget: 11 } },
+  ] } });
+  assert.equal(read.score, null);
+  assert.equal(read.title, 'Resumo final');
+  assert.match(read.summary, /encerrada/);
+});
+
+test('football percentages distinguish ratios, percentage points, zero and missing values', () => {
+  assert.equal(formatFootballStat('0.8', 'passPct'), '80%');
+  assert.equal(formatFootballStat('82.4', 'passPct'), '82.4%');
+  assert.equal(formatFootballStat('0.8%', 'passPct'), '0.8%');
+  assert.equal(formatFootballStat(0, 'passPct'), '0%');
+  assert.equal(formatFootballStat(undefined, 'passPct'), '-');
+  assert.equal(formatFootballStat(0, 'redCards'), '0');
+});
+
+test('football odds respect provider formats including long decimal prices', () => {
+  assert.equal(formatFootballOdd(15, 'decimal'), '15.00');
+  assert.equal(formatFootballOdd(-200, 'american'), '1.50');
+  assert.equal(formatFootballOdd(150, 'american'), '2.50');
+  assert.equal(formatFootballOdd('1,85', 'decimal'), '1.85');
+  assert.equal(formatFootballOdd(null), '-');
 });

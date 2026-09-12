@@ -18,9 +18,9 @@ export function Cs2Page() {
   useEffect(() => {
     let alive = true;
     setState((current) => ({ ...current, loading: true, error: null }));
-    getCs2Scoreboard()
+    getCs2Scoreboard({ force: refresh > 0 })
       .then((data) => {
-        if (alive) setState({ loading: false, error: null, matches: data.games || [] });
+        if (alive) setState({ loading: false, error: null, matches: data.meta?.source === 'baseline' ? [] : data.games || [] });
       })
       .catch((error) => {
         if (alive) setState({ loading: false, error, matches: [] });
@@ -61,8 +61,8 @@ export function Cs2Page() {
             </button>
           ))}
         </nav>
-        <button className="footballRefresh" type="button" onClick={() => setRefresh((value) => value + 1)}>
-          Atualizar
+        <button className="footballRefresh" type="button" disabled={state.loading} onClick={() => setRefresh((value) => value + 1)}>
+          {state.loading ? 'Atualizando...' : 'Atualizar'}
         </button>
       </div>
 
@@ -76,15 +76,15 @@ export function Cs2Page() {
 
       {state.loading ? <div className="state-box compact">Buscando confrontos CS2...</div> : null}
 
-      {!state.loading ? (
+      {!state.loading && !state.error ? (
         <div className="cs2Grid">
           {matches.map((match) => (
             <Cs2MatchCard match={match} key={match.id} onOpen={() => setSelectedMatch(match)} />
           ))}
           {!matches.length ? (
             <div className="emptyState richEmptyState">
-              <strong>Nenhum confronto encontrado</strong>
-              <span>Troque o filtro ou atualize para buscar a próxima janela de partidas.</span>
+              <strong>{state.matches.length ? 'Nenhum confronto nesse filtro' : 'Sem dados atuais de CS2'}</strong>
+              <span>{state.matches.length ? 'Troque o filtro para ver outros confrontos.' : 'Nenhuma partida foi recebida da fonte de dados. Atualize para tentar novamente.'}</span>
             </div>
           ) : null}
         </div>

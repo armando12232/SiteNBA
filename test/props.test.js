@@ -1,12 +1,51 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { confidenceFromEdge, ensureHalfLine, getBestProp } from '../src/utils/props.js';
+import { averageRecent, confidenceFromEdge, ensureHalfLine, getBestProp, hitPercent, numberOrNull, propForStat, streakOver } from '../src/utils/props.js';
 
-test('ensureHalfLine keeps half lines and rounds integer lines up to .5', () => {
+test('market lines retain their exact value, including integer and quarter lines', () => {
   assert.equal(ensureHalfLine(21.5), 21.5);
-  assert.equal(ensureHalfLine(21), 21.5);
-  assert.equal(ensureHalfLine('18'), 18.5);
+  assert.equal(ensureHalfLine(21), 21);
+  assert.equal(ensureHalfLine('18'), 18);
+  assert.equal(ensureHalfLine('18.25'), 18.25);
+  assert.equal(ensureHalfLine(0), 0);
+});
+
+test('missing or malformed market data never becomes a zero line', () => {
+  for (const value of [null, undefined, '', ' ', '12 points', Infinity, NaN, false, [], {}]) {
+    assert.equal(ensureHalfLine(value), null);
+    assert.equal(numberOrNull(value), null);
+  }
+  assert.equal(ensureHalfLine(-1), null);
+});
+
+test('selected stat never falls back to a different market', () => {
+  const player = { props: { pts: { line: 20.5, edge: 8 } }, synthetic_lines: { ast: 4.5 } };
+  assert.equal(propForStat(player, 'reb'), null);
+  assert.deepEqual(propForStat(player, 'ast'), { stat: 'ast', line: 4.5 });
+  assert.equal(propForStat(player, 'pts').line, 20.5);
+});
+
+test('OVER requires exceeding the line; pushes are not wins or streak hits', () => {
+  const games = [{ pts: 12 }, { pts: 10 }, { pts: 9 }];
+  assert.equal(hitPercent(games, 'pts', 10, 3), 33);
+  assert.equal(streakOver(games, 'pts', 10), 1);
+  assert.equal(hitPercent(games, 'pts', null, 3), null);
+});
+
+test('incomplete samples and missing stats stay unknown without substituting points', () => {
+  const games = [{ pts: 25, reb: 5 }, { pts: 30, reb: null }, { pts: 20 }];
+  assert.equal(hitPercent(games, 'pts', 20.5, 5), null);
+  assert.equal(hitPercent(games, 'reb', 4.5, 3), null);
+  assert.equal(averageRecent(games, 'reb', 3), null);
+  assert.equal(hitPercent([], 'pts', 20.5, 0), null);
+  assert.equal(streakOver(games, 'reb', 4.5), 1);
+});
+
+test('zero results are valid observations in averages and percentages', () => {
+  const games = [{ fg3m: 0 }, { fg3m: 2 }];
+  assert.equal(averageRecent(games, 'fg3m', 2), 1);
+  assert.equal(hitPercent(games, 'fg3m', 0.5, 2), 50);
 });
 
 test('confidenceFromEdge maps thresholds correctly', () => {

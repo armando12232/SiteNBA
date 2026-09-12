@@ -1,7 +1,6 @@
 import { fetchJson } from './http.js';
+import { cachedFetch, clearCachedPrefix, writeStored } from './cache.js';
 
-const pregameCache = new Map();
-const pregameInflight = new Map();
 const PREGAME_TTL_MS = 5 * 60 * 1000;
 const CACHE_VERSION = 'v4-last20';
 const PREGAME_STORAGE_PREFIX = `statcast:${CACHE_VERSION}:nba:pregame:`;
@@ -24,59 +23,33 @@ export function getBoxscore(gameId) {
 }
 
 export function getPregame(playerId) {
-  const cacheKey = String(playerId);
   const storageKey = getPregameStorageKey(playerId);
-  const stored = readStored(storageKey, PREGAME_TTL_MS);
-  if (stored) {
-    pregameCache.set(cacheKey, stored);
-    return Promise.resolve(stored);
-  }
-
-  if (pregameCache.has(cacheKey)) return Promise.resolve(pregameCache.get(cacheKey));
-  if (pregameInflight.has(cacheKey)) return pregameInflight.get(cacheKey);
-
-  const request = fetchJson(`/api/nba?type=pregame&playerId=${encodeURIComponent(playerId)}`)
-    .then((data) => {
-      pregameCache.set(cacheKey, data);
-      writeStored(storageKey, data);
-      return data;
-    })
-    .finally(() => {
-      pregameInflight.delete(cacheKey);
-    });
-
-  pregameInflight.set(cacheKey, request);
-  return request;
+  return cachedFetch(storageKey, PREGAME_TTL_MS, () => (
+    fetchJson(`/api/nba?type=pregame&playerId=${encodeURIComponent(playerId)}`)
+  ));
 }
 
 export function getPregameByName(name) {
   const storageKey = getPregameNameStorageKey(name);
-  const stored = readStored(storageKey, PREGAME_TTL_MS);
-  if (stored) return Promise.resolve(stored);
-
-  return fetchJson(`/api/nba?type=pregame_by_name&name=${encodeURIComponent(name)}`, { auth: true })
+  return cachedFetch(storageKey, PREGAME_TTL_MS, () => fetchJson(`/api/nba?type=pregame_by_name&name=${encodeURIComponent(name)}`, { auth: true })
     .then((data) => {
-      writeStored(storageKey, data);
       if (data?.player_id) {
         const playerKey = String(data.player_id);
-        pregameCache.set(playerKey, data);
         writeStored(`${PREGAME_STORAGE_PREFIX}${playerKey}`, data);
       }
       return data;
-    });
+    }));
 }
 
 export function clearPregameCache() {
-  pregameCache.clear();
-  pregameInflight.clear();
-  clearStoredPrefix(PREGAME_STORAGE_PREFIX);
-  clearStoredPrefix(PREGAME_NAME_STORAGE_PREFIX);
-  clearStoredPrefix('statcast:nba:pregame:');
-  clearStoredPrefix('statcast:nba:pregame-name:');
-  clearStoredPrefix('statcast:v2-playoffs:nba:pregame:');
-  clearStoredPrefix('statcast:v2-playoffs:nba:pregame-name:');
-  clearStoredPrefix('statcast:v3-team:nba:pregame:');
-  clearStoredPrefix('statcast:v3-team:nba:pregame-name:');
+  clearCachedPrefix(PREGAME_STORAGE_PREFIX);
+  clearCachedPrefix(PREGAME_NAME_STORAGE_PREFIX);
+  clearCachedPrefix('statcast:nba:pregame:');
+  clearCachedPrefix('statcast:nba:pregame-name:');
+  clearCachedPrefix('statcast:v2-playoffs:nba:pregame:');
+  clearCachedPrefix('statcast:v2-playoffs:nba:pregame-name:');
+  clearCachedPrefix('statcast:v3-team:nba:pregame:');
+  clearCachedPrefix('statcast:v3-team:nba:pregame-name:');
 }
 
 export function normalizePregameName(name) {
@@ -89,41 +62,4 @@ export function getPregameNameStorageKey(name) {
 
 export function getPregameStorageKey(playerId) {
   return `${PREGAME_STORAGE_PREFIX}${String(playerId)}`;
-}
-
-function readStored(key, ttlMs) {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || Date.now() - parsed.savedAt > ttlMs) {
-      window.localStorage.removeItem(key);
-      return null;
-    }
-    return parsed.data ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function writeStored(key, data) {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(key, JSON.stringify({ savedAt: Date.now(), data }));
-  } catch {
-    // localStorage can be full or disabled; in-memory cache still works.
-  }
-}
-
-function clearStoredPrefix(prefix) {
-  if (typeof window === 'undefined') return;
-  try {
-    for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
-      const key = window.localStorage.key(index);
-      if (key?.startsWith(prefix)) window.localStorage.removeItem(key);
-    }
-  } catch {
-    // Ignore browser storage errors.
-  }
 }

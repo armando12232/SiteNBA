@@ -18,6 +18,9 @@ import {
   filterFootballFixtures,
   footballFilterHasConstraints,
   footballStatusLabel,
+  formatFootballOdd,
+  formatFootballStat,
+  hasFootballStat,
   parseFootballStat,
   sortFootballFixtures,
 } from '../utils/football.js';
@@ -57,7 +60,6 @@ const FOOTBALL_STATUS_FILTERS = [
 
 const FOOTBALL_SORTS = [
   { key: 'time', label: 'Horário', icon: FX.clock },
-  { key: 'read', label: 'Score', icon: FX.trend },
   { key: 'league', label: 'Liga', icon: FX.sort },
 ];
 
@@ -88,6 +90,7 @@ export function FootballPage() {
             loading: false,
             refreshing: false,
             error: null,
+            unavailableLeagues: data.unavailable_leagues || [],
             fixtures: data.fixtures || [],
           });
           setLastUpdated(new Date());
@@ -178,12 +181,13 @@ export function FootballPage() {
         <div className="footballSearch">
           <span>{FX.search}</span>
           <input
+            aria-label="Buscar time ou liga"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar time ou liga..."
             maxLength={60}
           />
-          {query ? <button type="button" onClick={() => setQuery('')}>x</button> : null}
+          {query ? <button type="button" aria-label="Limpar busca" onClick={() => setQuery('')}>x</button> : null}
         </div>
         <div className="footballStatusFilters">
           {[
@@ -220,6 +224,7 @@ export function FootballPage() {
       </div>
 
       {state.error ? <div className="alertBox">{userErrorMessage(state.error, 'Não foi possível carregar futebol agora.')}</div> : null}
+      {state.unavailableLeagues?.length ? <div className="alertBox">Dados parciais: {state.unavailableLeagues.length} liga(s) temporariamente indisponível(is). Tente atualizar.</div> : null}
       {state.loading ? <div className="loadingGrid">Carregando futebol...</div> : null}
 
       {!state.loading ? (
@@ -306,8 +311,8 @@ function FootballHighlights({ items, onSelect }) {
   return (
     <section className="footballHighlights">
       <div className="footballHighlightsHead">
-        <span>{FX.star} Destaques</span>
-        <strong>{FX.eye} {items.length} jogos para olhar primeiro</strong>
+        <span>{FX.calendar} Partidas em foco</span>
+        <strong>{FX.eye} Ao vivo e próximas partidas primeiro</strong>
       </div>
       <div className="footballHighlightRail">
         {items.map(({ fixture, read }) => (
@@ -319,7 +324,7 @@ function FootballHighlights({ items, onSelect }) {
           >
             <span>{leagueIcon(fixture.league_key)} {fixture.league_name || fixture.league_key}</span>
             <strong>{fixture.home} x {fixture.away}</strong>
-            <em>{readIcon(read.tier)} {read.title} · {read.score}</em>
+            <em>{statusIcon(fixture)} {footballStatusLabel(fixture)}</em>
           </button>
         ))}
       </div>
@@ -374,7 +379,6 @@ function FootballCard({ fixture, onSelect }) {
       </div>
       <div className="footballCardRead">
         <span>{readIcon(read.tier)} {read.title}</span>
-        <strong>{read.score}</strong>
       </div>
       <div className="footballFooter">
         <span>{FX.calendar} {formatDate(fixture.date)}</span>
@@ -455,7 +459,7 @@ function FootballModal({ fixture, onClose }) {
 
   if (!fixture) return null;
 
-  const score = `${fixture.home_goals ?? 0} - ${fixture.away_goals ?? 0}`;
+  const score = fixture.live || fixture.finished ? `${fixture.home_goals ?? '-'} - ${fixture.away_goals ?? '-'}` : 'x';
   const tabs = [
     ['stats', 'Stats'],
     ['events', 'Eventos'],
@@ -468,9 +472,9 @@ function FootballModal({ fixture, onClose }) {
 
   return (
     <div className="ftModalOverlay" role="presentation" onClick={onClose}>
-      <article className="ftModal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+      <article className="ftModal" role="dialog" aria-modal="true" aria-label={`${fixture.home} x ${fixture.away}`} onClick={(event) => event.stopPropagation()}>
         <header className="ftModalHero">
-          <button className="modal-close ftClose" type="button" onClick={onClose}>x</button>
+          <button className="modal-close ftClose" type="button" aria-label="Fechar detalhes da partida" onClick={onClose}>x</button>
           <div className="footballMeta">
             <span>{fixture.league_name || fixture.league_key}</span>
             <em>{fixture.live ? 'AO VIVO' : fixture.finished ? 'FINAL' : 'PRE-JOGO'}</em>
@@ -555,11 +559,10 @@ function FootballReadPanel({ fixture, data }) {
     <section className={`ftReadPanel ${read.tier}`}>
       <div className="ftReadHead">
         <div>
-          <span>Football Read</span>
+          <span>Resumo da partida</span>
           <strong>{read.title}</strong>
           <p>{read.summary}</p>
         </div>
-        <b>{read.score}</b>
       </div>
       <div className="ftReadSignals">
         {read.signals.map((signal) => (
@@ -582,6 +585,7 @@ function FootballModalTab({ data, fixture, home, away, tab }) {
   if (tab === 'odds' && (data.pending?.odds || data.pending?.pregame || (!data.odds && !data.pregame))) return <div className="loadingGrid">Carregando odds...</div>;
   if (tab === 'referee' && (data.pending?.referee || !data.referee)) return <div className="loadingGrid">Carregando árbitro...</div>;
   if (tab === 'telegram' && (data.pending?.telegram || !data.telegram)) return <div className="loadingGrid">Carregando leitura...</div>;
+  if (['stats', 'events', 'players'].includes(tab) && data.stats?.error) return <EmptyModalState text="Não foi possível carregar os detalhes da partida. Feche e abra novamente para tentar." />;
 
   if (tab === 'stats') return <StatsPanel data={data.stats} home={home} away={away} />;
   if (tab === 'events') return <EventsPanel events={data.stats?.events || []} />;
@@ -607,7 +611,7 @@ function StatsPanel({ data, home, away }) {
     ['redCards', 'Vermelhos'],
     ['offsides', 'Impedimentos'],
     ['saves', 'Defesas'],
-    ['passPct', 'Passes'],
+    ['passPct', 'Precisão de passes'],
   ];
 
   if (!homeStats || !awayStats || data?.error) return <EmptyModalState text="Sem estatísticas disponíveis." />;
@@ -617,7 +621,7 @@ function StatsPanel({ data, home, away }) {
       <div className="ftModalTitle">Estatísticas</div>
       <div className="ftStatsHeader"><span>{home}</span><span>{away}</span></div>
       {rows.map(([key, label]) => (
-        <StatCompare key={key} label={label} home={homeStats.stats?.[key]} away={awayStats.stats?.[key]} />
+        <StatCompare key={key} statKey={key} label={label} home={homeStats.stats?.[key]} away={awayStats.stats?.[key]} />
       ))}
     </section>
   );
@@ -695,14 +699,15 @@ function OddsPanel({ draftKings, bet365, fixture }) {
       <div className="ftModalTitle">Odds</div>
       {hasDraftKings ? (
         <>
-          <div className="oddsProvider">DraftKings</div>
+          <div className="oddsProvider">{draftKings.provider || 'ESPN'}{fixture.finished ? ' · Odds históricas' : ''}</div>
           <OddsGrid home={fixture.home} away={fixture.away} odds={draftKings} />
+          {draftKings.overUnder != null ? <InfoRow label="Linha de gols (total)" value={draftKings.overUnder} /> : null}
         </>
       ) : null}
       {hasBet365 ? (
         <>
-          <div className="oddsProvider">Bet365</div>
-          <OddsGrid home={fixture.home} away={fixture.away} odds={bet365} />
+          <div className="oddsProvider">Bet365{fixture.finished ? ' · Odds históricas' : ''}</div>
+          <OddsGrid home={fixture.home} away={fixture.away} odds={bet365} format="decimal" />
           <div className="oddsExtras">
             {bet365.over25 ? <OddsBox label="Over 2.5" value={formatOdd(bet365.over25)} /> : null}
             {bet365.under25 ? <OddsBox label="Under 2.5" value={formatOdd(bet365.under25)} /> : null}
@@ -775,16 +780,16 @@ function TeamRefCard({ name, stats }) {
   );
 }
 
-function StatCompare({ label, home, away }) {
+function StatCompare({ label, home, away, statKey }) {
   const homeNum = parseFootballStat(home);
   const awayNum = parseFootballStat(away);
-  if (!home && !away) return null;
+  if (!hasFootballStat(home) && !hasFootballStat(away)) return null;
   const total = homeNum + awayNum || 1;
-  const homePct = Math.max(8, Math.round((homeNum / total) * 100));
-  const awayPct = Math.max(8, Math.round((awayNum / total) * 100));
+  const homePct = Math.round((homeNum / total) * 100);
+  const awayPct = Math.round((awayNum / total) * 100);
   return (
     <div className="ftStatCompare">
-      <span>{home ?? '0'}</span>
+      <span>{formatFootballStat(home, statKey)}</span>
       <div>
         <strong>{label}</strong>
         <div className="ftCompareBars">
@@ -792,7 +797,7 @@ function StatCompare({ label, home, away }) {
           <b style={{ width: `${awayPct}%` }} />
         </div>
       </div>
-      <span>{away ?? '0'}</span>
+      <span>{formatFootballStat(away, statKey)}</span>
     </div>
   );
 }
@@ -861,12 +866,12 @@ function H2HList({ games }) {
   );
 }
 
-function OddsGrid({ home, away, odds }) {
+function OddsGrid({ home, away, odds, format = odds.format || 'american' }) {
   return (
     <div className="oddsGrid">
-      <OddsBox label={home} value={formatOdd(odds.homeML)} />
-      <OddsBox label="Empate" value={formatOdd(odds.drawOdds)} />
-      <OddsBox label={away} value={formatOdd(odds.awayML)} />
+      <OddsBox label={home} value={formatFootballOdd(odds.homeML, format)} />
+      <OddsBox label="Empate" value={formatFootballOdd(odds.drawOdds, format)} />
+      <OddsBox label={away} value={formatFootballOdd(odds.awayML, format)} />
     </div>
   );
 }
@@ -926,15 +931,10 @@ function playerMainStat(player) {
 }
 
 function formatOdd(value) {
-  if (value == null || value === '') return '-';
-  const parsed = Number.parseFloat(value);
-  if (!Number.isFinite(parsed)) return String(value);
-  if (Math.abs(parsed) > 10) return parsed > 0 ? `+${Math.round(parsed)}` : String(Math.round(parsed));
-  return parsed.toFixed(2);
+  return formatFootballOdd(value, 'decimal');
 }
 
 function formatNumber(value) {
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed.toFixed(2) : '-';
 }
-

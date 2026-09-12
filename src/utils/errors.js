@@ -2,6 +2,17 @@ export function userErrorMessage(error, fallback = 'Não foi possível carregar 
   const raw = String(error?.message || error || '').trim();
   if (!raw) return fallback;
   const lower = raw.toLowerCase();
+  const status = Number(error?.status);
+
+  if (status === 401 || lower.includes('bearer token') || lower.includes('invalid token')) {
+    return 'Sua sessão expirou ou não autorizou essa consulta. Entre novamente.';
+  }
+  if (status === 403 || lower.includes('plan upgrade required') || lower.includes('subscription inactive')) {
+    return 'Esse recurso exige um plano ativo com acesso ao módulo.';
+  }
+  if (status >= 500 || lower.includes('provider unavailable') || lower.includes('service unavailable')) {
+    return 'O serviço está temporariamente indisponível. Tente novamente em alguns segundos.';
+  }
 
   if (lower.includes('failed to fetch') || lower.includes('fetch failed') || lower.includes('network')) {
     return 'Falha de conexão. Tente atualizar.';
@@ -15,7 +26,7 @@ export function userErrorMessage(error, fallback = 'Não foi possível carregar 
   if (lower.includes('http 404') || lower.includes('not found')) {
     return 'Nenhum dado encontrado para essa consulta.';
   }
-  if (lower.includes('http 429') || lower.includes('rate')) {
+  if (status === 429 || lower.includes('http 429') || lower.includes('rate limit')) {
     return 'Muitas tentativas em sequência. Aguarde um pouco e tente novamente.';
   }
   if (lower.includes('http 500') || lower.includes('internal server')) {

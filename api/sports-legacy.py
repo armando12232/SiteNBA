@@ -230,7 +230,8 @@ class handler(BaseHTTPRequestHandler):
                 limit = int(qs.get('limit', ['24'])[0] or 24)
             except ValueError:
                 limit = 24
-            self._json(200, get_cs2_scoreboard(limit))
+            payload = get_cs2_scoreboard(limit)
+            self._json(503 if payload.get('error') else 200, payload)
         elif lg == 'cs2':
             self._json(400, {'error': f'unsupported cs2 type: {t}'})
         elif lg == 'wnba' and t == 'players':
@@ -295,4 +296,3 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def log_message(self, *a): pass
-
