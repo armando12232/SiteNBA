@@ -63,7 +63,10 @@ export async function supabaseFetch(supabaseUrl, path, options = {}) {
     body: options.body,
   });
   const text = await response.text();
-  if (!response.ok) throw new Error(text || `Supabase HTTP ${response.status}`);
+  if (!response.ok) {
+    const status = response.status === 401 || response.status === 403 ? 401 : response.status >= 500 ? 503 : 500;
+    throw httpError(status === 401 ? 'invalid bearer token' : text || `Supabase HTTP ${response.status}`, status);
+  }
   if (options.allowEmpty && !text) return null;
   return text ? JSON.parse(text) : {};
 }
