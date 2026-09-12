@@ -24,6 +24,17 @@ export default async function handler(req, res) {
   const access = await checkFeature(req, 'football');
   if (!access.ok) return res.status(access.status).json(access.payload);
 
+  if (type === 'stats' || type === 'pregame') {
+    const gameId = requiredId(req.query?.gameId, 'gameId');
+    const league = LEAGUES.find((item) => item.key === String(req.query?.leagueKey || '')) || LEAGUES.find((item) => item.key === 'premier');
+    try {
+      const data = await fetchJson(`${BASE}/${league.slug}/summary?event=${encodeURIComponent(gameId)}`);
+      return res.status(200).json(type === 'stats' ? parseStats(data) : parsePregame(data));
+    } catch {
+      return res.status(503).json({ error: 'football detail provider unavailable', runtime: 'node-football' });
+    }
+  }
+
   if (type !== 'fixtures' && type !== 'live') return proxyLegacy(req, res);
 
   try {
@@ -64,6 +75,69 @@ function parseFixture(event, league) {
     live: state === 'in', finished: state === 'post', venue: competition.venue?.fullName || '' };
 }
 
+function parseStats(data) {
+  const wanted = new Set(['possessionPct', 'totalShots', 'shotsOnTarget', 'wonCorners', 'foulsCommitted', 'yellowCards', 'redCards',
+    'offsides', 'saves', 'passPct', 'accuratePasses', 'totalPasses', 'effectiveTackles', 'interceptions', 'expectedGoals', 'xG', 'xg',
+    'totalExpectedGoals', 'shotsInsideBox', 'shotsOutsideBox', 'bigChancesCreated', 'bigChancesMissed']);
+  const teams = (data.boxscore?.teams || []).map((item) => ({ team: item.team?.displayName || '', abbreviation: item.team?.abbreviation || '',
+    stats: Object.fromEntries((item.statistics || []).filter((stat) => wanted.has(stat.name)).map((stat) => [stat.name, stat.displayValue ?? stat.value ?? ''])) }));
+  const important = new Set(['Goal', 'Yellow Card', 'Red Card', 'Penalty', 'Own Goal', 'Substitution']);
+  const events = (data.keyEvents || []).filter((event) => important.has(event.type?.text)).slice(0, 20).map((event) => ({
+    type: event.type?.text || '', clock: event.clock?.displayValue || '', text: eventText(event), team: event.team?.displayName || '' }));
+  const playerStats = new Set(['totalGoals', 'goalAssists', 'totalShots', 'shotsOnTarget', 'yellowCards', 'redCards', 'foulsCommitted',
+    'foulsSuffered', 'offsides', 'subIns', 'shotsFaced', 'goalsConceded']);
+  const rosters = (data.rosters || []).map((roster) => ({ team: roster.team?.displayName || '', homeAway: roster.homeAway || '',
+    formation: typeof roster.formation === 'object' ? roster.formation?.name || '' : '', players: (roster.roster || []).map((item) => ({
+      name: item.athlete?.displayName || '', short: item.athlete?.shortName || '', jersey: item.jersey || '',
+      position: item.position?.abbreviation || '', positionFull: item.position?.displayName || '', starter: Boolean(item.starter),
+      subbedIn: Boolean(item.subbedIn), subbedOut: Boolean(item.subbedOut), stats: Object.fromEntries((item.stats || [])
+        .filter((stat) => playerStats.has(stat.name)).map((stat) => [stat.name, stat.displayValue ?? '0'])) })) }));
+  const odds = data.odds?.[0];
+  return { teams, events, rosters, ...(odds ? { odds: { spread: odds.spread, overUnder: odds.overUnder, provider: odds.provider?.name || '' } } : {}) };
+}
+
+function parsePregame(data) {
+  const competition = data.header?.competitions?.[0] || {};
+  const competitors = competition.competitors || [];
+  const teams = competitors.map((item) => ({ team: item.team?.displayName || '', logo: item.team?.logo || '', homeAway: item.homeAway || '',
+    record: (item.record || []).find((row) => row.type === 'total')?.displayValue || '',
+    points: (item.record || []).find((row) => row.type === 'points')?.displayValue || '' }));
+  const groups = data.standings?.groups || [];
+  const entries = groups[0]?.standings?.entries || [];
+  const stat = (entry, name) => (entry.stats || []).find((item) => item.name === name)?.displayValue || '';
+  const standings = entries.map((entry) => ({ team: String(entry.team || ''), rank: stat(entry, 'rank'), pts: stat(entry, 'points'),
+    wins: stat(entry, 'wins'), draws: stat(entry, 'ties'), losses: stat(entry, 'losses'), gp: stat(entry, 'gamesPlayed') }));
+  const leaders = [];
+  for (const category of data.leaders || []) {
+    for (const group of category.leaders || []) {
+      const rows = (group.leaders || []).slice(0, 3).map((item) => ({ name: item.athlete?.displayName || '',
+        value: item.shortDisplayValue || item.displayValue || '', team: item.team?.displayName || '' }));
+      if (rows.length) leaders.push({ category: group.displayName || group.name || '', leaders: rows });
+    }
+  }
+  const h2h = (data.headToHeadGames || []).slice(0, 5).map((event) => {
+    const comp = event.competitions?.[0] || {};
+    const home = (comp.competitors || []).find((item) => item.homeAway === 'home') || {};
+    const away = (comp.competitors || []).find((item) => item.homeAway === 'away') || {};
+    return { date: comp.date || '', home: home.team?.displayName || '', homeScore: scoreValue(home.score), away: away.team?.displayName || '',
+      awayScore: scoreValue(away.score), winner: Boolean(home.winner) };
+  });
+  const odds = data.odds?.[0];
+  return { teams, venue: data.gameInfo?.venue?.fullName || '', city: data.gameInfo?.venue?.address?.city || '', standings, leaders, h2h,
+    ...(odds ? { odds: { spread: odds.spread, overUnder: odds.overUnder, homeML: odds.homeTeamOdds?.moneyLine,
+      awayML: odds.awayTeamOdds?.moneyLine, drawOdds: odds.drawOdds?.moneyLine, provider: odds.provider?.name || '' } } : {}) };
+}
+
+function eventText(event) {
+  const type = event.type?.text || '';
+  const labels = { Goal: 'Gol', 'Own Goal': 'Gol Contra', 'Yellow Card': 'Cartão Amarelo', 'Red Card': 'Cartão Vermelho',
+    Penalty: 'Pênalti', Substitution: 'Substituição' };
+  const athlete = event.athletesInvolved?.[0]?.displayName || event.athletesInvolved?.[0]?.shortName || '';
+  return `${labels[type] || type}${athlete ? ` — ${athlete}` : ''}${event.team?.shortDisplayName ? ` (${event.team.shortDisplayName})` : ''}`;
+}
+
+function scoreValue(value) { return typeof value === 'object' ? value?.displayValue ?? value?.value ?? '' : value ?? ''; }
+
 async function proxyLegacy(req, res) {
   try {
     const query = new URLSearchParams(Object.entries(req.query || {}).map(([key, value]) => [key, Array.isArray(value) ? value[0] : String(value)])).toString();
@@ -82,5 +156,6 @@ function translateStatus(value) {
   return map[value] || value;
 }
 
+function requiredId(value, field) { const text = String(value || ''); if (!/^[a-zA-Z0-9_-]{1,40}$/.test(text)) throw Object.assign(new Error(`invalid ${field}`), { status: 400 }); return text; }
 function setCors(res) { res.setHeader('Access-Control-Allow-Origin', SITE_URL); res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); res.setHeader('Cache-Control', 'no-store'); }
 
