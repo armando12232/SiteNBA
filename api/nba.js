@@ -44,14 +44,15 @@ export default async function handler(req, res) {
     if (type === 'team_info') return res.status(200).json({ team: await teamInfo(requiredAbbr(req.query?.abbr || req.query?.teamAbbr)) });
     if (type === 'roster') return res.status(200).json({ players: await roster(requiredAbbr(req.query?.abbr || req.query?.teamAbbr)) });
     if (type === 'team_last') return res.status(200).json(await teamLast(requiredAbbr(req.query?.abbr)));
-    if (type === 'defense') return res.status(503).json({ error: 'Estatísticas de defesa por posição indisponíveis no provedor atual.' });
+    if (type === 'defense') return res.status(200).json(await defenseRanking(requiredAbbr(req.query?.teamAbbr), req.query?.position, req.query?.stat));
     if (type === 'debug_gamelog') {
       const data = await gameLog(requiredPlayerId(req.query?.playerId));
       return res.status(200).json({ source: 'espn', season: data.season, row_count: data.rows.length, sample: data.rows.slice(0, 2), errors: [] });
     }
   } catch (error) {
     const status = error.status || 502;
-    return res.status(status).json({ error: status === 404 ? error.message : 'Dados NBA indisponíveis no momento. Tente novamente.', runtime: 'node-nba' });
+    const message = status < 500 ? error.message : 'Dados NBA indisponíveis no momento. Tente novamente.';
+    return res.status(status).json({ error: message, runtime: 'node-nba' });
   }
 }
 
@@ -130,6 +131,28 @@ async function teamLast(abbreviation) {
       score: `${own.score}-${opponent.score}`, result: own.score > opponent.score ? 'W' : 'L' };
   });
   return { abbr: abbreviation, form: clean.map((game) => game.result).join(''), games: clean, source: 'espn' };
+}
+
+async function defenseRanking(abbreviation, position = 'G', stat = 'pts') {
+  const now = new Date();
+  let season = now.getUTCFullYear() + (now.getUTCMonth() >= 9 ? 1 : 0);
+  let entries = [];
+  for (const candidate of [season, season - 1]) {
+    const data = await fetchJson(`https://site.api.espn.com/apis/v2/sports/basketball/nba/standings?season=${candidate}`, 3_600_000);
+    entries = (data.children || []).flatMap((conference) => conference.standings?.entries || []).map((entry) => {
+      const allowed = entry.stats?.find((item) => item.name === 'avgPointsAgainst')?.value;
+      return { abbr: teamAbbr(entry.team || {}), value: Number(allowed) };
+    }).filter((entry) => Number.isFinite(entry.value) && entry.value > 0);
+    if (entries.length) { season = candidate; break; }
+  }
+  if (!entries.length) throw Object.assign(new Error('defensive statistics unavailable'), { status: 404 });
+  entries.sort((a, b) => b.value - a.value);
+  const index = entries.findIndex((entry) => entry.abbr === abbreviation);
+  if (index < 0) throw Object.assign(new Error('team not found'), { status: 404 });
+  const rank = index + 1;
+  return { team: abbreviation, position: String(position || 'G').toUpperCase(), category: 'Overall', stat: String(stat || 'pts').toLowerCase(),
+    pts_allowed: round(entries[index].value), rank, total: entries.length, rating: rank <= 10 ? 'ruim' : rank <= 20 ? 'media' : 'boa',
+    favorable: rank <= 10, scope: 'team_overall', season, source: 'espn' };
 }
 
 async function gameLog(playerId) {
