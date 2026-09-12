@@ -78,28 +78,32 @@ export default function App() {
             <div className="brandMark">SC</div>
           </div>
           <div className="logo-text">StatCast <span>BR</span></div>
-          <div className="live-pill"><span className="live-dot" /> {pageLabel(page, nbaTab)}</div>
+          <div className="live-pill">{pageLabel(page, nbaTab)}</div>
         </div>
         <div className="header-right">
           <span className="header-date">{new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</span>
           <SubscriptionWidget onSubscriptionChange={setAccount} />
         </div>
       </header>
-      <main id="main-content" tabIndex={-1} className={`main page-${page}`}>
-        <nav className="page-nav main-nav" aria-label="Esportes e início">
-          {['home', 'nba', 'wnba', 'football', 'cs2', 'nfl', 'nhl', 'mlb'].map((item) => (
-            <button
-              className={`page-nav-btn ${page === item ? 'active' : ''}`}
-              key={item}
-              type="button"
-              aria-pressed={page === item}
-              onClick={() => navigate(item)}
-            >
-              <span className="navIcon">{navIcon(item)}</span>
-              {navLabel(item)}
-            </button>
-          ))}
-        </nav>
+      <div className="app-shell">
+        <aside className="sport-sidebar">
+          <div className="sidebar-label">Explorar</div>
+          <nav className="page-nav main-nav" aria-label="Esportes e início">
+            {['home', 'nba', 'wnba', 'football', 'cs2', 'nfl', 'nhl', 'mlb'].map((item) => (
+              <button
+                className={`page-nav-btn ${page === item ? 'active' : ''}`}
+                key={item}
+                type="button"
+                aria-pressed={page === item}
+                onClick={() => navigate(item)}
+              >
+                <span className="navIcon">{navIcon(item)}</span>
+                <span className="navLabel">{navLabel(item)}</span>
+              </button>
+            ))}
+          </nav>
+        </aside>
+        <main id="main-content" tabIndex={-1} className={`main page-${page}`}>
 
         {deniedFeature ? <PlanPaywall feature={deniedFeature} plan={account.subscription?.plan} /> : null}
         <PageBoundary key={`${page}:${nbaTab}`}>
@@ -109,9 +113,9 @@ export default function App() {
         {page === 'nba' ? (
           <>
             <nav className="page-nav nba-tabs" aria-label="Recursos da NBA">
-              <button aria-pressed={nbaTab === 'pregame'} className={`page-nav-btn ${nbaTab === 'pregame' ? 'active' : ''}`} onClick={() => setNbaTabGuard('pregame')}><span className="navIcon">📊</span>Player Props</button>
-              <button aria-pressed={nbaTab === 'live'} className={`page-nav-btn ${nbaTab === 'live' ? 'active' : ''} ${!access.live ? 'locked' : ''}`} onClick={() => setNbaTabGuard('live')}><span className="navIcon liveMark">🔴</span>Ao Vivo</button>
-              <button aria-pressed={nbaTab === 'injuries'} className={`page-nav-btn ${nbaTab === 'injuries' ? 'active' : ''} ${!access.injuries ? 'locked' : ''}`} onClick={() => setNbaTabGuard('injuries')}><span className="navIcon">🩹</span>Lesões</button>
+              <button aria-pressed={nbaTab === 'pregame'} className={`page-nav-btn ${nbaTab === 'pregame' ? 'active' : ''}`} onClick={() => setNbaTabGuard('pregame')}><span className="navIcon">PP</span>Player Props</button>
+              <button aria-pressed={nbaTab === 'live'} className={`page-nav-btn ${nbaTab === 'live' ? 'active' : ''} ${!access.live ? 'locked' : ''}`} onClick={() => setNbaTabGuard('live')}><span className="navIcon liveMark">LV</span>Ao Vivo</button>
+              <button aria-pressed={nbaTab === 'injuries'} className={`page-nav-btn ${nbaTab === 'injuries' ? 'active' : ''} ${!access.injuries ? 'locked' : ''}`} onClick={() => setNbaTabGuard('injuries')}><span className="navIcon">IN</span>Lesões</button>
             </nav>
             {nbaTab === 'pregame' ? <PregameRadar access={access} onSelectPlayer={selectPlayer} /> : null}
             {nbaTab === 'live' && access.live ? <LiveMonitor /> : null}
@@ -132,7 +136,8 @@ export default function App() {
             </Suspense>
           </PageBoundary>
         ) : null}
-      </main>
+        </main>
+      </div>
     </>
   );
 }
@@ -235,14 +240,14 @@ function navLabel(page) {
 
 function navIcon(page) {
   return {
-    wnba: '🏀',
-    cs2: '🎮',
-    home: '🏠',
-    nba: '🏀',
-    nfl: '🏈',
-    nhl: '🏒',
-    mlb: '⚾',
-    football: '⚽',
+    wnba: 'WN',
+    cs2: 'C2',
+    home: 'IN',
+    nba: 'NBA',
+    nfl: 'NFL',
+    nhl: 'NHL',
+    mlb: 'MLB',
+    football: 'FT',
   }[page];
 }
 
@@ -250,3 +255,4 @@ function pageLabel(page, nbaTab) {
   if (page === 'nba') return nbaTab === 'live' ? 'NBA Live' : nbaTab === 'injuries' ? 'Lesões' : 'NBA';
   return navLabel(page);
 }
+

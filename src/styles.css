@@ -6191,3 +6191,419 @@ h2 {
   }
 }
 
+/* Final cascade for the premium sports desk */
+body {
+  background:
+    radial-gradient(circle at 14% -8%, rgba(244, 185, 66, .08), transparent 30%),
+    radial-gradient(circle at 94% 10%, rgba(88, 200, 238, .05), transparent 26%),
+    var(--bg);
+  font-size: 15px;
+}
+
+body::after {
+  opacity: .34;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .015), transparent 38%, rgba(0, 0, 0, .24));
+}
+
+.field-bg,
+.field-bg-football,
+.field-bg-cs2 {
+  opacity: .65;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(244, 185, 66, .07), transparent 26%),
+    radial-gradient(circle at 84% 70%, rgba(88, 200, 238, .045), transparent 26%);
+}
+
+.field-bg::before,
+.field-bg::after {
+  display: none;
+}
+
+.header {
+  height: 72px;
+  padding: 0 clamp(18px, 3vw, 44px);
+  border-color: var(--border);
+  background: rgba(8, 11, 16, .9);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .24);
+}
+
+.brandMark {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--gold);
+  box-shadow: 0 8px 24px rgba(244, 185, 66, .16);
+}
+
+.logo-text {
+  font-size: 25px;
+}
+
+.live-pill {
+  border-color: var(--border2);
+  border-radius: 8px;
+  padding: 5px 9px;
+  background: rgba(255, 255, 255, .035);
+  color: var(--text2);
+}
+
+.main {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.app-shell {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 154px minmax(0, 1120px);
+  gap: 28px;
+  width: min(100%, 1370px);
+  margin: 0 auto;
+  padding: 28px 24px 88px;
+}
+
+.sport-sidebar {
+  position: sticky;
+  top: 96px;
+  align-self: start;
+}
+
+.sidebar-label {
+  margin: 0 12px 9px;
+  color: var(--text3);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.navIcon,
+.quickIcon,
+.moduleIcon {
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .035);
+  color: var(--text2);
+  font-family: var(--display);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .03em;
+}
+
+.navIcon {
+  width: 29px;
+  min-width: 29px;
+  height: 27px;
+  min-height: 27px;
+  padding: 0;
+}
+
+.sport-sidebar .page-nav-btn.active .navIcon,
+.nba-tabs .page-nav-btn.active .navIcon {
+  border-color: rgba(244, 185, 66, .4);
+  background: var(--gold);
+  color: #11151a;
+}
+
+.moduleIcon,
+.quickIcon {
+  min-width: 40px;
+  min-height: 36px;
+  padding: 0 8px;
+  color: var(--gold);
+}
+
+.sport-sidebar .main-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 7px;
+  overflow: visible;
+  background: rgba(16, 21, 28, .86);
+  box-shadow: 0 18px 54px rgba(0, 0, 0, .2);
+  backdrop-filter: blur(18px);
+}
+
+.sport-sidebar .page-nav-btn {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 7px 9px;
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.sport-sidebar .page-nav-btn.active {
+  border-color: rgba(244, 185, 66, .24);
+  background: rgba(244, 185, 66, .09);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.page-nav.nba-tabs {
+  gap: 5px;
+  width: fit-content;
+  margin-bottom: 24px;
+  border: 0;
+  border-radius: 12px;
+  padding: 5px;
+  background: var(--bg2);
+}
+
+.nba-tabs .page-nav-btn {
+  min-height: 39px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 6px 13px 6px 7px;
+  color: var(--text2);
+}
+
+.section-title {
+  color: var(--text);
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.search-bar {
+  min-height: 46px;
+  border-color: var(--border);
+  border-radius: 12px;
+  background: rgba(16, 21, 28, .92);
+  font-size: 14px;
+}
+
+.statcast-board {
+  grid-template-columns: minmax(220px, 1.2fr) minmax(340px, 1fr) auto;
+  border-color: rgba(244, 185, 66, .19);
+  border-radius: 18px;
+  padding: 18px;
+  background: linear-gradient(105deg, rgba(244, 185, 66, .075), transparent 42%), var(--bg2);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .2);
+}
+
+.statcast-board-pick strong {
+  font-size: 30px;
+}
+
+.statcast-board-metric,
+.statcast-pick-card {
+  border-color: var(--border);
+  background: rgba(8, 11, 16, .5);
+}
+
+.props-table-wrap {
+  border-color: var(--border);
+  border-radius: 18px;
+  background: var(--bg2);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .17);
+}
+
+.props-table-game-header {
+  min-height: 45px;
+  padding-inline: 18px;
+  background: var(--bg3);
+}
+
+.props-table-row {
+  min-height: 82px;
+  padding-inline: 18px;
+}
+
+.props-player-name {
+  font-size: 18px;
+}
+
+.homeHero {
+  border-color: rgba(244, 185, 66, .18);
+  background: linear-gradient(115deg, rgba(244, 185, 66, .105), transparent 48%), var(--bg2);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .2);
+}
+
+.homeStat,
+.moduleCard,
+.quickActions,
+.footballCard,
+.sportsCard,
+.cs2Card,
+.footballBoard,
+.cs2Hero,
+.wnba-hero {
+  border-color: var(--border);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .16);
+}
+
+@media (max-width: 900px) and (min-width: 701px) {
+  .app-shell {
+    grid-template-columns: 122px minmax(0, 1fr);
+    gap: 18px;
+    padding-inline: 16px;
+  }
+
+  .statcast-board {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, .9fr);
+  }
+
+  .statcast-board-actions {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .header {
+    height: 64px;
+    padding: 0 14px;
+  }
+
+  .brandMark {
+    width: 30px;
+    height: 30px;
+  }
+
+  .logo-text {
+    font-size: 21px;
+  }
+
+  .app-shell {
+    display: block;
+    width: 100%;
+    padding: 16px 11px 108px;
+  }
+
+  .sport-sidebar {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 180;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border2);
+    background: rgba(8, 11, 16, .94);
+    box-shadow: 0 -14px 38px rgba(0, 0, 0, .36);
+    backdrop-filter: blur(20px);
+  }
+
+  .sidebar-label {
+    display: none;
+  }
+
+  .sport-sidebar .main-nav {
+    flex-direction: row;
+    gap: 3px;
+    width: 100%;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    overflow-x: auto;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .sport-sidebar .page-nav-btn {
+    flex: 0 0 70px;
+    flex-direction: column;
+    gap: 3px;
+    min-height: 54px;
+    padding: 5px 4px;
+    font-size: 9px;
+  }
+
+  .sport-sidebar .navIcon {
+    width: 27px;
+    min-width: 27px;
+    height: 24px;
+    min-height: 24px;
+    border: 0;
+    background: transparent;
+  }
+
+  .sport-sidebar .page-nav-btn.active .navIcon {
+    background: transparent;
+    color: var(--gold);
+  }
+
+  .page-nav.nba-tabs {
+    width: 100%;
+    margin-bottom: 20px;
+  }
+
+  .nba-tabs .page-nav-btn {
+    flex: 1;
+    min-width: 0;
+    padding: 6px;
+    font-size: 11px;
+  }
+
+  .view-mode-row {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+  }
+
+  .statcast-board {
+    grid-template-columns: minmax(0, 1fr) 76px;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .statcast-board-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .statcast-board-metric {
+    display: none;
+  }
+
+  .statcast-board-metric:first-child {
+    display: block;
+    min-height: 62px;
+  }
+
+  .statcast-board-actions {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .statcast-quick-row {
+    grid-template-columns: 1fr;
+  }
+
+  .statcast-tier-filters,
+  .statcast-top-picks {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 3px;
+  }
+
+  .statcast-tier-filters button {
+    flex: 0 0 108px;
+  }
+
+  .statcast-pick-card {
+    flex: 0 0 174px;
+  }
+
+  .props-table-header,
+  .props-table-row {
+    grid-template-columns: minmax(0, 1fr) repeat(3, 54px);
+    padding-inline: 11px;
+  }
+
+  .props-player-name {
+    max-width: 150px;
+    font-size: 17px;
+  }
+}
+
