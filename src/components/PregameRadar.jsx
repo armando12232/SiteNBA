@@ -260,7 +260,7 @@ export function PregameRadar({ access, onSelectPlayer }) {
         visiblePlayers.length ? (
           <div className="props-table-wrap">
             <div className="props-table-game-header">
-              <span>Hoje</span>
+              <span>{bpCount ? 'Agenda de props' : 'Histórico recente'}</span>
               <span>{state.loading ? `carregando ${state.loadedCount}/${PREGAME_PLAYERS.length}` : `${visiblePlayers.length} jogadores`} {bpCount ? '/ linhas reais' : '/ linhas estimadas'}</span>
             </div>
             <div className="props-table-header">
@@ -792,7 +792,8 @@ function pregameSortScore(player, stat) {
 function buildGameGroups(players, activeStat) {
   const map = new Map();
   for (const player of players) {
-    const label = normalizeGameLabel(player.gameLabel, player.team_abbr);
+    const label = normalizeGameLabel(player.gameLabel);
+    if (!label) continue;
     const key = `${player.gameDateLabel || 'today'}:${label}`;
     if (!map.has(key)) {
       map.set(key, {
@@ -821,11 +822,10 @@ function buildGameGroups(players, activeStat) {
     .sort((a, b) => (b.topScore || 0) - (a.topScore || 0));
 }
 
-function normalizeGameLabel(gameLabel, fallbackTeam) {
+function normalizeGameLabel(gameLabel) {
   const label = String(gameLabel || '').trim();
   if (/\b[A-Z]{2,3}\s+x\s+[A-Z]{2,3}\b/.test(label)) return label;
-  if (fallbackTeam) return `${fallbackTeam} / jogo do dia`;
-  return 'Jogo não identificado';
+  return null;
 }
 
 function buildLockedPreviewRows(count) {
