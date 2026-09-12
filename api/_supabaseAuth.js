@@ -30,7 +30,7 @@ export async function verifySupabaseToken(supabaseUrl, serviceKey, authorization
   if (!serviceKey) throw httpError('SUPABASE_SERVICE_KEY is not configured', 500);
   if (!token) throw httpError('missing bearer token', 401);
 
-  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+  const response = await fetchWithRetry(`${supabaseUrl}/auth/v1/user`, {
     headers: {
       Accept: 'application/json',
       apikey: serviceKey,
@@ -54,7 +54,7 @@ export async function verifySupabaseToken(supabaseUrl, serviceKey, authorization
 }
 
 export async function supabaseFetch(supabaseUrl, path, options = {}) {
-  const response = await fetch(`${supabaseUrl}${path}`, {
+  const response = await fetchWithRetry(`${supabaseUrl}${path}`, {
     method: options.method || 'GET',
     headers: {
       Accept: 'application/json',
@@ -68,8 +68,25 @@ export async function supabaseFetch(supabaseUrl, path, options = {}) {
   return text ? JSON.parse(text) : {};
 }
 
+async function fetchWithRetry(url, options, attempts = 3) {
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const response = await fetch(url, { ...options, signal: AbortSignal.timeout(4500) });
+      if (response.status < 500 || attempt === attempts - 1) return response;
+      lastError = new Error(`Supabase HTTP ${response.status}`);
+    } catch (error) {
+      lastError = error;
+      if (attempt === attempts - 1) throw error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 150 * (attempt + 1)));
+  }
+  throw lastError || new Error('Supabase request failed');
+}
+
 function httpError(message, status) {
   const error = new Error(message);
   error.status = status;
   return error;
 }
+

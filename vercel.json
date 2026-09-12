@@ -8,13 +8,19 @@
     "api/bettingpros.py": {
       "maxDuration": 10
     },
-    "api/football.py": {
+    "api/football.js": {
+      "maxDuration": 15
+    },
+    "api/football-legacy.py": {
       "maxDuration": 15
     },
     "api/checkout.py": {
       "maxDuration": 10
     },
-    "api/sports.py": {
+    "api/sports.js": {
+      "maxDuration": 10
+    },
+    "api/sports-legacy.py": {
       "maxDuration": 10
     },
     "api/injuries.js": {
