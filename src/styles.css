@@ -6741,6 +6741,196 @@ body::after {
   margin-bottom: 13px;
 }
 
+.radar-player-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.radar-compare-toggle,
+.radar-comparison-clear,
+.radar-compare-progress button {
+  border: 1px solid var(--border2);
+  border-radius: 9px;
+  padding: 7px 10px;
+  background: rgba(255,255,255,.035);
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.radar-compare-toggle:hover,
+.radar-compare-toggle.active {
+  border-color: rgba(253,185,39,.55);
+  background: rgba(253,185,39,.11);
+  color: var(--gold);
+}
+
+.radar-player-card.selected {
+  border-color: rgba(253,185,39,.45);
+  box-shadow: 0 12px 32px rgba(0,0,0,.16), inset 0 0 0 1px rgba(253,185,39,.08);
+}
+
+.radar-compare-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding: 15px 17px;
+}
+
+.radar-compare-toolbar span,
+.radar-comparison-head span {
+  display: block;
+  color: var(--gold);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.radar-compare-toolbar strong,
+.radar-comparison-head strong {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--display);
+  font-size: 19px;
+  text-transform: uppercase;
+}
+
+.radar-compare-toolbar small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text3);
+  font-size: 10px;
+}
+
+.radar-compare-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.radar-compare-progress b {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: rgba(253,185,39,.11);
+  color: var(--gold);
+  font-family: var(--display);
+  font-size: 18px;
+}
+
+.radar-comparison {
+  margin-bottom: 12px;
+  padding: 18px;
+}
+
+.radar-comparison[role="status"] {
+  color: var(--text3);
+  text-align: center;
+}
+
+.radar-comparison-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.radar-comparison-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 54px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.radar-comparison-player {
+  min-width: 0;
+  padding: 13px;
+  border-radius: 13px;
+  background: rgba(255,255,255,.035);
+}
+
+.radar-comparison-player.right {
+  grid-column: 3;
+  text-align: right;
+}
+
+.radar-comparison-player strong,
+.radar-comparison-player small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.radar-comparison-player strong {
+  font-family: var(--display);
+  font-size: 18px;
+}
+
+.radar-comparison-player small {
+  margin-top: 3px;
+  color: var(--text3);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.radar-comparison-versus {
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--gold);
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.radar-comparison-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px minmax(0, 1fr);
+  align-items: center;
+  min-height: 44px;
+  border-top: 1px solid var(--border);
+}
+
+.radar-comparison-row span {
+  color: var(--text3);
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.radar-comparison-row b {
+  font-family: var(--display);
+  font-size: 20px;
+}
+
+.radar-comparison-row b:last-child {
+  text-align: right;
+}
+
+.radar-comparison-row b.leader {
+  color: var(--gold);
+}
+
+.radar-comparison > p {
+  margin: 12px 0 0;
+  color: var(--text3);
+  font-size: 9px;
+  text-align: center;
+}
+
 .radar-league {
   padding: 4px 8px;
   border-radius: 999px;
@@ -6903,6 +7093,30 @@ body::after {
   .props-player-cell .favorite-btn .sport-icon {
     width: 15px;
     height: 15px;
+  }
+
+  .radar-compare-toolbar {
+    align-items: flex-start;
+  }
+
+  .radar-compare-toolbar small {
+    max-width: 210px;
+  }
+
+  .radar-comparison {
+    padding: 14px;
+  }
+
+  .radar-comparison-grid {
+    grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr);
+  }
+
+  .radar-comparison-row {
+    grid-template-columns: minmax(0, 1fr) 100px minmax(0, 1fr);
+  }
+
+  .radar-comparison-player strong {
+    font-size: 15px;
   }
 }
 
