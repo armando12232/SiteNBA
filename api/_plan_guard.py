@@ -66,7 +66,8 @@ def _load_user_and_subscription(headers):
     if not token:
         raise PlanError("missing bearer token", 401)
 
-    cache_key = f"plan:{token[-24:]}"
+    import hashlib
+    cache_key = "plan:" + hashlib.sha256(token.encode()).hexdigest()
     cached = _CACHE.get(cache_key)
     if cached and time.time() < cached["exp"]:
         return cached["data"]
@@ -114,6 +115,9 @@ def _json_request(url, headers):
         status = 401 if error.code in (401, 403) else 500
         raise PlanError("invalid bearer token" if status == 401 else f"Supabase HTTP {error.code}", status)
 
+    except (urllib.error.URLError, TimeoutError, ValueError):
+        raise PlanError("authentication service unavailable", 503)
+
 
 def _extract_bearer(headers):
     value = headers.get("Authorization") or headers.get("authorization") or ""
@@ -135,3 +139,4 @@ class PlanError(Exception):
         super().__init__(message)
         self.message = message
         self.status = status
+

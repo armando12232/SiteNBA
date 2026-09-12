@@ -41,16 +41,16 @@ export default async function handler(req, res) {
 }
 
 async function handleWebhook(req, res) {
-  if (TELEGRAM_WEBHOOK_SECRET) {
-    const secret = String(req.headers['x-telegram-bot-api-secret-token'] || '').trim();
-    if (secret !== TELEGRAM_WEBHOOK_SECRET) return res.status(401).json({ error: 'invalid telegram secret' });
-  }
+  if (!TELEGRAM_WEBHOOK_SECRET) return res.status(503).json({ error: 'telegram webhook unavailable' });
+  if (!TELEGRAM_CHAT_ID) return res.status(503).json({ error: 'telegram chat restriction unavailable' });
+  const secret = String(req.headers['x-telegram-bot-api-secret-token'] || '').trim();
+  if (secret !== TELEGRAM_WEBHOOK_SECRET) return res.status(401).json({ error: 'invalid telegram secret' });
 
   const update = parseBody(req.body);
   const parsed = parseTelegramUpdate(update);
   if (!parsed) return res.status(200).json({ ok: true, ignored: true });
 
-  if (TELEGRAM_CHAT_ID && String(parsed.chat_id) !== TELEGRAM_CHAT_ID) {
+  if (String(parsed.chat_id) !== TELEGRAM_CHAT_ID) {
     return res.status(200).json({ ok: true, ignored: true, reason: 'chat not allowed' });
   }
 
@@ -196,3 +196,4 @@ function normalizeSupabaseUrl(value) {
 function formatError(error) {
   return String(error?.cause?.message || error?.message || error || 'unknown error').slice(0, 500);
 }
+

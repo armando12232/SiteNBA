@@ -13,7 +13,7 @@ except ImportError:
     def get_client_ip(h): return '0.0.0.0'
     def sanitize_team_name(s): return (s or '')[:60]
     def is_valid_id(s): return bool(s) and len(s) <= 40
-    def check_feature(headers, feature): return True, 200, {}
+    def check_feature(headers, feature): return False, 503, {'error': 'authorization service unavailable'}
 
 try:
     from server.wnba_data import get_players as get_wnba_players, get_pregame as get_wnba_pregame, get_player_by_name as get_wnba_player_by_name
@@ -237,7 +237,11 @@ class handler(BaseHTTPRequestHandler):
             if not get_wnba_players:
                 self._json(500, {'error': 'internal server error'})
                 return
-            limit = int(qs.get('limit', ['60'])[0] or 60)
+            try:
+                limit = max(1, min(120, int(qs.get('limit', ['60'])[0] or 60)))
+            except ValueError:
+                self._json(400, {'error': 'invalid limit'})
+                return
             self._json(200, {'players': get_wnba_players(limit)})
         elif lg == 'wnba' and t == 'pregame':
             if not get_wnba_pregame:
@@ -291,3 +295,4 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def log_message(self, *a): pass
+

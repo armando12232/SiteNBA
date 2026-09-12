@@ -15,7 +15,7 @@ except ImportError:
     def is_valid_date(s): return bool(s) and len(s) <= 30
     def is_valid_league(s): return bool(s) and s.isalpha() and len(s) <= 20
     def sanitize_team_name(s): return str(s or '')[:60]
-    def check_feature(headers, feature): return True, 200, {}
+    def check_feature(headers, feature): return False, 503, {'error': 'authorization service unavailable'}
 
 ESPN_BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer'
 SITE_URL = os.environ.get('SITE_URL', 'https://site-nba-ten.vercel.app').rstrip('/')
@@ -1003,3 +1003,4 @@ class handler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', SITE_URL)
         self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+

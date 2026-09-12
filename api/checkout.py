@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -102,6 +103,7 @@ class handler(BaseHTTPRequestHandler):
         self._json(200, {
             'ok': True,
             'stripe_configured': bool(STRIPE_SECRET_KEY),
+            'webhook_configured': bool(os.environ.get('STRIPE_WEBHOOK_SECRET', '')),
             'supabase_configured': bool(SUPABASE_SERVICE_KEY),
             'plans': list(PLAN_PRICES.keys()),
         })
@@ -111,7 +113,11 @@ class handler(BaseHTTPRequestHandler):
         sig_header = self.headers.get('stripe-signature', '')
         webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 
-        if webhook_secret and not self._valid_stripe_signature(payload, sig_header, webhook_secret):
+        if not webhook_secret:
+            self._json(503, {'error': 'payment webhook unavailable'})
+            return
+
+        if not self._valid_stripe_signature(payload, sig_header, webhook_secret):
             self._json(400, {'error': 'invalid signature'})
             return
 
@@ -225,12 +231,14 @@ class handler(BaseHTTPRequestHandler):
 
     def _valid_stripe_signature(self, payload, sig_header, webhook_secret):
         try:
-            parts = dict(part.split('=', 1) for part in sig_header.split(',') if '=' in part)
-            ts = parts.get('t', '')
-            v1 = parts.get('v1', '')
+            parts = [part.strip().split('=', 1) for part in sig_header.split(',') if '=' in part]
+            ts = next((v for k,v in parts if k == 't'), '')
+            signatures = [v for k,v in parts if k == 'v1']
+            if abs(time.time() - int(ts)) > 300:
+                return False
             signed = f'{ts}.'.encode() + payload
             expected = hmac.new(webhook_secret.encode(), signed, hashlib.sha256).hexdigest()
-            return bool(v1) and hmac.compare_digest(expected, v1)
+            return any(hmac.compare_digest(expected, value) for value in signatures)
         except Exception:
             return False
 
@@ -248,3 +256,4 @@ class handler(BaseHTTPRequestHandler):
 
     def log_message(self, *args):
         pass
+

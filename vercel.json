@@ -2,7 +2,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/nba.py": {
+    "api/nba.js": {
       "maxDuration": 10
     },
     "api/bettingpros.py": {
@@ -17,7 +17,7 @@
     "api/sports.py": {
       "maxDuration": 10
     },
-    "api/injuries.py": {
+    "api/injuries.js": {
       "maxDuration": 15
     }
   },
@@ -91,3 +91,4 @@
     }
   ]
 }
+

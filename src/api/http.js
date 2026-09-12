@@ -15,7 +15,7 @@ export async function fetchJson(url, options = {}, timeoutMs = 10000) {
     });
     const data = await response.json().catch(() => null);
 
-    if (!response.ok) {
+    if (!response.ok || data?.error) {
       const message = data?.error || `HTTP ${response.status}`;
       throw new Error(message);
     }
@@ -32,3 +32,4 @@ async function authHeader() {
   const token = data?.session?.access_token;
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
+
