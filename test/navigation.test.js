@@ -11,6 +11,8 @@ test('Home shortcuts and NBA tabs require the same plan feature', () => {
     assert.equal(getPlanAccess('pro')[feature], true, target);
   }
   assert.equal(requiredPageFeature('home'), null);
+  assert.equal(requiredPageFeature('radar'), null);
   assert.equal(requiredPageFeature('nba'), null);
   assert.equal(requiredPageFeature('nba', 'live'), 'live');
 });
+

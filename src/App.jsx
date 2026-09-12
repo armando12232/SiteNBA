@@ -1,10 +1,11 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { PregameRadar } from './components/PregameRadar.jsx';
 import { SubscriptionWidget } from './components/SubscriptionWidget.jsx';
 import { SportIcon } from './components/SportIcon.jsx';
 import { PageBoundary } from './components/PageBoundary.jsx';
 import { getPlanAccess } from './api/subscriptions.js';
 import { requiredPageFeature } from './utils/navigation.js';
+import { favoriteKey, favoritesFromSession, persistFavorites, toggleFavoriteList } from './api/favorites.js';
 
 const FootballPage = lazy(() => import('./components/FootballPage.jsx').then((module) => ({ default: module.FootballPage })));
 const HomePage = lazy(() => import('./components/HomePage.jsx').then((module) => ({ default: module.HomePage })));
@@ -15,6 +16,7 @@ const SportsPage = lazy(() => import('./components/SportsPage.jsx').then((module
 const AdminPage = lazy(() => import('./components/AdminPage.jsx').then((module) => ({ default: module.AdminPage })));
 const WnbaPage = lazy(() => import('./components/WnbaPage.jsx').then((module) => ({ default: module.WnbaPage })));
 const Cs2Page = lazy(() => import('./components/Cs2Page.jsx').then((module) => ({ default: module.Cs2Page })));
+const MyRadarPage = lazy(() => import('./components/MyRadarPage.jsx').then((module) => ({ default: module.MyRadarPage })));
 
 export default function App() {
   const [selectedPlayer, setSelectedPlayer] = useState(null);
@@ -22,12 +24,17 @@ export default function App() {
   const [page, setPage] = useState('nba');
   const [nbaTab, setNbaTab] = useState('pregame');
   const [lockedFeature, setLockedFeature] = useState(null);
+  const [favoriteState, setFavoriteState] = useState({ items: [], savingKey: '', error: '' });
   const access = getPlanAccess(account.subscription);
   const pageFeature = requiredPageFeature(page, nbaTab);
   const deniedFeature = pageFeature && !access[pageFeature]
     ? (page === 'nba' ? nbaTab : page)
     : lockedFeature;
   const adminRoute = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('admin') === '1';
+
+  useEffect(() => {
+    setFavoriteState({ items: favoritesFromSession(account.session), savingKey: '', error: '' });
+  }, [account.session]);
 
   function navigate(nextPage) {
     const feature = requiredPageFeature(nextPage);
@@ -67,6 +74,26 @@ export default function App() {
     setLockedFeature(null);
   }
 
+  async function toggleFavorite(player) {
+    if (!account.session) {
+      window.dispatchEvent(new CustomEvent('statcast:open-auth'));
+      return;
+    }
+    if (favoriteState.savingKey) return;
+    const previous = favoriteState.items;
+    const next = toggleFavoriteList(previous, player);
+    if (!next.key) return;
+    setFavoriteState({ items: next.favorites, savingKey: next.key, error: '' });
+    try {
+      const { data, error } = await persistFavorites(next.favorites);
+      if (error) throw error;
+      const saved = data?.user ? favoritesFromSession({ user: data.user }) : next.favorites;
+      setFavoriteState({ items: saved, savingKey: '', error: '' });
+    } catch {
+      setFavoriteState({ items: previous, savingKey: '', error: 'Não foi possível salvar seu radar agora. Tente novamente.' });
+    }
+  }
+
   if (adminRoute) return <PageBoundary><Suspense fallback={<PageLoading />}><AdminPage /></Suspense></PageBoundary>;
 
   return (
@@ -90,7 +117,7 @@ export default function App() {
         <aside className="sport-sidebar">
           <div className="sidebar-label">Explorar</div>
           <nav className="page-nav main-nav" aria-label="Esportes e início">
-            {['home', 'nba', 'wnba', 'football', 'cs2', 'nfl', 'nhl', 'mlb'].map((item) => (
+            {['home', 'radar', 'nba', 'wnba', 'football', 'cs2', 'nfl', 'nhl', 'mlb'].map((item) => (
               <button
                 className={`page-nav-btn ${page === item ? 'active' : ''}`}
                 key={item}
@@ -110,6 +137,17 @@ export default function App() {
         <PageBoundary key={`${page}:${nbaTab}`}>
         <Suspense fallback={<PageLoading />}>
         {page === 'home' ? <HomePage onNavigate={navigate} /> : null}
+        {page === 'radar' ? (
+          <MyRadarPage
+            error={favoriteState.error}
+            favorites={favoriteState.items}
+            hasSession={Boolean(account.session)}
+            onNeedAuth={() => window.dispatchEvent(new CustomEvent('statcast:open-auth'))}
+            onSelectPlayer={selectPlayer}
+            onToggle={toggleFavorite}
+            savingKey={favoriteState.savingKey}
+          />
+        ) : null}
 
         {page === 'nba' ? (
           <>
@@ -118,7 +156,7 @@ export default function App() {
               <button aria-pressed={nbaTab === 'live'} className={`page-nav-btn ${nbaTab === 'live' ? 'active' : ''} ${!access.live ? 'locked' : ''}`} onClick={() => setNbaTabGuard('live')}><span className="navIcon liveMark"><SportIcon name="live" /></span>Ao Vivo</button>
               <button aria-pressed={nbaTab === 'injuries'} className={`page-nav-btn ${nbaTab === 'injuries' ? 'active' : ''} ${!access.injuries ? 'locked' : ''}`} onClick={() => setNbaTabGuard('injuries')}><span className="navIcon"><SportIcon name="medical" /></span>Lesões</button>
             </nav>
-            {nbaTab === 'pregame' ? <PregameRadar access={access} onSelectPlayer={selectPlayer} /> : null}
+            {nbaTab === 'pregame' ? <PregameRadar access={access} favorites={favoriteState.items} onSelectPlayer={selectPlayer} onToggleFavorite={toggleFavorite} savingFavoriteKey={favoriteState.savingKey} /> : null}
             {nbaTab === 'live' && access.live ? <LiveMonitor /> : null}
             {nbaTab === 'injuries' && access.injuries ? <InjuriesPage /> : null}
           </>
@@ -126,14 +164,14 @@ export default function App() {
 
         {page === 'football' && access.football ? <FootballPage /> : null}
         {page === 'cs2' && access.cs2 ? <Cs2Page /> : null}
-        {page === 'wnba' && access.sports ? <WnbaPage onSelectPlayer={selectPlayer} /> : null}
+        {page === 'wnba' && access.sports ? <WnbaPage favorites={favoriteState.items} onSelectPlayer={selectPlayer} onToggleFavorite={toggleFavorite} savingFavoriteKey={favoriteState.savingKey} /> : null}
         {['nfl', 'nhl', 'mlb'].includes(page) && access.sports ? <SportsPage key={page} league={page} /> : null}
         </Suspense>
         </PageBoundary>
         {selectedPlayer && access.modal ? (
           <PageBoundary>
             <Suspense fallback={<PageLoading />}>
-              <PlayerPropsModal playerName={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
+              <PlayerPropsModal favorites={favoriteState.items} onToggleFavorite={toggleFavorite} playerName={selectedPlayer} onClose={() => setSelectedPlayer(null)} savingFavoriteKey={favoriteState.savingKey} />
             </Suspense>
           </PageBoundary>
         ) : null}
@@ -229,6 +267,7 @@ function featureAccessDetails(feature) {
 function navLabel(page) {
   return {
     home: 'Home',
+    radar: 'Meu Radar',
     nba: 'NBA',
     wnba: 'WNBA',
     cs2: 'CS2',
@@ -244,6 +283,7 @@ function navIcon(page) {
     wnba: 'basketball',
     cs2: 'gamepad',
     home: 'home',
+    radar: 'star',
     nba: 'basketball',
     nfl: 'americanFootball',
     nhl: 'hockey',

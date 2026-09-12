@@ -13,6 +13,7 @@ const MODULES = [
 ];
 
 const QUICK_ACTIONS = [
+  { icon: 'star', label: 'Meu Radar', target: 'radar', text: 'Seus jogadores salvos' },
   { icon: 'basketball', label: 'WNBA', target: 'wnba', text: 'Jogos e placares' },
   { icon: 'chart', label: 'NBA Props', target: 'nba', text: 'Radar de props pré-jogo' },
   { icon: 'medical', label: 'NBA Lesões', target: 'nba-injuries', text: 'Disponibilidade dos jogadores' },

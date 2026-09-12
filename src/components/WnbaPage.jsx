@@ -3,6 +3,8 @@ import { clearWnbaCache, getWnbaPlayers, getWnbaPregame } from '../api/wnba.js';
 import { numberOrNull, propForStat } from '../utils/props.js';
 import { buildPregameScore } from '../utils/statcastScore.js';
 import { userErrorMessage } from '../utils/errors.js';
+import { favoriteKey } from '../api/favorites.js';
+import { FavoriteButton } from './FavoriteButton.jsx';
 
 const PLAYER_LIMIT = 36;
 const statLabels = {
@@ -12,7 +14,7 @@ const statLabels = {
   fg3m: '3PT',
 };
 
-export function WnbaPage({ onSelectPlayer }) {
+export function WnbaPage({ favorites = [], onSelectPlayer, onToggleFavorite, savingFavoriteKey = '' }) {
   const [activeStat, setActiveStat] = useState('pts');
   const [sortBy, setSortBy] = useState('score');
   const [query, setQuery] = useState('');
@@ -192,8 +194,11 @@ export function WnbaPage({ onSelectPlayer }) {
               <WnbaRow
                 key={player.player_id || player.id || player.player_name}
                 activeStat={activeStat}
+                favorites={favorites}
                 onSelectPlayer={onSelectPlayer}
+                onToggleFavorite={onToggleFavorite}
                 player={player}
+                savingFavoriteKey={savingFavoriteKey}
               />
             ))}
           </div>
@@ -236,7 +241,7 @@ function upsertPlayer(players, player) {
   return next;
 }
 
-function WnbaRow({ player, activeStat, onSelectPlayer }) {
+function WnbaRow({ player, activeStat, favorites, onSelectPlayer, onToggleFavorite, savingFavoriteKey }) {
   const entry = scoreEntry(player, activeStat);
   const prop = entry?.prop || {};
   const line = entry?.line ?? '-';
@@ -244,24 +249,25 @@ function WnbaRow({ player, activeStat, onSelectPlayer }) {
   const stat = entry?.stat || activeStat;
   const projection = prop.projection ?? player.last5_avg?.[stat] ?? player.season_avg?.[stat];
   const loaded = isPlayerLoaded(player);
+  const favoritePlayer = { ...player, league: 'wnba' };
+  const key = favoriteKey(favoritePlayer);
+  const isFavorite = favorites.some((favorite) => favoriteKey(favorite) === key);
 
   return (
-    <div className={`props-table-row ${loaded ? '' : 'is-loading'}`} role="button" tabIndex={0} aria-label={`Ver ${statLabels[stat]} de ${player.player_name}`} onClick={() => onSelectPlayer?.({ ...player, league: 'wnba' })} onKeyDown={(event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        onSelectPlayer?.({ ...player, league: 'wnba' });
-      }
-    }}>
+    <div className={`props-table-row ${loaded ? '' : 'is-loading'}`}>
       <div className="props-player-cell">
-        <img src={playerPhotoUrl(player)} alt="" className="player-img-mobile props-player-img" />
-        <div className="props-player-meta">
-          <div className="props-player-name">{player.player_name}</div>
-          <div className="props-player-sub">
-            {player.team_abbr || '-'} / {statLabels[stat]} / <span>Ref. {line}</span>
-            {prop.edge != null ? <em className={prop.edge >= 0 ? 'edge-up' : 'edge-down'}>{prop.edge >= 0 ? ' acima' : ' abaixo'}</em> : null}
+        <button type="button" className="props-player-open" aria-label={`Ver ${statLabels[stat]} de ${player.player_name}`} onClick={() => onSelectPlayer?.(favoritePlayer)}>
+          <img src={playerPhotoUrl(player)} alt="" className="player-img-mobile props-player-img" />
+          <div className="props-player-meta">
+            <div className="props-player-name">{player.player_name}</div>
+            <div className="props-player-sub">
+              {player.team_abbr || '-'} / {statLabels[stat]} / <span>Ref. {line}</span>
+              {prop.edge != null ? <em className={prop.edge >= 0 ? 'edge-up' : 'edge-down'}>{prop.edge >= 0 ? ' acima' : ' abaixo'}</em> : null}
+            </div>
+            <div className="props-player-sample">{sampleLabel(player)}</div>
           </div>
-          <div className="props-player-sample">{sampleLabel(player)}</div>
-        </div>
+        </button>
+        <FavoriteButton active={isFavorite} disabled={savingFavoriteKey === key} onToggle={() => onToggleFavorite?.(favoritePlayer)} playerName={player.player_name} />
       </div>
       <HitCell value={prop.l5} loading={!loaded} />
       <HitCell value={prop.l10} loading={!loaded} />

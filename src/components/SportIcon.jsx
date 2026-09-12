@@ -57,6 +57,9 @@ export function SportIcon({ name }) {
     medical: (
       <path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6V3Z" />
     ),
+    star: (
+      <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-2.9-5.6 2.9 1.1-6.2L3 9.6l6.2-.9L12 3Z" />
+    ),
   };
 
   return (

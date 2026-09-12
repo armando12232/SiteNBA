@@ -6620,3 +6620,289 @@ body::after {
   }
 }
 
+/* Meu Radar */
+.props-player-open {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.props-player-open:focus-visible,
+.radar-player-open:focus-visible,
+.favorite-btn:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+.favorite-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  padding: 0;
+  border: 1px solid var(--border2);
+  border-radius: 11px;
+  background: rgba(255,255,255,.035);
+  color: var(--text3);
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, color .18s ease, transform .18s ease;
+}
+
+.favorite-btn .sport-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.favorite-btn:hover {
+  border-color: rgba(253,185,39,.58);
+  color: var(--gold);
+  transform: translateY(-1px);
+}
+
+.favorite-btn.active {
+  border-color: rgba(253,185,39,.52);
+  background: rgba(253,185,39,.13);
+  color: var(--gold);
+}
+
+.favorite-btn.active .sport-icon {
+  fill: currentColor;
+}
+
+.favorite-btn:disabled {
+  cursor: wait;
+  opacity: .55;
+  transform: none;
+}
+
+.my-radar-page {
+  min-height: 420px;
+}
+
+.radar-header > div:first-child span {
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.radar-header h1 {
+  margin: 3px 0 0;
+  font-family: var(--display);
+  font-size: clamp(27px, 4vw, 42px);
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.radar-header > strong {
+  color: var(--text3);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.radar-lead {
+  max-width: 640px;
+  margin: -8px 0 22px;
+  color: var(--text3);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.radar-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.radar-player-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 17px;
+  background: linear-gradient(145deg, rgba(255,255,255,.035), rgba(255,255,255,.012));
+  box-shadow: 0 12px 32px rgba(0,0,0,.16);
+}
+
+.radar-player-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 13px;
+}
+
+.radar-league {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(29,66,138,.26);
+  color: #8eb4ff;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.radar-league.wnba {
+  background: rgba(249,83,23,.15);
+  color: #ff936d;
+}
+
+.radar-player-open {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.radar-player-avatar {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(253,185,39,.24);
+  border-radius: 14px;
+  background: rgba(253,185,39,.09);
+  color: var(--gold);
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.radar-player-open span:nth-child(2) {
+  min-width: 0;
+}
+
+.radar-player-open strong,
+.radar-player-open small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.radar-player-open strong {
+  font-family: var(--display);
+  font-size: 18px;
+}
+
+.radar-player-open small {
+  margin-top: 4px;
+  color: var(--text3);
+  font-size: 10px;
+}
+
+.radar-player-open em {
+  color: var(--gold);
+  font-size: 20px;
+  font-style: normal;
+}
+
+.radar-empty {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 320px;
+  padding: 42px 22px;
+  text-align: center;
+}
+
+.radar-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(253,185,39,.3);
+  border-radius: 18px;
+  background: rgba(253,185,39,.1);
+  color: var(--gold);
+}
+
+.radar-empty-icon .sport-icon {
+  width: 27px;
+  height: 27px;
+}
+
+.radar-empty strong {
+  font-family: var(--display);
+  font-size: 24px;
+}
+
+.radar-empty p {
+  max-width: 480px;
+  margin: 9px auto 18px;
+  color: var(--text3);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.radar-empty button {
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 18px;
+  background: var(--gold);
+  color: #171106;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.pp-hero-inner > .favorite-btn {
+  margin-right: 42px;
+}
+
+@media (max-width: 1000px) {
+  .radar-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .radar-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .radar-header {
+    align-items: end;
+  }
+
+  .radar-lead {
+    margin-top: -2px;
+  }
+
+  .props-player-cell {
+    gap: 6px;
+  }
+
+  .props-player-open {
+    gap: 7px;
+  }
+
+  .props-player-cell .favorite-btn {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+
+  .props-player-cell .favorite-btn .sport-icon {
+    width: 15px;
+    height: 15px;
+  }
+}
+

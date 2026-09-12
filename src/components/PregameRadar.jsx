@@ -5,6 +5,8 @@ import { PREGAME_PLAYERS } from '../data/pregamePlayers.js';
 import { numberOrNull, propForStat } from '../utils/props.js';
 import { buildPregameScore } from '../utils/statcastScore.js';
 import { userErrorMessage } from '../utils/errors.js';
+import { favoriteKey } from '../api/favorites.js';
+import { FavoriteButton } from './FavoriteButton.jsx';
 
 const statLabels = {
   pts: 'Pontos',
@@ -15,7 +17,7 @@ const statLabels = {
 
 const PREFS_KEY = 'statcast:nba:pregame:prefs:v1';
 
-export function PregameRadar({ access, onSelectPlayer }) {
+export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleFavorite, savingFavoriteKey = '' }) {
   const savedPrefs = readPrefs();
   const [activeStat, setActiveStat] = useState(savedPrefs.activeStat || 'pts');
   const [sortBy, setSortBy] = useState(savedPrefs.sortBy || 'l5');
@@ -278,7 +280,10 @@ export function PregameRadar({ access, onSelectPlayer }) {
                 key={player.player_id || `${player.team_abbr || 'bp'}-${player.player_name}`}
                 player={player}
                 activeStat={activeStat}
+                favorites={favorites}
                 onSelectPlayer={onSelectPlayer}
+                onToggleFavorite={onToggleFavorite}
+                savingFavoriteKey={savingFavoriteKey}
               />
             ))}
             {previewRows.map((row) => (
@@ -717,7 +722,7 @@ function LockedPreviewCell() {
   return <div className="hit-rate-cell none">-</div>;
 }
 
-function PregameRow({ player, activeStat, onSelectPlayer }) {
+function PregameRow({ player, activeStat, favorites, onSelectPlayer, onToggleFavorite, savingFavoriteKey }) {
   const best = propForStat(player, activeStat);
   const stat = activeStat;
   const line = best?.line ?? null;
@@ -735,23 +740,23 @@ function PregameRow({ player, activeStat, onSelectPlayer }) {
     games: player.last5_games || [],
     marketLine,
   }) : null;
+  const key = favoriteKey(player);
+  const isFavorite = favorites.some((favorite) => favoriteKey(favorite) === key);
 
   return (
-    <div className="props-table-row" role="button" tabIndex={0} aria-label={`Ver ${statLabels[stat]} de ${player.player_name}`} onClick={() => onSelectPlayer?.(player)} onKeyDown={(event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        onSelectPlayer?.(player);
-      }
-    }}>
+    <div className="props-table-row">
       <div className="props-player-cell">
-        <img src={photoUrl} alt="" className="player-img-mobile props-player-img" />
-        <div className="props-player-meta">
-          <div className="props-player-name">{player.player_name}</div>
-          <div className="props-player-sub">
-            {teamAbbr ? `${teamAbbr} / ` : ''}{statLabels[stat]} / <span>{marketLine ? 'O' : 'Ref.'} {line ?? '-'}</span>
-            {edge != null ? <em className={edge >= 0 ? 'edge-up' : 'edge-down'}>{marketLine ? (edge >= 0 ? ' up' : ' down') : (edge >= 0 ? ' acima' : ' abaixo')}</em> : null}
+        <button type="button" className="props-player-open" aria-label={`Ver ${statLabels[stat]} de ${player.player_name}`} onClick={() => onSelectPlayer?.(player)}>
+          <img src={photoUrl} alt="" className="player-img-mobile props-player-img" />
+          <div className="props-player-meta">
+            <div className="props-player-name">{player.player_name}</div>
+            <div className="props-player-sub">
+              {teamAbbr ? `${teamAbbr} / ` : ''}{statLabels[stat]} / <span>{marketLine ? 'O' : 'Ref.'} {line ?? '-'}</span>
+              {edge != null ? <em className={edge >= 0 ? 'edge-up' : 'edge-down'}>{marketLine ? (edge >= 0 ? ' up' : ' down') : (edge >= 0 ? ' acima' : ' abaixo')}</em> : null}
+            </div>
           </div>
-        </div>
+        </button>
+        <FavoriteButton active={isFavorite} disabled={savingFavoriteKey === key} onToggle={() => onToggleFavorite?.(player)} playerName={player.player_name} />
       </div>
       <HitCell value={best?.h2h} />
       <HitCell value={best?.l5} />

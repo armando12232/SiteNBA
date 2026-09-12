@@ -4,8 +4,10 @@ import { getWnbaPregame, getWnbaPregameByName } from '../api/wnba.js';
 import { averageRecent, hitPercent, numberOrNull, propForStat, streakOver } from '../utils/props.js';
 import { buildPregameScore } from '../utils/statcastScore.js';
 import { userErrorMessage } from '../utils/errors.js';
+import { favoriteKey } from '../api/favorites.js';
+import { FavoriteButton } from './FavoriteButton.jsx';
 
-export function PlayerPropsModal({ playerName, onClose }) {
+export function PlayerPropsModal({ favorites = [], onToggleFavorite, playerName, onClose, savingFavoriteKey = '' }) {
   const tableData = typeof playerName === 'object' && playerName ? playerName : null;
   const displayName = tableData?.player_name || String(playerName || '');
   const [activeStat, setActiveStat] = useState('pts');
@@ -109,6 +111,9 @@ export function PlayerPropsModal({ playerName, onClose }) {
   const score = data && best && !state.loading && !state.error
     ? buildPregameScore({ player: data, stat, prop: best, line, games, marketLine })
     : null;
+  const favoritePlayer = data || tableData;
+  const savedKey = favoriteKey(favoritePlayer);
+  const isFavorite = favorites.some((favorite) => favoriteKey(favorite) === savedKey);
 
   return (
     <div className="pp-modal-overlay open" onMouseDown={onClose}>
@@ -131,6 +136,7 @@ export function PlayerPropsModal({ playerName, onClose }) {
                 </div>
               ) : null}
             </div>
+            {favoritePlayer ? <FavoriteButton active={isFavorite} disabled={savingFavoriteKey === savedKey} onToggle={() => onToggleFavorite?.(favoritePlayer)} playerName={displayName} /> : null}
           </div>
         </div>
 
