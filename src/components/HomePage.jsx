@@ -1,23 +1,24 @@
 import { PREGAME_PLAYERS } from '../data/pregamePlayers.js';
+import { SportIcon } from './SportIcon.jsx';
 
 const MODULES = [
-  { key: 'wnba', icon: 'WN', title: 'WNBA', text: 'Placar, agenda e jogos ao vivo da liga feminina.', action: 'Abrir WNBA', status: 'Novo' },
-  { key: 'nba', icon: 'PP', title: 'Player Props', text: 'Hit rates L5-L20, linhas, edge e modal com histórico real.', action: 'Abrir NBA', status: 'Core' },
-  { key: 'football', icon: 'FT', title: 'Futebol', text: 'Jogos do dia, ao vivo, odds, estatísticas e contexto da partida.', action: 'Abrir Futebol', status: 'Novo' },
-  { key: 'cs2', icon: 'C2', title: 'CS2', text: 'Radar de confrontos, mapas, forma recente e leitura por score.', action: 'Abrir CS2', status: 'Novo' },
-  { key: 'nfl', icon: 'NFL', title: 'NFL', text: 'Placar e agenda para acompanhar os próximos jogos.', action: 'Abrir NFL', status: 'Base' },
-  { key: 'nhl', icon: 'NHL', title: 'NHL', text: 'Hockey ao vivo, placares e calendário.', action: 'Abrir NHL', status: 'Base' },
-  { key: 'mlb', icon: 'MLB', title: 'MLB', text: 'Baseball, jogos do dia e classificação.', action: 'Abrir MLB', status: 'Base' },
-  { key: 'injuries', icon: 'IN', title: 'Lesões NBA', text: 'Jogadores fora, questionáveis e prováveis.', action: 'Ver lesões', status: 'NBA' },
+  { key: 'wnba', icon: 'basketball', title: 'WNBA', text: 'Placar, agenda e jogos ao vivo da liga feminina.', action: 'Abrir WNBA', status: 'Novo' },
+  { key: 'nba', icon: 'chart', title: 'Player Props', text: 'Hit rates L5-L20, linhas, edge e modal com histórico real.', action: 'Abrir NBA', status: 'Core' },
+  { key: 'football', icon: 'soccer', title: 'Futebol', text: 'Jogos do dia, ao vivo, odds, estatísticas e contexto da partida.', action: 'Abrir Futebol', status: 'Novo' },
+  { key: 'cs2', icon: 'gamepad', title: 'CS2', text: 'Radar de confrontos, mapas, forma recente e leitura por score.', action: 'Abrir CS2', status: 'Novo' },
+  { key: 'nfl', icon: 'americanFootball', title: 'NFL', text: 'Placar e agenda para acompanhar os próximos jogos.', action: 'Abrir NFL', status: 'Base' },
+  { key: 'nhl', icon: 'hockey', title: 'NHL', text: 'Hockey ao vivo, placares e calendário.', action: 'Abrir NHL', status: 'Base' },
+  { key: 'mlb', icon: 'baseball', title: 'MLB', text: 'Baseball, jogos do dia e classificação.', action: 'Abrir MLB', status: 'Base' },
+  { key: 'injuries', icon: 'medical', title: 'Lesões NBA', text: 'Jogadores fora, questionáveis e prováveis.', action: 'Ver lesões', status: 'NBA' },
 ];
 
 const QUICK_ACTIONS = [
-  { icon: 'WN', label: 'WNBA', target: 'wnba', text: 'Jogos e placares' },
-  { icon: 'PP', label: 'NBA Props', target: 'nba', text: 'Radar de props pré-jogo' },
-  { icon: 'IN', label: 'NBA Lesões', target: 'nba-injuries', text: 'Disponibilidade dos jogadores' },
-  { icon: 'FT', label: 'Futebol', target: 'football', text: 'Jogos, odds e estatísticas' },
-  { icon: 'C2', label: 'CS2', target: 'cs2', text: 'Confrontos e mapas' },
-  { icon: 'NFL', label: 'NFL', target: 'nfl', text: 'Placar e agenda' },
+  { icon: 'basketball', label: 'WNBA', target: 'wnba', text: 'Jogos e placares' },
+  { icon: 'chart', label: 'NBA Props', target: 'nba', text: 'Radar de props pré-jogo' },
+  { icon: 'medical', label: 'NBA Lesões', target: 'nba-injuries', text: 'Disponibilidade dos jogadores' },
+  { icon: 'soccer', label: 'Futebol', target: 'football', text: 'Jogos, odds e estatísticas' },
+  { icon: 'gamepad', label: 'CS2', target: 'cs2', text: 'Confrontos e mapas' },
+  { icon: 'americanFootball', label: 'NFL', target: 'nfl', text: 'Placar e agenda' },
 ];
 
 export function HomePage({ onNavigate }) {
@@ -44,7 +45,7 @@ export function HomePage({ onNavigate }) {
         <div className="quickActionGrid">
           {QUICK_ACTIONS.map((item) => (
             <button key={item.label} type="button" onClick={() => onNavigate(item.target)}>
-              <span className="quickIcon">{item.icon}</span>
+              <span className="quickIcon"><SportIcon name={item.icon} /></span>
               <strong>{item.label}</strong>
               <em>{item.text}</em>
             </button>
@@ -59,7 +60,7 @@ export function HomePage({ onNavigate }) {
             type="button"
             onClick={() => onNavigate(item.key === 'injuries' ? 'nba-injuries' : item.key)}
           >
-            <span className="moduleIcon">{item.icon}</span>
+            <span className="moduleIcon"><SportIcon name={item.icon} /></span>
             <small>{item.status}</small>
             <strong>{item.title}</strong>
             <span>{item.text}</span>

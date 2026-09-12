@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { PregameRadar } from './components/PregameRadar.jsx';
 import { SubscriptionWidget } from './components/SubscriptionWidget.jsx';
+import { SportIcon } from './components/SportIcon.jsx';
 import { PageBoundary } from './components/PageBoundary.jsx';
 import { getPlanAccess } from './api/subscriptions.js';
 import { requiredPageFeature } from './utils/navigation.js';
@@ -97,7 +98,7 @@ export default function App() {
                 aria-pressed={page === item}
                 onClick={() => navigate(item)}
               >
-                <span className="navIcon">{navIcon(item)}</span>
+                <span className="navIcon"><SportIcon name={navIcon(item)} /></span>
                 <span className="navLabel">{navLabel(item)}</span>
               </button>
             ))}
@@ -113,9 +114,9 @@ export default function App() {
         {page === 'nba' ? (
           <>
             <nav className="page-nav nba-tabs" aria-label="Recursos da NBA">
-              <button aria-pressed={nbaTab === 'pregame'} className={`page-nav-btn ${nbaTab === 'pregame' ? 'active' : ''}`} onClick={() => setNbaTabGuard('pregame')}><span className="navIcon">PP</span>Player Props</button>
-              <button aria-pressed={nbaTab === 'live'} className={`page-nav-btn ${nbaTab === 'live' ? 'active' : ''} ${!access.live ? 'locked' : ''}`} onClick={() => setNbaTabGuard('live')}><span className="navIcon liveMark">LV</span>Ao Vivo</button>
-              <button aria-pressed={nbaTab === 'injuries'} className={`page-nav-btn ${nbaTab === 'injuries' ? 'active' : ''} ${!access.injuries ? 'locked' : ''}`} onClick={() => setNbaTabGuard('injuries')}><span className="navIcon">IN</span>Lesões</button>
+              <button aria-pressed={nbaTab === 'pregame'} className={`page-nav-btn ${nbaTab === 'pregame' ? 'active' : ''}`} onClick={() => setNbaTabGuard('pregame')}><span className="navIcon"><SportIcon name="chart" /></span>Player Props</button>
+              <button aria-pressed={nbaTab === 'live'} className={`page-nav-btn ${nbaTab === 'live' ? 'active' : ''} ${!access.live ? 'locked' : ''}`} onClick={() => setNbaTabGuard('live')}><span className="navIcon liveMark"><SportIcon name="live" /></span>Ao Vivo</button>
+              <button aria-pressed={nbaTab === 'injuries'} className={`page-nav-btn ${nbaTab === 'injuries' ? 'active' : ''} ${!access.injuries ? 'locked' : ''}`} onClick={() => setNbaTabGuard('injuries')}><span className="navIcon"><SportIcon name="medical" /></span>Lesões</button>
             </nav>
             {nbaTab === 'pregame' ? <PregameRadar access={access} onSelectPlayer={selectPlayer} /> : null}
             {nbaTab === 'live' && access.live ? <LiveMonitor /> : null}
@@ -240,14 +241,14 @@ function navLabel(page) {
 
 function navIcon(page) {
   return {
-    wnba: 'WN',
-    cs2: 'C2',
-    home: 'IN',
-    nba: 'NBA',
-    nfl: 'NFL',
-    nhl: 'NHL',
-    mlb: 'MLB',
-    football: 'FT',
+    wnba: 'basketball',
+    cs2: 'gamepad',
+    home: 'home',
+    nba: 'basketball',
+    nfl: 'americanFootball',
+    nhl: 'hockey',
+    mlb: 'baseball',
+    football: 'soccer',
   }[page];
 }
 

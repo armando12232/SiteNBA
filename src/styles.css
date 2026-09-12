@@ -6320,6 +6320,19 @@ body::after {
   color: var(--gold);
 }
 
+.sport-icon {
+  display: block;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+
+.moduleIcon .sport-icon,
+.quickIcon .sport-icon {
+  width: 20px;
+  height: 20px;
+}
+
 .sport-sidebar .main-nav {
   display: flex;
   flex-direction: column;
