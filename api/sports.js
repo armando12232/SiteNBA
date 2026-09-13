@@ -1,4 +1,5 @@
 import { checkFeature } from './_planGuard.js';
+import { fetchProviderJson } from './_providerFetch.js';
 
 const SITE_URL = String(process.env.SITE_URL || 'https://site-nba-ten.vercel.app').replace(/\/+$/, '');
 const ESPN_SITE = 'https://site.api.espn.com/apis/site/v2/sports';
@@ -56,22 +57,7 @@ export default async function handler(req, res) {
 }
 
 async function fetchJson(url, ttl = 120_000) {
-  const hit = cache.get(url);
-  if (hit && Date.now() - hit.time < ttl) return hit.data;
-  let lastError;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      const response = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(7500) });
-      if (!response.ok) throw Object.assign(new Error(`provider HTTP ${response.status}`), { status: 502 });
-      const data = await response.json();
-      cache.set(url, { time: Date.now(), data });
-      return data;
-    } catch (error) {
-      lastError = error;
-      if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 120));
-    }
-  }
-  throw lastError;
+  return fetchProviderJson(url, { ttlMs: ttl, timeoutMs: 7_500, retries: 1 });
 }
 
 function leagueBase(league) {
@@ -217,4 +203,3 @@ function normalizeName(value) { return String(value || '').normalize('NFD').repl
 function requiredId(value, field) { const text = String(value || ''); if (!/^[a-zA-Z0-9_-]{1,40}$/.test(text)) throw Object.assign(new Error(`invalid ${field}`), { status: 400 }); return text; }
 function boundedInt(value, low, high, fallback) { const number = Number.parseInt(value, 10); return Number.isFinite(number) ? Math.max(low, Math.min(high, number)) : fallback; }
 function setCors(res) { res.setHeader('Access-Control-Allow-Origin', SITE_URL); res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); res.setHeader('Cache-Control', 'no-store'); }
-

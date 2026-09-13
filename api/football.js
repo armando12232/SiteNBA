@@ -1,4 +1,5 @@
 import { checkFeature } from './_planGuard.js';
+import { fetchProviderJson } from './_providerFetch.js';
 
 const SITE_URL = String(process.env.SITE_URL || 'https://site-nba-ten.vercel.app').replace(/\/+$/, '');
 const BASE = 'https://site.api.espn.com/apis/site/v2/sports/soccer';
@@ -12,7 +13,6 @@ const LEAGUES = [
   { key: 'ligue1', slug: 'fra.1', name: 'Ligue 1', flag: '🇫🇷' },
   { key: 'libertadores', slug: 'conmebol.libertadores', name: 'Libertadores', flag: '🌎' },
 ];
-const cache = new Map();
 
 export default async function handler(req, res) {
   setCors(res);
@@ -56,13 +56,7 @@ export default async function handler(req, res) {
 }
 
 async function fetchJson(url) {
-  const hit = cache.get(url);
-  if (hit && Date.now() - hit.time < 60_000) return hit.data;
-  const response = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(7500) });
-  if (!response.ok) throw new Error(`provider HTTP ${response.status}`);
-  const data = await response.json();
-  cache.set(url, { time: Date.now(), data });
-  return data;
+  return fetchProviderJson(url, { ttlMs: 60_000, timeoutMs: 7_500, retries: 1 });
 }
 
 function parseFixture(event, league) {

@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { checkFeature } from './_planGuard.js';
+import { fetchProviderJson } from './_providerFetch.js';
 
 const BASE = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba';
 const COMMON = 'https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba';
@@ -8,7 +9,6 @@ const PLAYERS = JSON.parse(fs.readFileSync(new URL('../server/nba_player_ids.jso
 const ESPN_TO_NBA = new Map(Object.entries(PLAYERS).map(([nbaId, item]) => [String(item.espn_id), Number(nbaId)]));
 const NAME_TO_NBA = new Map(Object.entries(PLAYERS).map(([nbaId, item]) => [normalizeName(item.name), Number(nbaId)]));
 const TEAM_ABBR = { NY: 'NYK', GS: 'GSW', SA: 'SAS', NO: 'NOP', UTAH: 'UTA', WSH: 'WAS' };
-const cache = new Map();
 
 export default async function handler(req, res) {
   setCors(res);
@@ -57,13 +57,7 @@ export default async function handler(req, res) {
 }
 
 async function fetchJson(url, ttl = 300_000) {
-  const hit = cache.get(url);
-  if (hit && Date.now() - hit.time < ttl) return hit.data;
-  const response = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(8000) });
-  if (!response.ok) throw Object.assign(new Error(`provider HTTP ${response.status}`), { status: 502 });
-  const data = await response.json();
-  cache.set(url, { time: Date.now(), data });
-  return data;
+  return fetchProviderJson(url, { ttlMs: ttl, timeoutMs: 8_000, retries: 1 });
 }
 
 function eventGame(event) {
@@ -250,4 +244,3 @@ function mean(values) { const valid = values.filter(Number.isFinite); return val
 function round(value) { return Math.round(value * 10) / 10; }
 function hitRate(rows, key, line) { return rows.length ? Math.round(100 * rows.filter((row) => row[key] >= line).length / rows.length) : null; }
 function setCors(res) { res.setHeader('Access-Control-Allow-Origin', SITE_URL); res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); res.setHeader('Cache-Control', 'no-store'); }
-

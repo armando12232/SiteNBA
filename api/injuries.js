@@ -1,4 +1,5 @@
 import { checkFeature } from './_planGuard.js';
+import { fetchProviderJson } from './_providerFetch.js';
 
 const ESPN_URL = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/injuries';
 const TEAMS_URL = 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams';
@@ -15,12 +16,10 @@ export default async function handler(req, res) {
 
   try {
     if (cached && Date.now() - cached.time < 10 * 60 * 1000) return res.status(200).json(cached.data);
-    const [injuryResponse, teamResponse] = await Promise.all([
-      fetch(ESPN_URL, { headers: providerHeaders(), signal: AbortSignal.timeout(8000) }),
-      fetch(TEAMS_URL, { headers: providerHeaders(), signal: AbortSignal.timeout(8000) }),
+    const [payload, teamPayload] = await Promise.all([
+      fetchProviderJson(ESPN_URL, { ttlMs: 10 * 60 * 1000, timeoutMs: 8_000, retries: 1, headers: providerHeaders() }),
+      fetchProviderJson(TEAMS_URL, { ttlMs: 60 * 60 * 1000, timeoutMs: 8_000, retries: 1, headers: providerHeaders() }),
     ]);
-    if (!injuryResponse.ok || !teamResponse.ok) throw new Error('provider unavailable');
-    const [payload, teamPayload] = await Promise.all([injuryResponse.json(), teamResponse.json()]);
     const teams = new Map((teamPayload.sports?.[0]?.leagues?.[0]?.teams || []).map((item) => [String(item.team.id), item.team]));
     const injuries = [];
     for (const group of payload.injuries || []) {
@@ -66,4 +65,3 @@ function categorize(value) {
 function idFromHeadshot(url) { return String(url || '').match(/\/players\/full\/(\d+)\./)?.[1] || null; }
 function providerHeaders() { return { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' }; }
 function setCors(res) { res.setHeader('Access-Control-Allow-Origin', SITE_URL); res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); res.setHeader('Cache-Control', 'no-store'); }
-
