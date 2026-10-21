@@ -4992,18 +4992,90 @@ select {
 }
 
 .performance-chart {
-  position: relative;
-  min-height: 282px;
-  overflow: hidden;
-  padding: 18px 16px 30px 46px;
+  --chart-plot-height: 184px;
+  padding: 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--bg2);
 }
 
+.chart-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.chart-toolbar-label {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.chart-range-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.chart-range-options button {
+  min-width: 38px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.chart-range-options button[aria-pressed="true"] {
+  border-color: var(--green);
+  background: rgba(45, 141, 90, .2);
+  color: var(--green);
+}
+
+.chart-range-options button:disabled {
+  opacity: .35;
+  cursor: default;
+}
+
+.chart-sample-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin: 12px 0 16px;
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.chart-sample-summary strong {
+  color: var(--text);
+}
+
+.chart-scroll {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text3) transparent;
+  padding: 3px 0 8px;
+}
+
+.chart-canvas {
+  position: relative;
+  padding: 0 12px 0 40px;
+}
+
 .chart-grid {
   position: absolute;
-  inset: 18px 16px 30px 46px;
+  top: 24px;
+  left: 40px;
+  right: 12px;
+  height: var(--chart-plot-height);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -5025,13 +5097,21 @@ select {
   font-weight: 700;
 }
 
+.chart-reference {
+  position: absolute;
+  top: 24px;
+  left: 40px;
+  right: 12px;
+  height: var(--chart-plot-height);
+  z-index: 2;
+  pointer-events: none;
+}
+
 .chart-line {
   position: absolute;
-  left: 46px;
-  right: 16px;
-  z-index: 2;
+  left: 0;
+  right: 0;
   border-top: 2px dashed rgba(255,255,255,.55);
-  pointer-events: none;
 }
 
 .chart-line span {
@@ -5051,20 +5131,33 @@ select {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(18px, 1fr));
   align-items: end;
-  gap: 5px;
-  height: 220px;
+  gap: 8px;
 }
 
 .chart-bar-item {
   position: relative;
   display: grid;
-  grid-template-rows: 18px 1fr 14px 12px;
+  grid-template-rows: 24px var(--chart-plot-height) 22px 26px;
   align-items: end;
-  height: 100%;
   min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  font: inherit;
   text-align: center;
+  cursor: pointer;
+}
+
+.chart-bar-item.selected .chart-date {
+  background: var(--text);
+  color: var(--bg2);
+}
+
+.chart-bar-item:hover .chart-bar,
+.chart-bar-item:focus-visible .chart-bar {
+  filter: brightness(1.2);
 }
 
 .chart-bar-item strong {
@@ -5078,7 +5171,7 @@ select {
 
 .chart-bar {
   width: 100%;
-  min-height: 8px;
+  min-height: 0;
   border-radius: 3px 3px 0 0;
 }
 
@@ -5090,34 +5183,60 @@ select {
   background: #c52f32;
 }
 
-.chart-bar-item span {
-  overflow: hidden;
+.chart-bar.neutral {
+  background: var(--text3);
+}
+
+.chart-opponent {
   color: var(--text2);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.chart-bar-item small {
-  overflow: hidden;
-  color: var(--text3);
-  font-size: 8px;
-  font-weight: 700;
-  text-overflow: ellipsis;
+.chart-date {
+  align-self: center;
+  padding: 4px 0;
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.chart-game-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.chart-game-detail time {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.chart-game-detail strong {
+  margin-left: auto;
+  color: var(--text);
 }
 
 .chart-footer {
-  position: absolute;
-  left: 52px;
-  right: 16px;
-  bottom: 8px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
-  color: var(--text3);
-  font-size: 10px;
+  gap: 6px 12px;
+  margin-top: 12px;
+  color: var(--text2);
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -6040,16 +6159,7 @@ h2 {
   }
 
   .performance-chart {
-    padding-left: 34px;
-  }
-
-  .chart-grid,
-  .chart-line {
-    left: 34px;
-  }
-
-  .chart-bars {
-    gap: 4px;
+    padding: 12px 8px;
   }
 
   .gameRow {
@@ -7119,4 +7229,3 @@ body::after {
     font-size: 15px;
   }
 }
-
