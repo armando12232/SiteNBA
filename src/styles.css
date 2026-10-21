@@ -5429,20 +5429,20 @@ h2 {
 }
 
 .liveGameStack {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 14px;
   margin-bottom: 14px;
 }
 
 .liveGameTile {
   position: relative;
-  width: 282px;
+  width: 100%;
   overflow: hidden;
-  border: 1px solid rgba(255, 165, 0, 0.42);
+  border: 1px solid var(--border);
   border-radius: 14px;
   padding: 18px 14px 13px;
-  background: linear-gradient(180deg, rgba(20, 20, 20, 0.96), rgba(9, 9, 9, 0.98));
+  background: var(--bg2);
   color: var(--text1);
   cursor: pointer;
 }
@@ -5503,14 +5503,14 @@ h2 {
 }
 
 .liveGameFooter {
-  margin-top: 22px;
+  margin-top: 14px;
   border-top: 1px solid var(--border);
   padding-top: 10px;
 }
 
 .liveGameFooter small {
-  color: var(--text3);
-  font-size: 10px;
+  color: var(--text2);
+  font-size: 11px;
 }
 
 .liveDots,
@@ -5906,7 +5906,7 @@ h2 {
   align-items: center;
 }
 
-.livePlayerModalHead img {
+.livePlayerModalHead > .livePlayerAvatar {
   width: 74px;
   height: 74px;
   border: 1px solid var(--border2);
@@ -7228,4 +7228,274 @@ body::after {
   .radar-comparison-player strong {
     font-size: 15px;
   }
+}
+
+/* Live match identity and boxscore */
+.liveMatchMeta,
+.liveMatchHeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.liveNowBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: rgba(0, 255, 136, .1);
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.liveNowBadge::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.liveTeamScoreRow {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+  text-align: left;
+}
+
+.liveTeamLogo {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .04);
+  color: var(--text);
+  font: 800 11px/1 system-ui, sans-serif;
+}
+
+.liveTeamLogo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.liveTeamIdentity {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.liveTeamIdentity strong {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.liveTeamIdentity small {
+  color: var(--text2);
+  font-size: 10px;
+}
+
+.liveTeamScoreRow > b {
+  color: var(--text);
+  font: 800 25px/1 var(--display);
+  font-variant-numeric: tabular-nums;
+}
+
+.liveGameFooter > span {
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.livePlayerAvatar {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .07);
+  color: var(--text2);
+  font: 700 11px/1 system-ui, sans-serif;
+}
+
+.livePlayerAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+.livePlayerAvatar.liveAlertPhoto {
+  width: 52px;
+  height: 52px;
+}
+
+.liveGameModal {
+  width: min(1100px, 100%);
+  background: var(--bg2);
+}
+
+.liveGameModal .liveModalHero {
+  padding: 20px 28px 26px;
+  background: var(--bg2);
+}
+
+.liveMatchHeading {
+  padding-right: 32px;
+  margin-bottom: 24px;
+}
+
+.liveGameModal .liveModalTeam {
+  min-width: 0;
+  text-align: center;
+}
+
+.liveGameModal .liveModalTeam .liveTeamLogo {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  font-size: 17px;
+}
+
+.liveGameModal .liveModalTeam strong {
+  color: var(--text);
+  font: 700 15px/1.35 system-ui, sans-serif;
+}
+
+.liveGameModal .liveModalTeam small,
+.liveModalScore time {
+  color: var(--text2);
+  font-size: 11px;
+}
+
+.liveGameModal .liveModalScore i {
+  color: var(--text3);
+  font-style: normal;
+}
+
+.liveMatchTabs,
+.liveTeamTabs {
+  display: flex;
+  gap: 20px;
+}
+
+.liveMatchTabs {
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.liveMatchTabs button,
+.liveTeamTabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 8px 4px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--text2);
+  font: 700 13px/1.2 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.liveMatchTabs button[aria-pressed="true"],
+.liveTeamTabs button[aria-pressed="true"] {
+  border-bottom-color: var(--green);
+  color: var(--text);
+}
+
+.liveMatchTabs button > span {
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, .07);
+  font-size: 11px;
+}
+
+.liveTeamTabs { display: none; }
+.liveGameModal .liveTeamBox { padding: 0; overflow: hidden; background: var(--bg2); }
+
+.liveBoxTeamHeading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.liveBoxTeamHeading h3 {
+  margin: 0 0 4px;
+  color: var(--text);
+  font: 700 14px/1.3 system-ui, sans-serif;
+}
+
+.liveBoxTeamHeading div > span {
+  color: var(--text2);
+  font-size: 10px;
+}
+
+.liveBoxTableScroll { overflow-x: auto; scrollbar-width: thin; }
+.liveBoxTable { width: 100%; min-width: 430px; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.liveBoxTable .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.liveBoxTable thead th { padding: 12px 7px; background: rgba(255, 255, 255, .025); color: var(--text2); font-size: 10px; text-align: right; }
+.liveBoxTable thead th:first-child { text-align: left; padding-left: 14px; }
+.liveBoxTable td { padding: 10px 7px; text-align: right; color: var(--text); }
+.liveBoxTable th:last-child, .liveBoxTable td:last-child { padding-right: 14px; }
+.liveBoxTable tbody tr + tr { border-top: 1px solid var(--border); }
+.liveBoxTable tbody tr:hover { background: rgba(255, 255, 255, .035); }
+.liveBoxTable tbody th { width: 46%; padding: 0; font-weight: 400; }
+.liveBoxTable td.livePointsCell { color: var(--green); font-weight: 800; background: rgba(0, 255, 136, .025); }
+
+.liveBoxPlayer {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 62px;
+  padding: 10px 4px 10px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.liveBoxPlayer strong { display: block; font: 600 12px/1.35 system-ui, sans-serif; }
+.liveBoxPlayer small { display: block; margin-top: 4px; color: var(--text2); font-size: 10px; }
+.liveDataNote { margin: 0; color: var(--text2); font-size: 11px; line-height: 1.6; }
+
+@media (max-width: 900px) {
+  .liveGameModal .liveModalColumns { grid-template-columns: minmax(0, 1fr); }
+  .liveGameModal .liveModalColumns.show-away .team-home,
+  .liveGameModal .liveModalColumns.show-home .team-away { display: none; }
+  .liveTeamTabs { display: flex; border-bottom: 1px solid var(--border); }
+  .liveTeamTabs .liveTeamLogo { width: 24px; height: 24px; }
+}
+
+@media (max-width: 600px) {
+  .liveGameModal .liveModalHero { padding: 16px 12px 22px; }
+  .liveGameModal .liveModalTeams { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; }
+  .liveGameModal .liveModalScore { min-width: 100px; order: 0; }
+  .liveGameModal .liveModalScore strong { font-size: 34px; white-space: nowrap; }
+  .liveGameModal .liveModalTeam .liveTeamLogo { width: 46px; height: 46px; }
+  .liveGameModal .liveModalTeam strong { font-size: 11px; }
+  .liveGameModal .liveModalScore span, .liveGameModal .liveModalScore time { font-size: 10px; }
+  .liveMatchHeading { font-size: 11px; }
+  .liveMatchTabs { padding: 0 16px; }
+  .liveGameModal .liveModalBody { padding: 12px; }
 }
