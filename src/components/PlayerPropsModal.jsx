@@ -87,18 +87,12 @@ export function PlayerPropsModal({ favorites = [], onToggleFavorite, playerName,
   const stat = activeStat;
   const line = best?.line ?? null;
   const games = sortRecentGames(data?.last5_games || []);
-  const chartGames = games.slice(0, 20).reverse();
   const teamAbbr = data?.team_abbr || inferTeamFromGames(games);
-  const maxValue = Math.max(...games.map((game) => numberOrNull(game[stat]) ?? 0), line ?? 20, 1);
-  const chartMax = Math.ceil(maxValue / 2) * 2;
   const photoUrl = playerPhotoUrl(data);
   const hitRate = best?.hit_rate;
   const lineNumber = numberOrNull(line);
   const marketLine = best?.source === 'BettingPros';
   const averages = buildModalAverages(data, stat, games, best);
-  const chartLinePct = Number.isFinite(lineNumber)
-    ? Math.min(95, Math.max(5, (lineNumber / chartMax) * 100))
-    : 0;
   const metricHits = {
     h2h: activeProp?.h2h ?? null,
     l5: activeProp?.l5 ?? hitPercent(games, stat, lineNumber, 5),
@@ -107,7 +101,6 @@ export function PlayerPropsModal({ favorites = [], onToggleFavorite, playerName,
     l20: activeProp?.l20 ?? hitPercent(games, stat, lineNumber, 20),
   };
   const seasonHit = activeProp?.hit_rate ?? hitPercent(games, stat, lineNumber, games.length);
-  const currentStreak = streakOver(games, stat, lineNumber);
   const score = data && best && !state.loading && !state.error
     ? buildPregameScore({ player: data, stat, prop: best, line, games, marketLine })
     : null;
@@ -183,40 +176,7 @@ export function PlayerPropsModal({ favorites = [], onToggleFavorite, playerName,
                 <MetricInline label="L20" value={metricHits.l20} />
               </div>
               {games.length ? (
-                <div className="performance-chart">
-                  <div className="chart-grid">
-                    {[1, 0.8, 0.6, 0.4, 0.2, 0].map((ratio) => (
-                      <div className="chart-grid-line" key={ratio}>
-                        <span>{Math.round(chartMax * ratio)}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div
-                    className="chart-line"
-                    style={{ bottom: `${chartLinePct}%`, display: Number.isFinite(lineNumber) ? undefined : 'none' }}
-                  >
-                    <span>{marketLine ? 'Linha' : 'Ref.'} {line ?? '-'}</span>
-                  </div>
-                  <div className="chart-bars">
-                    {chartGames.map((game) => {
-                      const value = numberOrNull(game[stat]);
-                      const pct = value == null ? 0 : Math.max(0, Math.round((value / chartMax) * 100));
-                      const hit = line != null && value != null ? value > lineNumber : false;
-                      return (
-                        <div className="chart-bar-item" key={`${game.date}-${game.opp}`}>
-                          <strong>{value == null ? '-' : formatNumber(value)}</strong>
-                          <div className={`chart-bar ${hit ? 'hit' : 'miss'}`} style={{ height: `${pct}%` }} />
-                          <span>{shortOpponent(game.opp)}</span>
-                          <small>{formatDateShort(game.date)}</small>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="chart-footer">
-                    <span>Mais antigo → mais recente</span>
-                    <span>{currentStreak ? `${marketLine ? 'Streak OVER' : 'Sequência acima'}: ${currentStreak}x` : 'Sequência: -'}</span>
-                  </div>
-                </div>
+                <PerformanceChart key={displayName} games={games} stat={stat} line={lineNumber} marketLine={marketLine} />
               ) : <div className="state-box compact">Histórico de jogos indisponível para este jogador.</div>}
             </>
           ) : state.loading ? (
@@ -224,6 +184,88 @@ export function PlayerPropsModal({ favorites = [], onToggleFavorite, playerName,
           ) : null}
         </div>
       </section>
+    </div>
+  );
+}
+
+function PerformanceChart({ games, stat, line, marketLine }) {
+  const [limit, setLimit] = useState(10);
+  const [selectedGame, setSelectedGame] = useState(null);
+  const scrollRef = useRef(null);
+  const chartId = useId();
+  const activeLimit = limit === 'all' || limit > games.length ? 'all' : limit;
+  const recentGames = activeLimit === 'all' ? games : games.slice(0, activeLimit);
+  const chartGames = [...recentGames].reverse();
+  const detailGame = recentGames.includes(selectedGame) ? selectedGame : recentGames[0];
+  const maxValue = Math.max(...recentGames.map((game) => numberOrNull(game[stat]) ?? 0), line ?? 0, 1);
+  const chartMax = Math.ceil(maxValue / 5) * 5;
+  const hit = hitPercent(recentGames, stat, line, recentGames.length);
+  const currentStreak = streakOver(recentGames, stat, line);
+  const detailValue = numberOrNull(detailGame?.[stat]);
+
+  useEffect(() => {
+    const scroll = scrollRef.current;
+    if (scroll) scroll.scrollLeft = scroll.scrollWidth;
+  }, [activeLimit, games.length]);
+
+  return (
+    <div className="performance-chart">
+      <div className="chart-toolbar">
+        <span className="chart-toolbar-label" id={`${chartId}-label`}>Últimos jogos</span>
+        <div className="chart-range-options" role="group" aria-labelledby={`${chartId}-label`}>
+          {[5, 10, 15, 20, 'all'].map((count) => (
+            <button type="button" key={count} aria-pressed={activeLimit === count}
+              aria-controls={chartId} disabled={count !== 'all' && count > games.length}
+              onClick={() => { setLimit(count); setSelectedGame(null); }}>
+              {count === 'all' ? 'Todos' : count}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="chart-sample-summary" aria-live="polite">
+        <span>{recentGames.length} {recentGames.length === 1 ? 'jogo' : 'jogos'} · {formatDateShort(chartGames[0]?.date)} a {formatDateShort(recentGames[0]?.date)}</span>
+        <strong>{hit == null ? 'Acerto indisponível' : `${hit}% acima ${marketLine ? 'da linha' : 'da referência'}`}</strong>
+      </div>
+      <div ref={scrollRef} className="chart-scroll" id={chartId} tabIndex={0} role="region" aria-label={`Histórico de ${statLabels[stat]}. Mais antigo à esquerda, mais recente à direita.`}>
+        <div className="chart-canvas" style={{ minWidth: `${chartGames.length * 48 + 52}px` }}>
+          <div className="chart-grid" aria-hidden="true">
+            {[1, 0.8, 0.6, 0.4, 0.2, 0].map((ratio) => (
+              <div className="chart-grid-line" key={ratio}><span>{Math.round(chartMax * ratio)}</span></div>
+            ))}
+          </div>
+          {line != null ? <div className="chart-reference" aria-hidden="true">
+            <div className="chart-line" style={{ bottom: `${(line / chartMax) * 100}%` }}>
+              <span>{marketLine ? 'Linha' : 'Ref.'} {line}</span>
+            </div>
+          </div> : null}
+          <div className="chart-bars" style={{ gridTemplateColumns: `repeat(${chartGames.length}, minmax(0, 1fr))` }}>
+            {chartGames.map((game, index) => {
+              const value = numberOrNull(game[stat]);
+              const result = value == null || line == null ? 'neutral' : value > line ? 'hit' : 'miss';
+              const description = `${formatGameDate(game.date)} · ${game.opp || 'Adversário indisponível'} · ${value == null ? 'Sem dados' : `${formatNumber(value)} ${statLabels[stat].toLowerCase()}`}`;
+              return (
+                <button type="button" className={`chart-bar-item ${detailGame === game ? 'selected' : ''}`}
+                  key={`${game.date}-${game.opp}-${index}`} aria-label={description} aria-pressed={detailGame === game}
+                  title={description} onClick={() => setSelectedGame(game)} onFocus={() => setSelectedGame(game)}>
+                  <strong>{value == null ? '—' : formatNumber(value)}</strong>
+                  <span className={`chart-bar ${result}`} style={{ height: `${value == null ? 0 : Math.max(0, value / chartMax * 100)}%` }} />
+                  <span className="chart-opponent">{shortOpponent(game.opp)}</span>
+                  <time className="chart-date" dateTime={dateAttribute(game.date)}>{formatDateShort(game.date)}</time>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      <div className="chart-game-detail" aria-live="polite">
+        <time dateTime={dateAttribute(detailGame?.date)}>{formatGameDate(detailGame?.date)}</time>
+        <span>{detailGame?.opp || 'Adversário indisponível'}</span>
+        <strong>{detailValue == null ? 'Sem dados' : `${formatNumber(detailValue)} ${statLabels[stat].toLowerCase()}`}</strong>
+      </div>
+      <div className="chart-footer">
+        <span>Mais antigo → mais recente</span>
+        <span>{currentStreak ? `Sequência acima: ${currentStreak}x` : 'Sequência: —'}</span>
+      </div>
     </div>
   );
 }
@@ -316,16 +358,22 @@ function MetricInline({ label, value, suffix = '%', green = false }) {
   );
 }
 
-function formatDate(value) {
+function formatGameDate(value) {
   const date = parseNbaDate(value);
-  if (!date) return value ? String(value).slice(0, 12) : '-';
-  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  if (!date) return 'Data indisponível';
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
 function formatDateShort(value) {
   const date = parseNbaDate(value);
-  if (!date) return '';
-  return date.toLocaleDateString('pt-BR', { month: 'short', day: '2-digit' }).replace('.', '');
+  if (!date) return '—';
+  return date.toLocaleDateString('pt-BR', { month: '2-digit', day: '2-digit' });
+}
+
+function dateAttribute(value) {
+  const date = parseNbaDate(value);
+  if (!date) return undefined;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function formatNumber(value) {
@@ -409,4 +457,3 @@ function sampleLabel(player) {
   if (!seasons.length) return '';
   return player?.using_previous_season ? `Amostra ${seasons.join(' + ')}` : `Temporada ${seasons[0]}`;
 }
-
