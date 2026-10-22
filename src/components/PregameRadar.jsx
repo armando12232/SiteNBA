@@ -269,24 +269,22 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
       </div>
 
       <div className="team-search-row">
-        <label htmlFor="props-team-filter">Buscar por time</label>
-        <select
-          id="props-team-filter"
-          aria-label="Buscar jogadores por time"
+        <div className="team-search-copy">
+          <span>Buscar por time</span>
+          <small>
+            {teamLoading ? 'Carregando elenco...' : seasonView === 'previous'
+              ? 'Filtro baseado no time das estatísticas históricas'
+              : teamFilter === 'all' ? 'Explore os elencos da NBA' : `${basePlayers.length} jogadores encontrados`}
+          </small>
+        </div>
+        <TeamPicker
+          teams={NBA_TEAMS}
           value={teamFilter}
-          onChange={(event) => {
-            setTeamFilter(event.target.value);
+          onChange={(value) => {
+            setTeamFilter(value);
             setScoreFilter('all');
           }}
-        >
-          <option value="all">Todos os times</option>
-          {NBA_TEAMS.map(([abbr, name]) => <option key={abbr} value={abbr}>{name}</option>)}
-        </select>
-        <small>
-          {teamLoading ? 'Carregando elenco...' : seasonView === 'previous'
-            ? 'Filtrando pelo time das estatísticas históricas'
-            : teamFilter === 'all' ? '30 times disponíveis' : `${basePlayers.length} jogadores encontrados`}
-        </small>
+        />
       </div>
 
       {query.trim().length >= 2 && !directoryDismissed ? (
@@ -488,6 +486,111 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
       ) : null}
     </section>
   );
+}
+
+function TeamPicker({ teams, value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const pickerRef = useRef(null);
+  const selected = value === 'all' ? ['all', 'Todos os times'] : teams.find(([abbr]) => abbr === value) || ['all', 'Todos os times'];
+  const cleanedSearch = normalizeTeamSearch(search);
+  const options = [
+    ['all', 'Todos os times'],
+    ...teams.filter(([abbr, name]) => !cleanedSearch || normalizeTeamSearch(`${name} ${abbr}`).includes(cleanedSearch)),
+  ];
+
+  useEffect(() => {
+    if (!open) return undefined;
+    function closeOnOutsideClick(event) {
+      if (!pickerRef.current?.contains(event.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick);
+  }, [open]);
+
+  return (
+    <div className={`team-picker ${open ? 'open' : ''}`} ref={pickerRef}>
+      <button
+        type="button"
+        className="team-picker-trigger"
+        aria-label="Selecionar time da NBA"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls="nba-team-options"
+        onClick={() => {
+          setOpen((current) => !current);
+          setSearch('');
+        }}
+      >
+        <span className="team-picker-badge" style={{ '--team-accent': teamColor(selected[0]) }}>
+          {selected[0] === 'all' ? 'NBA' : selected[0]}
+        </span>
+        <span className="team-picker-selected">
+          <strong>{selected[1]}</strong>
+          <small>{selected[0] === 'all' ? '30 equipes' : selected[0]}</small>
+        </span>
+        <span className="team-picker-chevron" aria-hidden="true">⌄</span>
+      </button>
+
+      {open ? (
+        <div className="team-picker-menu">
+          <div className="team-picker-search">
+            <span aria-hidden="true">⌕</span>
+            <input
+              type="search"
+              aria-label="Buscar time pelo nome ou sigla"
+              placeholder="Digite o nome ou sigla..."
+              value={search}
+              autoFocus
+              onChange={(event) => setSearch(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setOpen(false);
+              }}
+            />
+          </div>
+          <div className="team-picker-options" id="nba-team-options" role="listbox" aria-label="Times da NBA">
+            {options.map(([abbr, name]) => (
+              <button
+                type="button"
+                role="option"
+                aria-selected={value === abbr || (value === 'all' && abbr === 'all')}
+                className={`team-picker-option ${value === abbr || (value === 'all' && abbr === 'all') ? 'selected' : ''}`}
+                key={abbr}
+                onClick={() => {
+                  onChange(abbr);
+                  setOpen(false);
+                  setSearch('');
+                }}
+              >
+                <span className="team-picker-badge small" style={{ '--team-accent': teamColor(abbr) }}>
+                  {abbr === 'all' ? 'NBA' : abbr}
+                </span>
+                <span>{name}</span>
+                {value === abbr || (value === 'all' && abbr === 'all') ? <span className="team-picker-check" aria-hidden="true">✓</span> : null}
+              </button>
+            ))}
+            {!options.length ? <div className="team-picker-empty">Nenhum time encontrado.</div> : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function normalizeTeamSearch(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+}
+
+function teamColor(abbr) {
+  const colors = {
+    ATL: '#e03a3e', BOS: '#007a33', BKN: '#9ca3af', CHA: '#1d1160', CHI: '#ce1141',
+    CLE: '#860038', DAL: '#00538c', DEN: '#0e2240', DET: '#c8102e', GSW: '#1d428a',
+    HOU: '#ce1141', IND: '#002d62', LAC: '#c8102e', LAL: '#552583', MEM: '#5d76a9',
+    MIA: '#98002e', MIL: '#00471b', MIN: '#0c2340', NOP: '#0c2340', NYK: '#006bb6',
+    OKC: '#007ac1', ORL: '#0077c0', PHI: '#006bb6', PHX: '#e56020', POR: '#e03a3e',
+    SAC: '#5a2d81', SAS: '#9ca3af', TOR: '#ce1141', UTA: '#002b5c', WAS: '#002b5c',
+  };
+  return colors[abbr] || '#ffb81c';
 }
 
 async function progressivePool(items, limit, worker) {
