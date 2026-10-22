@@ -77,7 +77,7 @@ function normalizeName(name) {
   return String(name || '')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\\u0300-\\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/\p{Diacritic}/gu, '')
     .trim();
 }
