@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { displayStat, livePlayerKey, playerPhotoUrl, playersForTeam, teamAbbr, teamLogoUrl } from '../src/utils/liveNba.js';
+import { displayStat, livePlayerKey, playerPhotoUrl, playersForTeam, sortLivePlayers, teamAbbr, teamLogoUrl } from '../src/utils/liveNba.js';
 
 test('live NBA team logos use provider assets, never ESPN IDs on the NBA CDN', () => {
   assert.equal(teamLogoUrl({ teamId: '15', abbr: 'MIL', logoUrl: 'https://a.espncdn.com/mil.png' }), 'https://a.espncdn.com/mil.png');
@@ -35,4 +35,25 @@ test('players without an NBA mapping still have distinct keys and missing stats 
   assert.equal(displayStat(0), '0');
   assert.equal(displayStat(null), '—');
   assert.equal(displayStat(undefined), '—');
+});
+
+test('live boxscore can prioritize rebounds and assists independently of points', () => {
+  const players = [{ name: 'Scorer', pts: 30, reb: 1, ast: 2 }, { name: 'Rebounder', pts: 5, reb: 12, ast: 1 }, { name: 'Playmaker', pts: 8, reb: 3, ast: 11 }];
+  assert.equal(sortLivePlayers(players, 'pts')[0].name, 'Scorer');
+  assert.equal(sortLivePlayers(players, 'reb')[0].name, 'Rebounder');
+  assert.equal(sortLivePlayers(players, 'ast')[0].name, 'Playmaker');
+  assert.equal(players[0].name, 'Scorer');
+});
+
+test('live sorting puts unknown stats after real zero values', () => {
+  const players = [{ name: 'Unknown', reb: null }, { name: 'Zero', reb: 0 }, { name: 'Leader', reb: '10' }, { name: 'Missing' }];
+  assert.deepEqual(sortLivePlayers(players, 'reb').map(({ name }) => name), ['Leader', 'Zero', 'Missing', 'Unknown']);
+  assert.equal(displayStat(' '), '—');
+  assert.equal(displayStat(false), '—');
+});
+
+test('live sorting resolves ties by player name and validates the selected metric', () => {
+  const players = [{ name: 'Zed', pts: 2, ast: 5 }, { name: 'Ana', pts: 2, ast: 5 }];
+  assert.deepEqual(sortLivePlayers(players, 'ast').map(({ name }) => name), ['Ana', 'Zed']);
+  assert.deepEqual(sortLivePlayers(players, 'unknown'), sortLivePlayers(players, 'pts'));
 });

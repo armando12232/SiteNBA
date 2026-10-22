@@ -1,3 +1,5 @@
+import { numberOrNull } from './props.js';
+
 const ALIASES = { NY: 'NYK', GS: 'GSW', SA: 'SAS', NO: 'NOP', UTAH: 'UTA', WSH: 'WAS' };
 const ESPN_ABBR = { NYK: 'ny', GSW: 'gs', SAS: 'sa', NOP: 'no', UTA: 'utah', WAS: 'wsh' };
 
@@ -40,6 +42,16 @@ export function livePlayerKey(player) {
 }
 
 export function displayStat(value) {
-  if (value == null || value === '' || !Number.isFinite(Number(value))) return '—';
+  if (numberOrNull(value) == null) return '—';
   return String(value);
+}
+export function sortLivePlayers(players, stat = 'pts') {
+  const key = ['pts', 'reb', 'ast'].includes(stat) ? stat : 'pts';
+  return [...players].sort((a, b) => {
+    const first = numberOrNull(a[key]);
+    const second = numberOrNull(b[key]);
+    if (first == null && second != null) return 1;
+    if (second == null && first != null) return -1;
+    return (second ?? 0) - (first ?? 0) || String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR');
+  });
 }

@@ -3,7 +3,7 @@ import { getBoxscore, getScoreboard } from '../api/nba.js';
 import { promisePool } from '../utils/promisePool.js';
 import { buildLiveScore } from '../utils/statcastScore.js';
 import { userErrorMessage } from '../utils/errors.js';
-import { displayStat, livePlayerKey, playerPhotoUrl, playersForTeam, teamAbbr, teamLogoUrl, teamName } from '../utils/liveNba.js';
+import { displayStat, livePlayerKey, playerPhotoUrl, playersForTeam, sortLivePlayers, teamAbbr, teamLogoUrl, teamName } from '../utils/liveNba.js';
 
 const ALERT_FILTERS = [
   { id: 'all', label: 'Todos' },
@@ -12,6 +12,12 @@ const ALERT_FILTERS = [
   { id: 'orange', label: 'Intervalo' },
   { id: 'yellow', label: '1o quarto' },
   { id: 'risk', label: 'Em risco' },
+];
+
+const BOX_STATS = [
+  { key: 'pts', label: 'Pontos', short: 'PTS' },
+  { key: 'reb', label: 'Rebotes', short: 'REB' },
+  { key: 'ast', label: 'Assistências', short: 'AST' },
 ];
 
 export function LiveMonitor() {
@@ -264,6 +270,7 @@ function LiveGameModal({ game, players, alerts, onClose, onPlayer }) {
   const homePlayers = playersForTeam(players, home);
   const [tab, setTab] = useState('players');
   const [teamTab, setTeamTab] = useState('away');
+  const [sortStat, setSortStat] = useState('pts');
   const titleId = useId();
   const dialogRef = useLiveDialog(onClose);
   const unassigned = players.length - awayPlayers.length - homePlayers.length;
@@ -291,13 +298,19 @@ function LiveGameModal({ game, players, alerts, onClose, onPlayer }) {
         <div className="liveModalBody">
           {game.boxscoreUnavailable ? <div className="alertBox">Não foi possível atualizar as estatísticas desta partida. Tente atualizar o monitor.</div> : null}
           {tab === 'players' ? <>
+            <div className="liveStatsToolbar">
+              <span>Ordenar jogadores por</span>
+              <div className="liveStatSort" role="group" aria-label="Ordenação do boxscore">
+                {BOX_STATS.map(({ key, label }) => <button type="button" key={key} className={`stat-${key}`} aria-pressed={sortStat === key} onClick={() => setSortStat(key)}>{label}<span aria-hidden="true">{sortStat === key ? ' ↓' : ''}</span></button>)}
+              </div>
+            </div>
             <div className="liveTeamTabs" role="group" aria-label="Time no boxscore">
               <button type="button" aria-pressed={teamTab === 'away'} onClick={() => setTeamTab('away')}><TeamLogo team={away} />{teamAbbr(away)}</button>
               <button type="button" aria-pressed={teamTab === 'home'} onClick={() => setTeamTab('home')}><TeamLogo team={home} />{teamAbbr(home)}</button>
             </div>
             <div className={`liveModalColumns show-${teamTab}`}>
-              <LiveTeamBox side="away" team={away} players={awayPlayers} onPlayer={onPlayer} />
-              <LiveTeamBox side="home" team={home} players={homePlayers} onPlayer={onPlayer} />
+              <LiveTeamBox side="away" team={away} players={awayPlayers} onPlayer={onPlayer} sortStat={sortStat} onSort={setSortStat} />
+              <LiveTeamBox side="home" team={home} players={homePlayers} onPlayer={onPlayer} sortStat={sortStat} onSort={setSortStat} />
             </div>
             {unassigned > 0 ? <p className="liveDataNote">{unassigned} jogadores sem identificação de time no provedor não foram incluídos nas tabelas.</p> : null}
             <p className="liveDataNote">PTS pontos · REB rebotes · AST assistências · +/− saldo em quadra. Selecione um jogador para ver os detalhes.</p>
@@ -311,19 +324,21 @@ function LiveGameModal({ game, players, alerts, onClose, onPlayer }) {
   );
 }
 
-function LiveTeamBox({ team, players, onPlayer, side }) {
+function LiveTeamBox({ team, players, onPlayer, side, sortStat, onSort }) {
+  const sorted = sortLivePlayers(players, sortStat);
+  const sortLabel = BOX_STATS.find(({ key }) => key === sortStat)?.label.toLowerCase();
   return (
     <section className={`liveTeamBox team-${side}`}>
-      <div className="liveBoxTeamHeading"><TeamLogo team={team} /><div><h3>{teamName(team)}</h3><span>{players.length} jogadores · ordenados por pontos</span></div></div>
+      <div className="liveBoxTeamHeading"><TeamLogo team={team} /><div><h3>{teamName(team)}</h3><span>{players.length} jogadores · ordenados por {sortLabel}</span></div></div>
       <div className="liveBoxTableScroll" tabIndex={0} role="region" aria-label={`Estatísticas de ${teamName(team)}`}>
         <table className="liveBoxTable">
           <caption className="sr-only">Boxscore de {teamName(team)}</caption>
-          <thead><tr><th scope="col">Jogador</th><th scope="col">MIN</th><th scope="col">PTS</th><th scope="col">REB</th><th scope="col">AST</th><th scope="col">+/−</th></tr></thead>
-          <tbody>{players.map((player) => <tr key={livePlayerKey(player)}>
+          <thead><tr><th scope="col">Jogador</th>{BOX_STATS.map(({ key, label, short }) => <th key={key} scope="col" className={`liveMainStat stat-${key}`} aria-sort={sortStat === key ? 'descending' : 'none'}><button type="button" aria-label={`Ordenar por ${label.toLowerCase()}`} onClick={() => onSort(key)}>{short}<span aria-hidden="true">{sortStat === key ? ' ↓' : ''}</span></button></th>)}<th scope="col" className="liveSecondaryStat">MIN</th><th scope="col" className="liveSecondaryStat">+/−</th></tr></thead>
+          <tbody>{sorted.map((player) => <tr key={livePlayerKey(player)}>
             <th scope="row"><button type="button" className="liveBoxPlayer" onClick={() => onPlayer(player)}>
-              <PlayerAvatar player={player} /><span><strong>{player.name}</strong><small>{player.position || '—'}</small></span>
+              <PlayerAvatar player={player} /><span><strong>{player.name}</strong><small>{player.position || '—'}<span className="livePlayerMinutes"> · {displayStat(player.mins)} min</span></small></span>
             </button></th>
-            <td>{displayStat(player.mins)}</td><td className="livePointsCell">{displayStat(player.pts)}</td><td>{displayStat(player.reb)}</td><td>{displayStat(player.ast)}</td><td>{displayStat(player.plusMinus)}</td>
+            {BOX_STATS.map(({ key }) => <td key={key} className={`liveMainStat stat-${key} ${sortStat === key ? 'sorted' : ''}`}>{displayStat(player[key])}</td>)}<td className="liveSecondaryStat">{displayStat(player.mins)}</td><td className="liveSecondaryStat">{displayStat(player.plusMinus)}</td>
           </tr>)}</tbody>
         </table>
       </div>
