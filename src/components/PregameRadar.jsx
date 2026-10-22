@@ -25,6 +25,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
   const [query, setQuery] = useState(savedPrefs.query || '');
   const [directoryPlayers, setDirectoryPlayers] = useState([]);
   const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [directoryDismissed, setDirectoryDismissed] = useState(false);
   const [selectedDirectoryId, setSelectedDirectoryId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const lastLoadedAt = useRef(Date.now());
@@ -183,6 +184,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
           aria-label="Buscar jogador NBA"
           value={query}
           onChange={(event) => {
+            setDirectoryDismissed(false);
             setQuery(event.target.value);
             setScoreFilter('all');
           }}
@@ -195,6 +197,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
           aria-label="Limpar busca"
           disabled={!query}
           onClick={() => {
+            setDirectoryDismissed(false);
             setQuery('');
             setScoreFilter('all');
           }}
@@ -203,7 +206,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
         </button>
       </div>
 
-      {query.trim().length >= 2 ? (
+      {query.trim().length >= 2 && !directoryDismissed ? (
         <div className="player-search-results" role="listbox" aria-label="Jogadores encontrados">
           {directoryLoading ? <div className="player-search-status">Buscando jogadores...</div> : null}
           {!directoryLoading ? directoryPlayers.map((player) => (
@@ -215,6 +218,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
               className="player-search-result"
               onClick={async () => {
                 setSelectedDirectoryId(player.id);
+                setDirectoryDismissed(true);
                 const data = await getPregame(player.id).catch(() => null);
                 if (!data || data.error) return;
                 setState((current) => ({
