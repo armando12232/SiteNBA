@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'method not allowed' });
 
   const type = String(req.query?.type || '');
-  const valid = new Set(['scoreboard', 'boxscore', 'season_avg', 'pregame', 'pregame_by_name', 'schedule', 'defense', 'team_info', 'team_last', 'roster', 'debug_gamelog']);
+  const valid = new Set(['scoreboard', 'boxscore', 'season_avg', 'pregame', 'pregame_by_name', 'schedule', 'defense', 'team_info', 'team_last', 'roster', 'debug_gamelog', 'player_search']);
   if (!valid.has(type)) return res.status(400).json({ error: 'invalid type' });
 
   try {
@@ -29,6 +29,21 @@ export default async function handler(req, res) {
       if (!access.ok) return res.status(access.status).json(access.payload);
     }
 
+    if (type === 'player_search') {
+      const query = String(req.query?.query || '').trim();
+      if (query.length < 2 || query.length > 60) return res.status(400).json({ error: 'invalid query' });
+      const normalizedQuery = normalizeName(query);
+      const players = Object.entries(PLAYERS)
+        .filter(([, item]) => normalizeName(item.name).includes(normalizedQuery))
+        .map(([id, item]) => ({ id: Number(id), name: item.name }))
+        .sort((a, b) => {
+          const aName = normalizeName(a.name);
+          const bName = normalizeName(b.name);
+          return Number(bName.startsWith(normalizedQuery)) - Number(aName.startsWith(normalizedQuery)) || a.name.localeCompare(b.name);
+        })
+        .slice(0, 12);
+      return res.status(200).json({ players });
+    }
     if (type === 'scoreboard') return res.status(200).json({ games: (await scoreboard()).filter((game) => game.status === 2) });
     if (type === 'schedule') return res.status(200).json({ games: await schedule() });
     if (type === 'boxscore') return res.status(200).json({ players: await boxscore(requiredId(req.query?.gameId, 'gameId')) });
