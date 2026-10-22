@@ -15,6 +15,7 @@ export const PREGAME_PLAYERS = [
   { id: 2544, name: 'LeBron James' },
   { id: 1628378, name: 'Donovan Mitchell' },
   { id: 201939, name: 'Stephen Curry' },
+  { id: 203110, name: 'Draymond Green' },
   { id: 201142, name: 'Kevin Durant' },
   { id: 203081, name: 'Damian Lillard' },
   { id: 203897, name: 'Zach LaVine' },
