@@ -754,6 +754,7 @@ function PregameRow({ player, activeStat, favorites, onSelectPlayer, onToggleFav
               {teamAbbr ? `${teamAbbr} / ` : ''}{statLabels[stat]} / <span>{marketLine ? 'O' : 'Ref.'} {line ?? '-'}</span>
               {edge != null ? <em className={edge >= 0 ? 'edge-up' : 'edge-down'}>{marketLine ? (edge >= 0 ? ' up' : ' down') : (edge >= 0 ? ' acima' : ' abaixo')}</em> : null}
             </div>
+            {seasonSampleNote(player) ? <div className="props-player-sample">{seasonSampleNote(player)}</div> : null}
           </div>
         </button>
         <FavoriteButton active={isFavorite} disabled={savingFavoriteKey === key} onToggle={() => onToggleFavorite?.(player)} playerName={player.player_name} />
@@ -774,6 +775,18 @@ function PregameRow({ player, activeStat, favorites, onSelectPlayer, onToggleFav
       </div>
     </div>
   );
+}
+
+function seasonSampleNote(player) {
+  const sampleSeason = Number(player?.sample_season);
+  const count = Number(player?.sample_size);
+  if (!Number.isInteger(sampleSeason) || !Number.isInteger(count)) return '';
+  const formatSeason = (season) => `${season}/${String(season + 1).slice(-2)}`;
+  if (player.using_previous_season && Number.isInteger(Number(player.current_season))) {
+    return `${formatSeason(sampleSeason)} · ${count} jogos; ${formatSeason(Number(player.current_season))} sem jogos`;
+  }
+  if (count < 10) return `${formatSeason(sampleSeason)} · ${count} ${count === 1 ? 'jogo' : 'jogos'}; L5/L10 incompletos`;
+  return '';
 }
 
 function inferTeamFromGames(games) {

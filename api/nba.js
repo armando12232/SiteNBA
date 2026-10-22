@@ -153,8 +153,7 @@ async function defenseRanking(abbreviation, position = 'G', stat = 'pts') {
 async function gameLog(playerId) {
   const player = PLAYERS[String(playerId)];
   if (!player) throw Object.assign(new Error('player not found'), { status: 404 });
-  const now = new Date();
-  const currentSeason = now.getUTCFullYear() + (now.getUTCMonth() >= 9 ? 1 : 0);
+  const currentSeason = nbaSeason();
   for (const season of [currentSeason, currentSeason - 1]) {
     const data = await fetchJson(`${COMMON}/athletes/${player.espn_id}/gamelog?season=${season}`);
     const rows = parseGameLog(data);
@@ -188,6 +187,14 @@ function averages(rows) {
   return Object.fromEntries([['pts', 'PTS'], ['reb', 'REB'], ['ast', 'AST'], ['fg3m', 'FG3M']].map(([label, key]) => [label, round(mean(rows.map((row) => row[key])))]));
 }
 
+function nullAverages() {
+  return { pts: null, reb: null, ast: null, fg3m: null };
+}
+
+function nbaSeason(date = new Date()) {
+  return date.getUTCFullYear() + (date.getUTCMonth() >= 9 ? 1 : 0);
+}
+
 async function pregame(playerId) {
   const { rows, season } = await gameLog(playerId);
   const seasonAvg = averages(rows);
@@ -198,14 +205,17 @@ async function pregame(playerId) {
     const avg = seasonAvg[label];
     if (avg < 1.5) continue;
     const line = Math.floor(avg) + 0.5;
-    const l5 = hitRate(last5, key, line);
-    const l10 = hitRate(last10, key, line);
-    props[label] = { l5, l10, line, hit_rate: l10, edge: round(mean(last5.map((row) => row[key])) - line) };
+    const l5 = hitRate(last5, key, line, 5);
+    const l10 = hitRate(last10, key, line, 10);
+    props[label] = { l5, l10, line, hit_rate: l10, edge: last5.length === 5 ? round(mean(last5.map((row) => row[key])) - line) : null };
   }
   const pts = props.pts || {};
-  return { player_id: playerId, player_name: PLAYERS[String(playerId)].name, team_abbr: String(rows[0]?.MATCHUP || '').split(' ')[0], source: 'espn', sample_season: season,
-    season_avg: seasonAvg, props, last5_avg: averages(last5), last10_avg: averages(last10), synthetic_lines: Object.fromEntries(Object.entries(props).map(([key, value]) => [key, value.line])),
-    hit_rates: { pts_last10: pts.hit_rate ?? null }, edge_points: pts.edge ?? null, minsL5: round(mean(last5.map((row) => row.MIN))),
+  const currentSeason = nbaSeason();
+  const usingPreviousSeason = season < currentSeason;
+  return { player_id: playerId, player_name: PLAYERS[String(playerId)].name, team_abbr: String(rows[0]?.MATCHUP || '').split(' ')[0], source: 'espn',
+    current_season: currentSeason, sample_season: season, sample_seasons: [String(season)], using_previous_season: usingPreviousSeason, sample_size: rows.length,
+    season_avg: seasonAvg, props, last5_avg: last5.length === 5 ? averages(last5) : nullAverages(), last10_avg: last10.length === 10 ? averages(last10) : nullAverages(), synthetic_lines: Object.fromEntries(Object.entries(props).map(([key, value]) => [key, value.line])),
+    hit_rates: { pts_last10: pts.hit_rate ?? null }, edge_points: pts.edge ?? null, minsL5: last5.length === 5 ? round(mean(last5.map((row) => row.MIN))) : null,
     last5_games: rows.slice(0, 20).map((row) => ({ opp: row.MATCHUP, date: row.GAME_DATE, pts: row.PTS, reb: row.REB, ast: row.AST, fg3m: row.FG3M,
       season_type: row._SEASON_TYPE, hit: Number.isFinite(pts.line) ? row.PTS >= pts.line : null })), summary: `L5 ${pts.l5 ?? '—'}%` };
 }
@@ -245,5 +255,9 @@ function statNumber(value) { const number = Number(String(value ?? '').split('-'
 function isNumber(value) { return Number.isFinite(Number(value)); }
 function mean(values) { const valid = values.filter(Number.isFinite); return valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : 0; }
 function round(value) { return Math.round(value * 10) / 10; }
-function hitRate(rows, key, line) { return rows.length ? Math.round(100 * rows.filter((row) => row[key] >= line).length / rows.length) : null; }
+function hitRate(rows, key, line, requiredCount = rows.length) {
+  return rows.length === requiredCount && requiredCount > 0
+    ? Math.round(100 * rows.filter((row) => row[key] >= line).length / requiredCount)
+    : null;
+}
 function setCors(res) { res.setHeader('Access-Control-Allow-Origin', SITE_URL); res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS'); res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization'); res.setHeader('Cache-Control', 'no-store'); }

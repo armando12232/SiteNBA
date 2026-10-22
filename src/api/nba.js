@@ -2,7 +2,7 @@ import { fetchJson } from './http.js';
 import { cachedFetch, clearCachedPrefix, writeStored } from './cache.js';
 
 const PREGAME_TTL_MS = 5 * 60 * 1000;
-const CACHE_VERSION = 'v4-last20';
+const CACHE_VERSION = 'v5-season-aware';
 const PREGAME_STORAGE_PREFIX = `statcast:${CACHE_VERSION}:nba:pregame:`;
 const PREGAME_NAME_STORAGE_PREFIX = `statcast:${CACHE_VERSION}:nba:pregame-name:`;
 
