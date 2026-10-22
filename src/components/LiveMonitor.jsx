@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { getBoxscore, getScoreboard } from '../api/nba.js';
 import { promisePool } from '../utils/promisePool.js';
 import { buildLiveScore } from '../utils/statcastScore.js';
 import { userErrorMessage } from '../utils/errors.js';
+import { displayStat, livePlayerKey, playerPhotoUrl, playersForTeam, sortLivePlayers, teamAbbr, teamLogoUrl, teamName } from '../utils/liveNba.js';
 
 const ALERT_FILTERS = [
   { id: 'all', label: 'Todos' },
@@ -11,6 +12,12 @@ const ALERT_FILTERS = [
   { id: 'orange', label: 'Intervalo' },
   { id: 'yellow', label: '1o quarto' },
   { id: 'risk', label: 'Em risco' },
+];
+
+const BOX_STATS = [
+  { key: 'pts', label: 'Pontos', short: 'PTS' },
+  { key: 'reb', label: 'Rebotes', short: 'REB' },
+  { key: 'ast', label: 'Assistências', short: 'AST' },
 ];
 
 export function LiveMonitor() {
@@ -36,8 +43,8 @@ export function LiveMonitor() {
         const scoreData = await getScoreboard();
         const games = scoreData.games || [];
         const boxscores = await promisePool(games, 2, async (game) => {
-          const box = await getBoxscore(game.gameId).catch(() => ({ players: [] }));
-          return { game, players: box.players || [] };
+          const box = await getBoxscore(game.gameId).catch(() => ({ players: [], unavailable: true }));
+          return { game: { ...game, boxscoreUnavailable: Boolean(box.unavailable) }, players: box.players || [] };
         });
 
         const players = boxscores.flatMap(({ game, players: rows }) => {
@@ -57,11 +64,11 @@ export function LiveMonitor() {
           setState({
             loading: false,
             error: null,
-            games,
+            games: boxscores.map((row) => row.game),
             players,
             updatedAt: new Date(),
           });
-          setActiveGameId((current) => current || games[0]?.gameId || null);
+          setActiveGameId((current) => games.some((game) => game.gameId === current) ? current : games[0]?.gameId || null);
         }
       } catch (error) {
         if (alive) setState((current) => ({ ...current, loading: false, error }));
@@ -101,11 +108,12 @@ export function LiveMonitor() {
 
   const activeGroup = alertsByGame.find((row) => row.game.gameId === activeGameId) || alertsByGame[0];
   const totalAlerts = alertsByGame.reduce((sum, row) => sum + row.alerts.length, 0);
+  const selectedGame = state.games.find((game) => game.gameId === gameModal);
   const gameModalPlayers = useMemo(() => {
     if (!gameModal) return [];
     return state.players
-      .filter((player) => player.gameId === gameModal.gameId)
-      .sort((a, b) => liveScore(b) - liveScore(a));
+      .filter((player) => player.gameId === gameModal)
+      .sort((a, b) => Number(b.pts || 0) - Number(a.pts || 0));
   }, [gameModal, state.players]);
 
   return (
@@ -136,6 +144,7 @@ export function LiveMonitor() {
             type="button"
             key={item.id}
             className={`liveFilterBtn ${filter === item.id ? 'active' : ''}`}
+            aria-pressed={filter === item.id}
             onClick={() => setFilter(item.id)}
           >
             <span className={`liveFilterDot ${item.id}`} />
@@ -145,12 +154,12 @@ export function LiveMonitor() {
       </div>
 
       {state.error ? <div className="alertBox">{userErrorMessage(state.error, 'Não foi possível carregar NBA ao vivo agora.')}</div> : null}
-      {state.loading ? <div className="loadingGrid">Buscando jogos e boxscores...</div> : null}
+      {state.loading && !state.games.length ? <div className="loadingGrid">Buscando jogos e boxscores...</div> : null}
 
-      {!state.loading && !state.error ? (
+      {state.games.length || (!state.loading && !state.error) ? (
         <>
           <div className="liveSectionTitle">
-            <span>Alertas ativos</span>
+            <span>Partidas ao vivo</span>
           </div>
 
           {state.games.length ? (
@@ -160,31 +169,23 @@ export function LiveMonitor() {
                   type="button"
                   className={`liveGameTile ${activeGroup?.game.gameId === game.gameId ? 'active' : ''}`}
                   key={game.gameId}
+                  aria-label={`Abrir ${teamName(game.awayTeam)} ${teamScore(game.awayTeam)} a ${teamScore(game.homeTeam)} ${teamName(game.homeTeam)}`}
                   onClick={() => {
                     setActiveGameId(game.gameId);
-                    setGameModal(game);
+                    setGameModal(game.gameId);
                   }}
                 >
-                  <span className="liveGameAccent" />
-                  <span className="liveGameTeams">
-                    <TeamLogo team={game.awayTeam} />
-                    <span className="liveScoreBlock">
-                      <strong>{teamScore(game.awayTeam)} · {teamScore(game.homeTeam)}</strong>
-                      <em>{game.gameStatusText || `Q${game.period}`}</em>
+                  <span className="liveMatchMeta"><span className="liveNowBadge">Ao vivo</span><span>{game.gameStatusText || `Q${game.period}`}</span></span>
+                  {[game.awayTeam, game.homeTeam].map((team, index) => (
+                    <span className="liveTeamScoreRow" key={index}>
+                      <TeamLogo team={team} />
+                      <span className="liveTeamIdentity"><strong>{teamName(team)}</strong><small>{index === 0 ? 'Visitante' : 'Mandante'}</small></span>
+                      <b>{teamScore(team)}</b>
                     </span>
-                    <TeamLogo team={game.homeTeam} />
-                  </span>
-                  <span className="liveGameAbbrs">
-                    <b>{teamAbbr(game.awayTeam)}</b>
-                    <b>{teamAbbr(game.homeTeam)}</b>
-                  </span>
+                  ))}
                   <span className="liveGameFooter">
-                    <span className="liveDots">
-                      {Array.from({ length: Math.min(alerts.length || 1, 5) }).map((_, index) => (
-                        <i key={index} />
-                      ))}
-                    </span>
-                    <small>{alerts.length} alertas</small>
+                    <small>{game.boxscoreUnavailable ? 'Estatísticas indisponíveis' : `${alerts.length} ${alerts.length === 1 ? 'alerta' : 'alertas'}`}</small>
+                    <span>Ver partida <span aria-hidden="true">↗</span></span>
                   </span>
                 </button>
               ))}
@@ -192,24 +193,20 @@ export function LiveMonitor() {
           ) : (
             <div className="emptyState">Nenhum jogo ao vivo agora.</div>
           )}
+          {state.games.length > 0 && !alertsByGame.length ? <div className="emptyState">Nenhuma partida com alertas neste filtro.</div> : null}
 
           {activeGroup ? (
             <div className="liveDrawer">
               <div className="liveDrawerHeader">
                 <span>Jogadores com alerta - {teamAbbr(activeGroup.game.awayTeam)} {teamScore(activeGroup.game.awayTeam)} · {teamAbbr(activeGroup.game.homeTeam)} {teamScore(activeGroup.game.homeTeam)}</span>
-                <div className="liveMiniDots">
-                  <b>{teamAbbr(activeGroup.game.awayTeam)}</b>
-                  <i /><i /><i /><i /><i />
-                  <b>{teamAbbr(activeGroup.game.homeTeam)}</b>
-                  <i /><i /><i /><i /><i />
-                </div>
+                <span>{activeGroup.alerts.length} alertas neste filtro</span>
               </div>
 
               <div className="liveAlertGrid">
                 {activeGroup.alerts.map((alert) => (
                   <LiveAlertCard
                     alert={alert}
-                    key={`${alert.gameId}-${alert.playerId}`}
+                    key={livePlayerKey(alert)}
                     onOpen={() => setPlayerModal(alert)}
                   />
                 ))}
@@ -220,13 +217,14 @@ export function LiveMonitor() {
             </div>
           ) : null}
 
-          {gameModal ? (
+          {selectedGame ? (
             <LiveGameModal
-              game={gameModal}
+              key={selectedGame.gameId}
+              game={selectedGame}
               players={gameModalPlayers}
-              alerts={alertsByGame.find((row) => row.game.gameId === gameModal.gameId)?.alerts || []}
+              alerts={alertsByGame.find((row) => row.game.gameId === gameModal)?.alerts || []}
               onClose={() => setGameModal(null)}
-              onPlayer={(player) => setPlayerModal(buildAlert(player, gameModal) || player)}
+              onPlayer={(player) => setPlayerModal(buildAlert(player, selectedGame) || player)}
             />
           ) : null}
 
@@ -243,12 +241,7 @@ function LiveAlertCard({ alert, onOpen }) {
   return (
     <button type="button" className={`liveAlertCard ${alert.type}`} onClick={onOpen}>
       <div className="liveAlertTop">
-        <img
-          className="liveAlertPhoto"
-          src={`https://cdn.nba.com/headshots/nba/latest/1040x760/${alert.playerId}.png`}
-          alt=""
-          onError={(event) => { event.currentTarget.style.visibility = 'hidden'; }}
-        />
+        <PlayerAvatar player={alert} className="liveAlertPhoto" />
         <div>
           <strong className="liveAlertName">{alert.name}</strong>
           <span>{alert.teamAbbr} · {alert.position || '-'}</span>
@@ -273,65 +266,90 @@ function LiveAlertCard({ alert, onOpen }) {
 function LiveGameModal({ game, players, alerts, onClose, onPlayer }) {
   const away = game.awayTeam || {};
   const home = game.homeTeam || {};
-  const awayPlayers = players.filter((player) => String(player.teamAbbr || '').toUpperCase() === teamAbbr(away));
-  const homePlayers = players.filter((player) => String(player.teamAbbr || '').toUpperCase() === teamAbbr(home));
+  const awayPlayers = playersForTeam(players, away);
+  const homePlayers = playersForTeam(players, home);
+  const [tab, setTab] = useState('players');
+  const [teamTab, setTeamTab] = useState('away');
+  const [sortStat, setSortStat] = useState('pts');
+  const titleId = useId();
+  const dialogRef = useLiveDialog(onClose);
+  const unassigned = players.length - awayPlayers.length - homePlayers.length;
 
   return (
-    <div className="liveModalOverlay" role="dialog" aria-modal="true">
-      <div className="liveModal liveGameModal">
+    <div className="liveModalOverlay" onMouseDown={onClose}>
+      <section ref={dialogRef} className="liveModal liveGameModal" role="dialog" aria-modal="true" aria-labelledby={titleId} onMouseDown={(event) => event.stopPropagation()}>
         <div className="liveModalHero">
-          <button type="button" className="pp-modal-close" onClick={onClose}>x</button>
+          <button type="button" aria-label="Fechar partida" className="pp-modal-close" onClick={onClose}>×</button>
+          <div className="liveMatchHeading" id={titleId}><span>NBA · Detalhes da partida</span><span className="liveNowBadge">Ao vivo</span></div>
           <div className="liveModalTeams">
             <ModalTeam team={away} />
             <div className="liveModalScore">
-              <strong>{teamScore(away)} · {teamScore(home)}</strong>
+              <strong>{teamScore(away)} <i>–</i> {teamScore(home)}</strong>
               <span>{game.gameStatusText || `Q${game.period}`}</span>
-              <em>{alerts.length} alertas ativos</em>
+              <time dateTime={game.gameTimeUTC || undefined}>{gameDate(game.gameTimeUTC)}</time>
             </div>
             <ModalTeam team={home} />
           </div>
         </div>
-
-        <div className="liveModalBody">
-          <div className="liveModalMetrics">
-            <LiveModalMetric label="Periodo" value={`Q${game.period || '-'}`} />
-            <LiveModalMetric label="Clock" value={formatClock(game.gameClock) || game.gameStatusText || '-'} />
-            <LiveModalMetric label="Diferença" value={Math.abs(teamScore(away) - teamScore(home))} />
-            <LiveModalMetric label="Alertas" value={alerts.length} />
-          </div>
-
-          <div className="liveModalColumns">
-            <LiveTeamBox title={teamAbbr(away)} players={awayPlayers} onPlayer={onPlayer} />
-            <LiveTeamBox title={teamAbbr(home)} players={homePlayers} onPlayer={onPlayer} />
-          </div>
+        <div className="liveMatchTabs" role="group" aria-label="Conteúdo da partida">
+          <button type="button" aria-pressed={tab === 'players'} onClick={() => setTab('players')}>Jogadores</button>
+          <button type="button" aria-pressed={tab === 'alerts'} onClick={() => setTab('alerts')}>Alertas <span>{alerts.length}</span></button>
         </div>
-      </div>
+        <div className="liveModalBody">
+          {game.boxscoreUnavailable ? <div className="alertBox">Não foi possível atualizar as estatísticas desta partida. Tente atualizar o monitor.</div> : null}
+          {tab === 'players' ? <>
+            <div className="liveStatsToolbar">
+              <span>Ordenar jogadores por</span>
+              <div className="liveStatSort" role="group" aria-label="Ordenação do boxscore">
+                {BOX_STATS.map(({ key, label }) => <button type="button" key={key} className={`stat-${key}`} aria-pressed={sortStat === key} onClick={() => setSortStat(key)}>{label}<span aria-hidden="true">{sortStat === key ? ' ↓' : ''}</span></button>)}
+              </div>
+            </div>
+            <div className="liveTeamTabs" role="group" aria-label="Time no boxscore">
+              <button type="button" aria-pressed={teamTab === 'away'} onClick={() => setTeamTab('away')}><TeamLogo team={away} />{teamAbbr(away)}</button>
+              <button type="button" aria-pressed={teamTab === 'home'} onClick={() => setTeamTab('home')}><TeamLogo team={home} />{teamAbbr(home)}</button>
+            </div>
+            <div className={`liveModalColumns show-${teamTab}`}>
+              <LiveTeamBox side="away" team={away} players={awayPlayers} onPlayer={onPlayer} sortStat={sortStat} onSort={setSortStat} />
+              <LiveTeamBox side="home" team={home} players={homePlayers} onPlayer={onPlayer} sortStat={sortStat} onSort={setSortStat} />
+            </div>
+            {unassigned > 0 ? <p className="liveDataNote">{unassigned} jogadores sem identificação de time no provedor não foram incluídos nas tabelas.</p> : null}
+            <p className="liveDataNote">PTS pontos · REB rebotes · AST assistências · +/− saldo em quadra. Selecione um jogador para ver os detalhes.</p>
+          </> : <div className="liveAlertGrid">
+            {alerts.map((alert) => <LiveAlertCard key={livePlayerKey(alert)} alert={alert} onOpen={() => onPlayer(alert)} />)}
+            {!alerts.length ? <div className="emptyState">Nenhum alerta para esta partida no filtro atual.</div> : null}
+          </div>}
+        </div>
+      </section>
     </div>
   );
 }
 
-function LiveTeamBox({ title, players, onPlayer }) {
+function LiveTeamBox({ team, players, onPlayer, side, sortStat, onSort }) {
+  const sorted = sortLivePlayers(players, sortStat);
+  const sortLabel = BOX_STATS.find(({ key }) => key === sortStat)?.label.toLowerCase();
   return (
-    <section className="liveTeamBox">
-      <div className="liveModalSectionTitle">{title} boxscore</div>
-      <div className="liveBoxRows">
-        {players.slice(0, 10).map((player) => (
-          <button type="button" className="liveBoxRow" key={player.playerId} onClick={() => onPlayer(player)}>
-            <img src={`https://cdn.nba.com/headshots/nba/latest/1040x760/${player.playerId}.png`} alt="" />
-            <span>
-              <strong>{player.name}</strong>
-              <em>{player.position || '-'} · {player.mins || 0} min</em>
-            </span>
-            <b>{player.pts || 0}</b>
-            <small>{player.reb || 0}R · {player.ast || 0}A</small>
-          </button>
-        ))}
+    <section className={`liveTeamBox team-${side}`}>
+      <div className="liveBoxTeamHeading"><TeamLogo team={team} /><div><h3>{teamName(team)}</h3><span>{players.length} jogadores · ordenados por {sortLabel}</span></div></div>
+      <div className="liveBoxTableScroll" tabIndex={0} role="region" aria-label={`Estatísticas de ${teamName(team)}`}>
+        <table className="liveBoxTable">
+          <caption className="sr-only">Boxscore de {teamName(team)}</caption>
+          <thead><tr><th scope="col">Jogador</th>{BOX_STATS.map(({ key, label, short }) => <th key={key} scope="col" className={`liveMainStat stat-${key}`} aria-sort={sortStat === key ? 'descending' : 'none'}><button type="button" aria-label={`Ordenar por ${label.toLowerCase()}`} onClick={() => onSort(key)}>{short}<span aria-hidden="true">{sortStat === key ? ' ↓' : ''}</span></button></th>)}<th scope="col" className="liveSecondaryStat">MIN</th><th scope="col" className="liveSecondaryStat">+/−</th></tr></thead>
+          <tbody>{sorted.map((player) => <tr key={livePlayerKey(player)}>
+            <th scope="row"><button type="button" className="liveBoxPlayer" onClick={() => onPlayer(player)}>
+              <PlayerAvatar player={player} /><span><strong>{player.name}</strong><small>{player.position || '—'}<span className="livePlayerMinutes"> · {displayStat(player.mins)} min</span></small></span>
+            </button></th>
+            {BOX_STATS.map(({ key }) => <td key={key} className={`liveMainStat stat-${key} ${sortStat === key ? 'sorted' : ''}`}>{displayStat(player[key])}</td>)}<td className="liveSecondaryStat">{displayStat(player.mins)}</td><td className="liveSecondaryStat">{displayStat(player.plusMinus)}</td>
+          </tr>)}</tbody>
+        </table>
       </div>
+      {!players.length ? <div className="emptyState">Estatísticas deste time ainda indisponíveis.</div> : null}
     </section>
   );
 }
 
 function LivePlayerModal({ alert, onClose }) {
+  const dialogRef = useLiveDialog(onClose);
+  const titleId = useId();
   const impact = liveScore(alert);
   const projectedPts = Number.parseInt(String(alert.hints?.pts || '').replace(/\D/g, ''), 10) || alert.pts || 0;
   const projectedReb = Number.parseInt(String(alert.hints?.reb || '').replace(/\D/g, ''), 10) || alert.reb || 0;
@@ -345,14 +363,14 @@ function LivePlayerModal({ alert, onClose }) {
   });
 
   return (
-    <div className="liveModalOverlay" role="dialog" aria-modal="true">
-      <div className="liveModal livePlayerModal">
+    <div className="liveModalOverlay" onMouseDown={onClose}>
+      <div ref={dialogRef} className="liveModal livePlayerModal" role="dialog" aria-modal="true" aria-labelledby={titleId} onMouseDown={(event) => event.stopPropagation()}>
         <div className="liveModalHero player">
-          <button type="button" className="pp-modal-close" onClick={onClose}>x</button>
+          <button type="button" aria-label="Fechar jogador" className="pp-modal-close" onClick={onClose}>×</button>
           <div className="livePlayerModalHead">
-            <img src={`https://cdn.nba.com/headshots/nba/latest/1040x760/${alert.playerId}.png`} alt="" />
+            <PlayerAvatar player={alert} />
             <div>
-              <h3>{alert.name}</h3>
+              <h3 id={titleId}>{alert.name}</h3>
               <p>{alert.teamAbbr} · {alert.position || '-'} · {alert.gameLabel || 'Ao vivo'}</p>
               <span className={`liveAlertType ${alert.type || ''}`}>{alert.label || 'AO VIVO'}</span>
             </div>
@@ -393,7 +411,8 @@ function ModalTeam({ team }) {
   return (
     <div className="liveModalTeam">
       <TeamLogo team={team} />
-      <strong>{teamAbbr(team)}</strong>
+      <strong>{teamName(team)}</strong>
+      <small>{teamAbbr(team)}</small>
     </div>
   );
 }
@@ -512,16 +531,56 @@ function isPlayerTeamWinning(player, game) {
 }
 
 function TeamLogo({ team }) {
-  return <img src={teamLogoUrl(team)} alt={teamAbbr(team)} onError={(event) => { event.currentTarget.style.opacity = '0'; }} />;
+  const url = teamLogoUrl(team);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [url]);
+  return <span className="liveTeamLogo" aria-hidden="true">{url && !failed
+    ? <img src={url} alt="" onError={() => setFailed(true)} />
+    : <span>{teamAbbr(team)}</span>}</span>;
 }
 
-function teamLogoUrl(team) {
-  const id = team?.teamId || team?.id;
-  return id ? `https://cdn.nba.com/logos/nba/${id}/primary/L/logo.svg` : '';
+function PlayerAvatar({ player, className = '' }) {
+  const url = playerPhotoUrl(player);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [url]);
+  const initials = String(player.name || '?').split(/\s+/).map((word) => word[0]).slice(0, 2).join('');
+  return <span className={`livePlayerAvatar ${className}`} aria-hidden="true">{url && !failed
+    ? <img src={url} alt="" loading="lazy" onError={() => setFailed(true)} />
+    : <span>{initials}</span>}</span>;
 }
 
-function teamAbbr(team) {
-  return String(team?.teamAbbreviation || team?.abbr || team?.abbreviation || '---').toUpperCase();
+function useLiveDialog(onClose) {
+  const dialogRef = useRef(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    dialog?.querySelector('button')?.focus();
+    const onKey = (event) => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeRef.current(); }
+      if (event.key !== 'Tab') return;
+      const elements = [...dialog.querySelectorAll('button:not([disabled]), [tabindex="0"]')].filter((element) => element.getClientRects().length);
+      const first = elements[0];
+      const last = elements.at(-1);
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    dialog?.addEventListener('keydown', onKey);
+    return () => {
+      dialog?.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus();
+    };
+  }, []);
+  return dialogRef;
+}
+
+function gameDate(value) {
+  const date = value ? new Date(value) : null;
+  return date && Number.isFinite(date.getTime()) ? date.toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Horário indisponível';
 }
 
 function teamScore(team) {

@@ -66,7 +66,8 @@ function eventGame(event) {
   const team = (side) => {
     const item = (competition.competitors || []).find((row) => row.homeAway === side) || {};
     const info = item.team || {};
-    return { teamId: info.id, abbr: teamAbbr(info), teamAbbreviation: teamAbbr(info), name: info.displayName || '', score: numericScore(item.score) };
+    return { teamId: info.id, abbr: teamAbbr(info), teamAbbreviation: teamAbbr(info), name: info.displayName || '',
+      logoUrl: info.logo || info.logos?.[0]?.href || null, score: numericScore(item.score) };
   };
   const date = competition.date || event.date || '';
   const state = status.type?.state;
@@ -221,10 +222,11 @@ async function boxscore(gameId) {
         const values = Object.fromEntries((block.labels || []).map((label, index) => [label, item.stats?.[index]]));
         const athlete = item.athlete || {};
         result.push({ playerId: ESPN_TO_NBA.get(String(athlete.id)) || null, espn_id: athlete.id, name: athlete.displayName, position: athlete.position?.abbreviation || '',
+          photoUrl: athlete.headshot?.href || null,
           teamAbbr: teamAbbr(group.team || {}), teamId: group.team?.id, isHome: group.team?.id === homeId, mins: statNumber(values.MIN) || 0,
           pts: statNumber(values.PTS) || 0, reb: statNumber(values.REB) || 0, ast: statNumber(values.AST) || 0, pf: statNumber(values.PF) || 0,
           fgm: statNumber(values.FG) || 0, fga: Number(String(values.FG || '0-0').split('-')[1]) || 0, tpm: statNumber(values['3PT']) || 0,
-          to: statNumber(values.TO) || 0, plusMinus: Number(values['+/-']) || 0, stl: statNumber(values.STL) || 0 });
+          to: statNumber(values.TO) || 0, plusMinus: optionalNumber(values['+/-']), stl: statNumber(values.STL) || 0 });
       }
     }
   }
@@ -237,6 +239,7 @@ function requiredAbbr(value) { const text = String(value || '').toUpperCase(); i
 function normalizeName(value) { return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
 function teamAbbr(team) { const value = team.abbreviation || ''; return TEAM_ABBR[value] || value; }
 function numericScore(value) { const raw = typeof value === 'object' ? value?.value ?? value?.displayValue : value; return Number(raw) || 0; }
+function optionalNumber(value) { if (value == null || String(value).trim() === '') return null; const number = Number(value); return Number.isFinite(number) ? number : null; }
 function compactDate(date) { return date.toISOString().slice(0, 10).replaceAll('-', ''); }
 function statNumber(value) { const number = Number(String(value ?? '').split('-')[0]); return Number.isFinite(number) ? number : null; }
 function isNumber(value) { return Number.isFinite(Number(value)); }
