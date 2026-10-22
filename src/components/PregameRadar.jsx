@@ -220,7 +220,10 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
                 setSelectedDirectoryId(player.id);
                 setDirectoryDismissed(true);
                 const data = await getPregame(player.id).catch(() => null);
-                if (!data || data.error) return;
+                if (!data || data.error) {
+                  setDirectoryDismissed(false);
+                  return;
+                }
                 setState((current) => ({
                   ...current,
                   players: upsertPlayer(current.players, { ...data, player_name: player.name }),
