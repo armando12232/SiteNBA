@@ -459,6 +459,7 @@ function sampleLabel(player) {
   const formatSeason = (season) => `${season}/${String(season + 1).slice(-2)}`;
   const count = Number(player?.sample_size);
   const countLabel = Number.isInteger(count) ? `${count} ${count === 1 ? 'jogo' : 'jogos'}` : '';
+  if (count === 0) return `${formatSeason(sampleSeason)} · aguardando o primeiro jogo`;
   if (player?.using_previous_season) {
     const currentSeason = Number(player.current_season);
     const currentLabel = Number.isInteger(currentSeason) ? ` enquanto ${formatSeason(currentSeason)} não tem jogos finalizados` : '';
