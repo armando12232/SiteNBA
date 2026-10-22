@@ -22,3 +22,6 @@ create index if not exists telegram_match_intel_type_created_idx
 
 create index if not exists telegram_match_intel_teams_idx
   on public.telegram_match_intel using gin (teams);
+
+-- Access this table only through trusted server-side code using the service role.
+alter table public.telegram_match_intel enable row level security;

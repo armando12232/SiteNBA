@@ -34,7 +34,7 @@ export function getPregame(playerId, season = 'current') {
   const seasonView = season === 'previous' ? 'previous' : 'current';
   const storageKey = getPregameStorageKey(playerId, seasonView);
   return cachedFetch(storageKey, PREGAME_TTL_MS, () => (
-    fetchJson(`/api/nba?type=pregame&playerId=${encodeURIComponent(playerId)}&season=${seasonView}`)
+    fetchJson(`/api/nba?type=pregame&playerId=${encodeURIComponent(playerId)}&season=${seasonView}`, { auth: true })
   ));
 }
 
