@@ -327,13 +327,15 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
         >
           Lista geral
         </button>
-        <button
-          type="button"
-          className={`view-mode-btn premium ${viewMode === 'games' ? 'active' : ''}`}
-          onClick={() => setViewMode('games')}
-        >
-          {bpCount ? 'Melhores Props' : 'Props por confronto'} {bpCount ? <small>{propsDayLabel}</small> : null}<span>Premium</span>
-        </button>
+        {seasonView === 'current' ? (
+          <button
+            type="button"
+            className={`view-mode-btn premium ${viewMode === 'games' ? 'active' : ''}`}
+            onClick={() => setViewMode('games')}
+          >
+            {bpCount ? 'Melhores Props' : 'Props por confronto'} {bpCount ? <small>{propsDayLabel}</small> : null}<span>Premium</span>
+          </button>
+        ) : null}
       </div>
 
       <StatCastBoard
