@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getBettingProsForDates } from '../api/bettingpros.js';
-import { clearPregameCache, getPregame, getSchedule } from '../api/nba.js';
+import { clearPregameCache, getPregame, getSchedule, searchNbaPlayers } from '../api/nba.js';
 import { PREGAME_PLAYERS } from '../data/pregamePlayers.js';
 import { numberOrNull, propForStat } from '../utils/props.js';
 import { buildPregameScore } from '../utils/statcastScore.js';
@@ -23,6 +23,9 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
   const [activeStat, setActiveStat] = useState(savedPrefs.activeStat || 'pts');
   const [sortBy, setSortBy] = useState(savedPrefs.sortBy || 'l5');
   const [query, setQuery] = useState(savedPrefs.query || '');
+  const [directoryPlayers, setDirectoryPlayers] = useState([]);
+  const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [selectedDirectoryId, setSelectedDirectoryId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const lastLoadedAt = useRef(Date.now());
   const [scoreInfoOpen, setScoreInfoOpen] = useState(false);
@@ -105,6 +108,31 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
   }, []);
 
   useEffect(() => {
+    const cleaned = query.trim();
+    if (cleaned.length < 2) {
+      setDirectoryPlayers([]);
+      setDirectoryLoading(false);
+      return undefined;
+    }
+    let alive = true;
+    const timer = setTimeout(async () => {
+      setDirectoryLoading(true);
+      try {
+        const result = await searchNbaPlayers(cleaned);
+        if (alive) setDirectoryPlayers(result.players || []);
+      } catch {
+        if (alive) setDirectoryPlayers([]);
+      } finally {
+        if (alive) setDirectoryLoading(false);
+      }
+    }, 250);
+    return () => {
+      alive = false;
+      clearTimeout(timer);
+    };
+  }, [query]);
+
+  useEffect(() => {
     writePrefs({ activeStat, sortBy, query, scoreFilter, viewMode });
   }, [activeStat, query, scoreFilter, sortBy, viewMode]);
 
@@ -174,6 +202,36 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
           x
         </button>
       </div>
+
+      {query.trim().length >= 2 ? (
+        <div className="player-search-results" role="listbox" aria-label="Jogadores encontrados">
+          {directoryLoading ? <div className="player-search-status">Buscando jogadores...</div> : null}
+          {!directoryLoading ? directoryPlayers.map((player) => (
+            <button
+              type="button"
+              role="option"
+              key={player.id}
+              aria-selected={selectedDirectoryId === player.id}
+              className="player-search-result"
+              onClick={async () => {
+                setSelectedDirectoryId(player.id);
+                const data = await getPregame(player.id).catch(() => null);
+                if (!data || data.error) return;
+                setState((current) => ({
+                  ...current,
+                  players: upsertPlayer(current.players, { ...data, player_name: player.name }),
+                }));
+                setQuery(player.name);
+                setDirectoryPlayers([]);
+              }}
+            >
+              <span>{player.name}</span>
+              <small>Ver estatísticas da temporada</small>
+            </button>
+          )) : null}
+          {!directoryLoading && !directoryPlayers.length ? <div className="player-search-status">Nenhum jogador encontrado no catálogo.</div> : null}
+        </div>
+      ) : null}
 
       <div className="filter-row">
         {Object.entries(statLabels).map(([stat, label]) => (

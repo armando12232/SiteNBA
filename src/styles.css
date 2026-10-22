@@ -3230,6 +3230,54 @@ select {
   font-size: 13px;
 }
 
+.player-search-results {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% - 8px);
+  right: 0;
+  left: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--border2);
+  border-radius: 0 0 10px 10px;
+  background: var(--bg2);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, .35);
+}
+
+.player-search-result {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.player-search-result:hover,
+.player-search-result[aria-selected="true"] {
+  background: var(--bg3);
+}
+
+.player-search-result span {
+  font-weight: 700;
+}
+
+.player-search-result small,
+.player-search-status {
+  color: var(--text3);
+  font-size: 11px;
+}
+
+.player-search-status {
+  padding: 12px 14px;
+}
+
 .search-bar:focus {
   border-color: var(--border2);
 }
