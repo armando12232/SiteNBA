@@ -32,7 +32,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
   const lastLoadedAt = useRef(Date.now());
   const [scoreInfoOpen, setScoreInfoOpen] = useState(false);
   const [scoreFilter, setScoreFilter] = useState(savedPrefs.scoreFilter || 'all');
-  const [viewMode, setViewMode] = useState(savedPrefs.viewMode || 'list');
+  const [viewMode, setViewMode] = useState(savedPrefs.seasonView === 'previous' ? 'list' : savedPrefs.viewMode || 'list');
   const [state, setState] = useState({
     loading: true,
     error: null,
@@ -137,7 +137,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
       alive = false;
       clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, seasonView]);
 
   useEffect(() => {
     writePrefs({ activeStat, seasonView, sortBy, query, scoreFilter, viewMode });
@@ -258,6 +258,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
               if (seasonView === value) return;
               setSeasonView(value);
               setScoreFilter('all');
+              setDirectoryDismissed(false);
               setDirectoryPlayers([]);
               if (value === 'previous') setViewMode('list');
             }}>
