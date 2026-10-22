@@ -23,6 +23,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
   const [sortBy, setSortBy] = useState(savedPrefs.sortBy || 'l5');
   const [query, setQuery] = useState(savedPrefs.query || '');
   const [refreshKey, setRefreshKey] = useState(0);
+  const lastLoadedAt = useRef(Date.now());
   const [scoreInfoOpen, setScoreInfoOpen] = useState(false);
   const [scoreFilter, setScoreFilter] = useState(savedPrefs.scoreFilter || 'all');
   const [viewMode, setViewMode] = useState(savedPrefs.viewMode || 'list');
@@ -40,7 +41,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
     let alive = true;
 
     async function load() {
-      setState({ loading: true, error: null, players: [], loadedCount: 0, bpPlayers: [], bpDate: null, schedule: [] });
+      setState((current) => ({ ...current, loading: true, error: null, loadedCount: 0 }));
       try {
         getSchedule()
           .then(async (scheduleData) => {
@@ -78,6 +79,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
         });
 
         if (alive) {
+          lastLoadedAt.current = Date.now();
           setState((current) => ({ ...current, loading: false }));
         }
       } catch (error) {
@@ -90,6 +92,16 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
       alive = false;
     };
   }, [refreshKey]);
+
+  useEffect(() => {
+    function refreshWhenVisible() {
+      if (document.visibilityState !== 'visible' || Date.now() - lastLoadedAt.current < 5 * 60 * 1000) return;
+      clearPregameCache();
+      setRefreshKey((value) => value + 1);
+    }
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => document.removeEventListener('visibilitychange', refreshWhenVisible);
+  }, []);
 
   useEffect(() => {
     writePrefs({ activeStat, sortBy, query, scoreFilter, viewMode });
