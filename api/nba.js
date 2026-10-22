@@ -54,7 +54,7 @@ export default async function handler(req, res) {
       if (!name || name.length > 60) return res.status(400).json({ error: 'invalid name' });
       const playerId = NAME_TO_NBA.get(normalizeName(name));
       if (!playerId) return res.status(404).json({ error: 'player not found', name });
-      return res.status(200).json(await pregame(playerId));
+      return res.status(200).json(await pregame(playerId, requestedSeason(req.query?.season)));
     }
     if (type === 'team_info') return res.status(200).json({ team: await teamInfo(requiredAbbr(req.query?.abbr || req.query?.teamAbbr)) });
     if (type === 'roster') return res.status(200).json({ players: await roster(requiredAbbr(req.query?.abbr || req.query?.teamAbbr)) });

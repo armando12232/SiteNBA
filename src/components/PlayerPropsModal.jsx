@@ -11,11 +11,21 @@ export function PlayerPropsModal({ favorites = [], onToggleFavorite, playerName,
   const tableData = typeof playerName === 'object' && playerName ? playerName : null;
   const displayName = tableData?.player_name || String(playerName || '');
   const [activeStat, setActiveStat] = useState('pts');
+  const [seasonView, setSeasonView] = useState(tableData?.using_previous_season ? 'previous' : 'current');
   const [state, setState] = useState({ loading: true, error: null, data: null });
   const dialogRef = useRef(null);
   const closeRef = useRef(onClose);
   const titleId = useId();
+  const isWnba = tableData?.league === 'wnba';
+  const seasonResetKey = `${displayName}:${tableData?.using_previous_season ? 'previous' : 'current'}`;
+  const seasonResetKeyRef = useRef(seasonResetKey);
   closeRef.current = onClose;
+
+  useEffect(() => {
+    if (seasonResetKeyRef.current === seasonResetKey) return;
+    seasonResetKeyRef.current = seasonResetKey;
+    setSeasonView(tableData?.using_previous_season ? 'previous' : 'current');
+  }, [seasonResetKey, tableData?.using_previous_season]);
 
   useEffect(() => {
     if (!playerName) return;
@@ -53,31 +63,34 @@ export function PlayerPropsModal({ favorites = [], onToggleFavorite, playerName,
   useEffect(() => {
     if (!playerName) return;
     let alive = true;
-    setActiveStat('pts');
-    setState({ loading: !tableData, error: null, data: tableData });
+    const tableDataMatchesSeason = isWnba || ((seasonView === 'previous') === Boolean(tableData?.using_previous_season));
+    setState({ loading: !tableDataMatchesSeason, error: null, data: tableDataMatchesSeason ? tableData : null });
 
-    const isWnba = tableData?.league === 'wnba';
     const request = tableData?.player_id
-      ? (isWnba ? getWnbaPregame(tableData.player_id) : getNbaPregame(tableData.player_id))
-      : (isWnba ? getWnbaPregameByName(displayName) : getNbaPregameByName(displayName));
+      ? (isWnba ? getWnbaPregame(tableData.player_id) : getNbaPregame(tableData.player_id, seasonView))
+      : (isWnba ? getWnbaPregameByName(displayName) : getNbaPregameByName(displayName, seasonView));
     request
       .then((data) => {
         if (!alive) return;
         setState({
           loading: false,
           error: null,
-          data: mergeModalData(tableData, data),
+          data: mergeModalData(tableDataMatchesSeason ? tableData : null, data),
         });
       })
       .catch((error) => {
         if (!alive) return;
-        setState({ loading: false, error: tableData ? null : error, data: tableData });
+        setState({ loading: false, error: tableDataMatchesSeason ? null : error, data: tableDataMatchesSeason ? tableData : null });
       });
 
     return () => {
       alive = false;
     };
-  }, [displayName, playerName, tableData]);
+  }, [displayName, playerName, tableData, seasonView]);
+
+  useEffect(() => {
+    setActiveStat('pts');
+  }, [displayName]);
 
   if (!playerName) return null;
 
@@ -134,6 +147,27 @@ export function PlayerPropsModal({ favorites = [], onToggleFavorite, playerName,
         </div>
 
         <div className="pp-modal-body">
+          {!isWnba ? (
+            <div className="pp-season-switch" role="group" aria-label="Temporada das estatísticas do jogador">
+              <span>Temporada</span>
+              <div className="pp-season-options">
+                {[
+                  ['current', `${modalSeasonLabel(0)} · Atual`],
+                  ['previous', `${modalSeasonLabel(1)} · Anterior`],
+                ].map(([value, label]) => (
+                  <button
+                    type="button"
+                    key={value}
+                    className={`pp-season-option ${seasonView === value ? 'active' : ''}`}
+                    aria-pressed={seasonView === value}
+                    onClick={() => setSeasonView(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {state.error ? <div className="alertBox">{userErrorMessage(state.error, 'Não foi possível carregar o histórico real agora.')}</div> : null}
 
           {!state.loading && !state.error ? (
@@ -450,6 +484,11 @@ function parseNbaDate(value) {
 function monthIndex(value) {
   return ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
     .indexOf(String(value).toLowerCase());
+}
+
+function modalSeasonLabel(previousOffset = 0) {
+  const seasonEndYear = new Date().getUTCFullYear() + (new Date().getUTCMonth() >= 9 ? 1 : 0) - previousOffset;
+  return `${seasonEndYear - 1}/${String(seasonEndYear).slice(-2)}`;
 }
 
 function sampleLabel(player) {
