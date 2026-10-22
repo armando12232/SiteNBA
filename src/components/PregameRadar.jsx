@@ -7,6 +7,7 @@ import { buildPregameScore } from '../utils/statcastScore.js';
 import { userErrorMessage } from '../utils/errors.js';
 import { favoriteKey } from '../api/favorites.js';
 import { FavoriteButton } from './FavoriteButton.jsx';
+import { mergePregamePlayers } from '../utils/mergePregamePlayers.js';
 
 const statLabels = {
   pts: 'Pontos',
@@ -109,7 +110,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
 
   const basePlayers = useMemo(() => {
     const cleaned = query.trim().toLowerCase();
-    const merged = mergeBettingPros(state.players, state.bpPlayers, state.schedule);
+    const merged = mergePregamePlayers(state.players, state.bpPlayers, state.schedule);
     return cleaned
       ? merged.filter((player) => player.player_name?.toLowerCase().includes(cleaned))
       : merged;
@@ -938,63 +939,6 @@ function scoreEntry(player, activeStat) {
     marketLine: best.source === 'BettingPros',
   });
   return { player, stat, line, score, prop: best };
-}
-
-function mergeBettingPros(nbaPlayers, bpPlayers, schedule) {
-  const safeNbaPlayers = Array.isArray(nbaPlayers) ? nbaPlayers : [];
-  const safeBpPlayers = Array.isArray(bpPlayers) ? bpPlayers : [];
-  const safeSchedule = Array.isArray(schedule) ? schedule : [];
-  const byName = new Map(safeNbaPlayers.map((player) => [normalizeName(player.player_name), player]));
-  const rows = [];
-
-  for (const bp of safeBpPlayers) {
-    const key = normalizeName(bp.player_name);
-    const nba = byName.get(key);
-    const game = findGameForTeam(safeSchedule, bp.team);
-    const merged = {
-      ...(nba || {}),
-      player_name: bp.player_name,
-      player_id: nba?.player_id,
-      team_abbr: bp.team || nba?.team_abbr,
-      position: bp.position || nba?.position,
-      bp_image: bp.image,
-      gameLabel: game ? `${game.awayTeam?.abbr || 'AWY'} x ${game.homeTeam?.abbr || 'HME'}` : bp.team || '',
-      gameDateLabel: game?.gameDateLabel,
-      props: mergeProps(nba?.props || {}, bp.props || {}),
-      source: 'BettingPros',
-    };
-    rows.push(merged);
-  }
-
-  if (rows.length) {
-    return rows;
-  }
-
-  return safeNbaPlayers;
-}
-
-function mergeProps(nbaProps, bpProps) {
-  const result = { ...nbaProps };
-  for (const [stat, prop] of Object.entries(bpProps || {})) {
-    result[stat] = {
-      ...(nbaProps[stat] || {}),
-      line: prop.line,
-      odds: prop.odds,
-      l5: prop.l5,
-      l10: prop.l10,
-      l15: prop.l15,
-      l20: prop.l20,
-      h2h: prop.h2h,
-      hit_rate: prop.season,
-      projection: prop.projection,
-      edge: numberOrNull(prop.diff) ?? (numberOrNull(prop.projection) != null && numberOrNull(prop.line) != null ? Number(prop.projection) - Number(prop.line) : null),
-      ev: prop.ev,
-      rec_side: prop.rec_side,
-      streak: prop.streak,
-      source: 'BettingPros',
-    };
-  }
-  return result;
 }
 
 function scheduleDates(games) {
