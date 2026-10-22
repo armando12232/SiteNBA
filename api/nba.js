@@ -20,12 +20,11 @@ export default async function handler(req, res) {
   if (!valid.has(type)) return res.status(400).json({ error: 'invalid type' });
 
   try {
-    if (['boxscore', 'debug_gamelog'].includes(type)) {
-      const access = await checkFeature(req, type === 'boxscore' ? 'live' : 'modal');
-      if (!access.ok) return res.status(access.status).json(access.payload);
-    }
-    if (type === 'pregame_by_name') {
-      const access = await checkFeature(req, 'modal');
+    const protectedFeature = type === 'boxscore' ? 'live'
+      : ['debug_gamelog', 'season_avg', 'pregame', 'pregame_by_name'].includes(type) ? 'modal'
+        : null;
+    if (protectedFeature) {
+      const access = await checkFeature(req, protectedFeature);
       if (!access.ok) return res.status(access.status).json(access.payload);
     }
 
