@@ -7,17 +7,28 @@ import os
 
 cache = {}
 CACHE_TTL = 300  # 5 min
+MAX_CACHE_ENTRIES = 250
 SITE_URL = os.environ.get('SITE_URL', 'https://site-nba-ten.vercel.app').rstrip('/')
 
 def _cache_get(key):
-    if key in cache:
-        data, ts = cache[key]
-        if time.time() - ts < CACHE_TTL:
-            return data
+    entry = cache.get(key)
+    if entry is None:
+        return None
+    data, ts = entry
+    if time.time() - ts < CACHE_TTL:
+        return data
+    cache.pop(key, None)
     return None
 
 def _cache_set(key, data):
-    cache[key] = (data, time.time())
+    now = time.time()
+    for cached_key, (_, ts) in list(cache.items()):
+        if now - ts >= CACHE_TTL:
+            cache.pop(cached_key, None)
+    cache.pop(key, None)
+    cache[key] = (data, now)
+    while len(cache) > MAX_CACHE_ENTRIES:
+        cache.pop(next(iter(cache)))
 
 BP_HEADERS = {
     'Accept': 'application/json, text/plain, */*',
@@ -39,6 +50,13 @@ MARKETS = {
     'stl':  142,   # Steals
     'blk':  136,   # Blocks
 }
+
+def valid_date(value: str) -> bool:
+    try:
+        return datetime.strptime(value, '%Y-%m-%d').strftime('%Y-%m-%d') == value
+    except (TypeError, ValueError):
+        return False
+
 
 def hit_rate(period_data):
     """Calcula hit rate Over de um período."""
@@ -143,8 +161,17 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         params = parse_qs(urlparse(self.path).query)
         date_str = params.get('date', [None])[0]
+        if date_str and not valid_date(date_str):
+            self._send(400, {'error': 'invalid date'})
+            return
         stats_raw = params.get('stats', ['pts,reb,ast,fg3m'])[0]
-        stats = [s.strip() for s in stats_raw.split(',') if s.strip()]
+        if len(stats_raw) > 100:
+            self._send(400, {'error': 'invalid stats'})
+            return
+        stats = list(dict.fromkeys(s.strip() for s in stats_raw.split(',') if s.strip()))
+        if not stats or any(stat not in MARKETS for stat in stats):
+            self._send(400, {'error': 'invalid stats'})
+            return
 
         try:
             data = get_props(date_str, stats)
