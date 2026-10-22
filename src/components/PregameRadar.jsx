@@ -794,6 +794,7 @@ function seasonSampleNote(player) {
   const count = Number(player?.sample_size);
   if (!Number.isInteger(sampleSeason) || !Number.isInteger(count)) return '';
   const formatSeason = (season) => `${season}/${String(season + 1).slice(-2)}`;
+  if (count === 0) return `${formatSeason(sampleSeason)} · aguardando o primeiro jogo`;
   if (player.using_previous_season && Number.isInteger(Number(player.current_season))) {
     return `${formatSeason(sampleSeason)} · ${count} jogos; ${formatSeason(Number(player.current_season))} sem jogos`;
   }
