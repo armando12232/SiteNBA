@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getBettingProsForDates } from '../api/bettingpros.js';
-import { clearPregameCache, getPregame, getSchedule, searchNbaPlayers } from '../api/nba.js';
+import { clearPregameCache, getPregame, getSchedule, getTeamRoster, searchNbaPlayers } from '../api/nba.js';
 import { PREGAME_PLAYERS } from '../data/pregamePlayers.js';
 import { numberOrNull, propForStat } from '../utils/props.js';
 import { buildPregameScore } from '../utils/statcastScore.js';
@@ -18,10 +18,25 @@ const statLabels = {
 
 const PREFS_KEY = 'statcast:nba:pregame:prefs:v1';
 
+const NBA_TEAMS = [
+  ['ATL', 'Atlanta Hawks'], ['BOS', 'Boston Celtics'], ['BKN', 'Brooklyn Nets'],
+  ['CHA', 'Charlotte Hornets'], ['CHI', 'Chicago Bulls'], ['CLE', 'Cleveland Cavaliers'],
+  ['DAL', 'Dallas Mavericks'], ['DEN', 'Denver Nuggets'], ['DET', 'Detroit Pistons'],
+  ['GSW', 'Golden State Warriors'], ['HOU', 'Houston Rockets'], ['IND', 'Indiana Pacers'],
+  ['LAC', 'LA Clippers'], ['LAL', 'Los Angeles Lakers'], ['MEM', 'Memphis Grizzlies'],
+  ['MIA', 'Miami Heat'], ['MIL', 'Milwaukee Bucks'], ['MIN', 'Minnesota Timberwolves'],
+  ['NOP', 'New Orleans Pelicans'], ['NYK', 'New York Knicks'], ['OKC', 'Oklahoma City Thunder'],
+  ['ORL', 'Orlando Magic'], ['PHI', 'Philadelphia 76ers'], ['PHX', 'Phoenix Suns'],
+  ['POR', 'Portland Trail Blazers'], ['SAC', 'Sacramento Kings'], ['SAS', 'San Antonio Spurs'],
+  ['TOR', 'Toronto Raptors'], ['UTA', 'Utah Jazz'], ['WAS', 'Washington Wizards'],
+];
+
 export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleFavorite, savingFavoriteKey = '' }) {
   const savedPrefs = readPrefs();
   const [activeStat, setActiveStat] = useState(savedPrefs.activeStat || 'pts');
   const [seasonView, setSeasonView] = useState(savedPrefs.seasonView || 'current');
+  const [teamFilter, setTeamFilter] = useState(NBA_TEAMS.some(([abbr]) => abbr === savedPrefs.teamFilter) ? savedPrefs.teamFilter : 'all');
+  const [teamLoading, setTeamLoading] = useState(false);
   const [sortBy, setSortBy] = useState(savedPrefs.sortBy || 'l5');
   const [query, setQuery] = useState(savedPrefs.query || '');
   const [directoryPlayers, setDirectoryPlayers] = useState([]);
@@ -115,6 +130,44 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
   }, []);
 
   useEffect(() => {
+    if (teamFilter === 'all' || seasonView === 'previous') {
+      setTeamLoading(false);
+      return undefined;
+    }
+
+    let alive = true;
+    async function loadTeamRoster() {
+      setTeamLoading(true);
+      try {
+        const result = await getTeamRoster(teamFilter);
+        const roster = (result.players || []).filter((player) => Number(player.playerId) > 0);
+        await progressivePool(roster, 4, async (player) => {
+          if (!alive) return;
+          const data = await getPregame(player.playerId, seasonView).catch(() => null);
+          if (!alive || !data || data.error) return;
+          setState((current) => ({
+            ...current,
+            players: upsertPlayer(current.players, {
+              ...data,
+              player_name: player.name || data.player_name,
+              team_abbr: teamFilter,
+            }),
+          }));
+        });
+      } catch {
+        // Keep the preloaded player list usable if the roster provider is unavailable.
+      } finally {
+        if (alive) setTeamLoading(false);
+      }
+    }
+
+    loadTeamRoster();
+    return () => {
+      alive = false;
+    };
+  }, [seasonView, teamFilter]);
+
+  useEffect(() => {
     const cleaned = query.trim();
     if (cleaned.length < 2) {
       setDirectoryPlayers([]);
@@ -140,16 +193,19 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
   }, [query, seasonView]);
 
   useEffect(() => {
-    writePrefs({ activeStat, seasonView, sortBy, query, scoreFilter, viewMode });
-  }, [activeStat, seasonView, query, scoreFilter, sortBy, viewMode]);
+    writePrefs({ activeStat, seasonView, teamFilter, sortBy, query, scoreFilter, viewMode });
+  }, [activeStat, seasonView, teamFilter, query, scoreFilter, sortBy, viewMode]);
 
   const basePlayers = useMemo(() => {
     const cleaned = query.trim().toLowerCase();
     const merged = mergePregamePlayers(state.players, seasonView === 'current' ? state.bpPlayers : [], seasonView === 'current' ? state.schedule : []);
+    const byTeam = teamFilter === 'all'
+      ? merged
+      : merged.filter((player) => String(player.team_abbr || inferTeamFromGames(player.last5_games || []) || '').toUpperCase() === teamFilter);
     return cleaned
-      ? merged.filter((player) => player.player_name?.toLowerCase().includes(cleaned))
-      : merged;
-  }, [query, seasonView, state.bpPlayers, state.players, state.schedule]);
+      ? byTeam.filter((player) => player.player_name?.toLowerCase().includes(cleaned))
+      : byTeam;
+  }, [query, seasonView, state.bpPlayers, state.players, state.schedule, teamFilter]);
 
   const visiblePlayers = useMemo(() => {
     const filtered = filterByScoreTier(basePlayers, activeStat, scoreFilter);
@@ -210,6 +266,27 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
         >
           x
         </button>
+      </div>
+
+      <div className="team-search-row">
+        <label htmlFor="props-team-filter">Buscar por time</label>
+        <select
+          id="props-team-filter"
+          aria-label="Buscar jogadores por time"
+          value={teamFilter}
+          onChange={(event) => {
+            setTeamFilter(event.target.value);
+            setScoreFilter('all');
+          }}
+        >
+          <option value="all">Todos os times</option>
+          {NBA_TEAMS.map(([abbr, name]) => <option key={abbr} value={abbr}>{name}</option>)}
+        </select>
+        <small>
+          {teamLoading ? 'Carregando elenco...' : seasonView === 'previous'
+            ? 'Filtrando pelo time das estatísticas históricas'
+            : teamFilter === 'all' ? '30 times disponíveis' : `${basePlayers.length} jogadores encontrados`}
+        </small>
       </div>
 
       {query.trim().length >= 2 && !directoryDismissed ? (
@@ -449,6 +526,7 @@ function readPrefs() {
       scoreFilter: ['all', 'elite', 'strong', 'watch'].includes(parsed.scoreFilter) ? parsed.scoreFilter : 'all',
       viewMode: ['list', 'games'].includes(parsed.viewMode) ? parsed.viewMode : 'list',
       seasonView: parsed.seasonView === 'previous' ? 'previous' : 'current',
+      teamFilter: NBA_TEAMS.some(([abbr]) => abbr === parsed.teamFilter) ? parsed.teamFilter : 'all',
     };
   } catch {
     return {};
