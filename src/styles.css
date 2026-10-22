@@ -7975,3 +7975,49 @@ body::after {
     padding: 0 6px;
   }
 }
+
+
+.sport-sidebar .main-nav .navIcon {
+  --nav-accent: #e8edf5;
+  border-color: color-mix(in srgb, var(--nav-accent) 23%, transparent);
+  border-radius: 9px;
+  color: var(--nav-accent);
+  background: color-mix(in srgb, var(--nav-accent) 9%, rgba(255, 255, 255, .025));
+  transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease;
+}
+
+.sport-sidebar .main-nav .navIcon-home { --nav-accent: #91b4ff; }
+.sport-sidebar .main-nav .navIcon-radar { --nav-accent: #b69cff; }
+.sport-sidebar .main-nav .navIcon-nba { --nav-accent: #ff9d42; }
+.sport-sidebar .main-nav .navIcon-wnba { --nav-accent: #ff78ad; }
+.sport-sidebar .main-nav .navIcon-football { --nav-accent: #5ce3a2; }
+.sport-sidebar .main-nav .navIcon-cs2 { --nav-accent: #80b7ff; }
+.sport-sidebar .main-nav .navIcon-nfl { --nav-accent: #edc975; }
+.sport-sidebar .main-nav .navIcon-nhl { --nav-accent: #a9d3ff; }
+.sport-sidebar .main-nav .navIcon-mlb { --nav-accent: #ff777f; }
+
+.sidebar-sport-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  overflow: visible;
+}
+
+.sport-sidebar .main-nav .page-nav-btn:hover .navIcon {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--nav-accent) 50%, transparent);
+}
+
+.sport-sidebar .main-nav .page-nav-btn.active .navIcon {
+  border-color: rgba(244, 185, 66, .56);
+  background: linear-gradient(145deg, rgba(255, 202, 91, .19), rgba(244, 185, 66, .08));
+  color: var(--nav-accent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--nav-accent) 17%, transparent), inset 0 0 10px rgba(255, 255, 255, .035);
+}
+
+.sport-sidebar .main-nav .page-nav-btn.active .navIcon-nba,
+.sport-sidebar .main-nav .page-nav-btn.active .navIcon-wnba {
+  border-color: rgba(244, 185, 66, .72);
+  background: linear-gradient(145deg, #ffc64b, #e9a81d);
+  box-shadow: 0 7px 18px rgba(244, 185, 66, .18);
+}
