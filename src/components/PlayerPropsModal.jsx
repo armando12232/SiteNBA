@@ -393,8 +393,8 @@ function formatPercent(value) {
 function buildModalAverages(player, stat, games, prop) {
   const seasonAvg = numberOrNull(player?.season_avg?.[stat]);
   const projection = numberOrNull(prop?.projection);
-  const l5Avg = numberOrNull(player?.last5_avg?.[stat]) ?? averageRecent(games, stat, 5);
-  const l10Avg = numberOrNull(player?.last10_avg?.[stat]) ?? averageRecent(games, stat, 10);
+  const l5Avg = numberOrNull(player?.last5_avg?.[stat]) ?? (games.length >= 5 ? averageRecent(games, stat, 5) : null);
+  const l10Avg = numberOrNull(player?.last10_avg?.[stat]) ?? (games.length >= 10 ? averageRecent(games, stat, 10) : null);
 
   return {
     seasonLabel: seasonAvg != null ? 'Temp' : projection != null ? 'Proj' : 'Temp',
@@ -454,6 +454,19 @@ function monthIndex(value) {
 
 function sampleLabel(player) {
   const seasons = Array.isArray(player?.sample_seasons) ? player.sample_seasons.filter(Boolean) : [];
-  if (!seasons.length) return '';
-  return player?.using_previous_season ? `Amostra ${seasons.join(' + ')}` : `Temporada ${seasons[0]}`;
+  const sampleSeason = Number(player?.sample_season || seasons[0]);
+  if (!Number.isInteger(sampleSeason)) return '';
+  const formatSeason = (season) => `${season}/${String(season + 1).slice(-2)}`;
+  const count = Number(player?.sample_size);
+  const countLabel = Number.isInteger(count) ? `${count} ${count === 1 ? 'jogo' : 'jogos'}` : '';
+  if (count === 0) return `${formatSeason(sampleSeason)} · aguardando o primeiro jogo`;
+  if (player?.using_previous_season) {
+    const currentSeason = Number(player.current_season);
+    const currentLabel = Number.isInteger(currentSeason) ? ` enquanto ${formatSeason(currentSeason)} não tem jogos finalizados` : '';
+    return `${formatSeason(sampleSeason)} usada${currentLabel}${countLabel ? ` · ${countLabel}` : ''}`;
+  }
+  const incomplete = Number.isInteger(count) && count < 10
+    ? count < 5 ? ' · L5 e L10 incompletos' : ' · L10 incompleto'
+    : '';
+  return `Temporada ${formatSeason(sampleSeason)}${countLabel ? ` · ${countLabel}` : ''}${incomplete}`;
 }

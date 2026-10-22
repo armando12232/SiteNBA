@@ -23,6 +23,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
   const [sortBy, setSortBy] = useState(savedPrefs.sortBy || 'l5');
   const [query, setQuery] = useState(savedPrefs.query || '');
   const [refreshKey, setRefreshKey] = useState(0);
+  const lastLoadedAt = useRef(Date.now());
   const [scoreInfoOpen, setScoreInfoOpen] = useState(false);
   const [scoreFilter, setScoreFilter] = useState(savedPrefs.scoreFilter || 'all');
   const [viewMode, setViewMode] = useState(savedPrefs.viewMode || 'list');
@@ -40,7 +41,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
     let alive = true;
 
     async function load() {
-      setState({ loading: true, error: null, players: [], loadedCount: 0, bpPlayers: [], bpDate: null, schedule: [] });
+      setState((current) => ({ ...current, loading: true, error: null, loadedCount: 0 }));
       try {
         getSchedule()
           .then(async (scheduleData) => {
@@ -78,6 +79,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
         });
 
         if (alive) {
+          lastLoadedAt.current = Date.now();
           setState((current) => ({ ...current, loading: false }));
         }
       } catch (error) {
@@ -90,6 +92,16 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
       alive = false;
     };
   }, [refreshKey]);
+
+  useEffect(() => {
+    function refreshWhenVisible() {
+      if (document.visibilityState !== 'visible' || Date.now() - lastLoadedAt.current < 5 * 60 * 1000) return;
+      clearPregameCache();
+      setRefreshKey((value) => value + 1);
+    }
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => document.removeEventListener('visibilitychange', refreshWhenVisible);
+  }, []);
 
   useEffect(() => {
     writePrefs({ activeStat, sortBy, query, scoreFilter, viewMode });
@@ -754,6 +766,7 @@ function PregameRow({ player, activeStat, favorites, onSelectPlayer, onToggleFav
               {teamAbbr ? `${teamAbbr} / ` : ''}{statLabels[stat]} / <span>{marketLine ? 'O' : 'Ref.'} {line ?? '-'}</span>
               {edge != null ? <em className={edge >= 0 ? 'edge-up' : 'edge-down'}>{marketLine ? (edge >= 0 ? ' up' : ' down') : (edge >= 0 ? ' acima' : ' abaixo')}</em> : null}
             </div>
+            {seasonSampleNote(player) ? <div className="props-player-sample">{seasonSampleNote(player)}</div> : null}
           </div>
         </button>
         <FavoriteButton active={isFavorite} disabled={savingFavoriteKey === key} onToggle={() => onToggleFavorite?.(player)} playerName={player.player_name} />
@@ -774,6 +787,22 @@ function PregameRow({ player, activeStat, favorites, onSelectPlayer, onToggleFav
       </div>
     </div>
   );
+}
+
+function seasonSampleNote(player) {
+  const sampleSeason = Number(player?.sample_season);
+  const count = Number(player?.sample_size);
+  if (!Number.isInteger(sampleSeason) || !Number.isInteger(count)) return '';
+  const formatSeason = (season) => `${season}/${String(season + 1).slice(-2)}`;
+  if (count === 0) return `${formatSeason(sampleSeason)} · aguardando o primeiro jogo`;
+  if (player.using_previous_season && Number.isInteger(Number(player.current_season))) {
+    return `${formatSeason(sampleSeason)} · ${count} jogos; ${formatSeason(Number(player.current_season))} sem jogos`;
+  }
+  if (count < 10) {
+    const windowNote = count < 5 ? 'L5/L10 incompletos' : 'L10 incompleto';
+    return `${formatSeason(sampleSeason)} · ${count} ${count === 1 ? 'jogo' : 'jogos'}; ${windowNote}`;
+  }
+  return '';
 }
 
 function inferTeamFromGames(games) {
