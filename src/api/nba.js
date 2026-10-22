@@ -22,6 +22,10 @@ export function getTeamLast(abbr) {
   return fetchJson(`/api/nba?type=team_last&abbr=${encodeURIComponent(abbr)}`);
 }
 
+export function getTeamRoster(abbr) {
+  return fetchJson(`/api/nba?type=roster&abbr=${encodeURIComponent(abbr)}`);
+}
+
 export function getBoxscore(gameId) {
   return fetchJson(`/api/nba?type=boxscore&gameId=${encodeURIComponent(gameId)}`, { auth: true });
 }
