@@ -47,8 +47,8 @@ export default async function handler(req, res) {
     if (type === 'scoreboard') return res.status(200).json({ games: (await scoreboard()).filter((game) => game.status === 2) });
     if (type === 'schedule') return res.status(200).json({ games: await schedule() });
     if (type === 'boxscore') return res.status(200).json({ players: await boxscore(requiredId(req.query?.gameId, 'gameId')) });
-    if (type === 'season_avg') return res.status(200).json({ avg: averages((await gameLog(requiredPlayerId(req.query?.playerId))).rows) });
-    if (type === 'pregame') return res.status(200).json(await pregame(requiredPlayerId(req.query?.playerId)));
+    if (type === 'season_avg') return res.status(200).json({ avg: averages((await gameLog(requiredPlayerId(req.query?.playerId), requestedSeason(req.query?.season))).rows) });
+    if (type === 'pregame') return res.status(200).json(await pregame(requiredPlayerId(req.query?.playerId), requestedSeason(req.query?.season)));
     if (type === 'pregame_by_name') {
       const name = String(req.query?.name || '').trim();
       if (!name || name.length > 60) return res.status(400).json({ error: 'invalid name' });
@@ -156,10 +156,9 @@ async function defenseRanking(abbreviation, position = 'G', stat = 'pts') {
     favorable: rank <= 10, scope: 'team_overall', season, source: 'espn' };
 }
 
-async function gameLog(playerId) {
+async function gameLog(playerId, season = nbaSeason()) {
   const player = PLAYERS[String(playerId)];
   if (!player) throw Object.assign(new Error('player not found'), { status: 404 });
-  const season = nbaSeason();
   const data = await fetchJson(`${COMMON}/athletes/${player.espn_id}/gamelog?season=${season}`);
   return { rows: parseGameLog(data), season };
 }
@@ -198,8 +197,15 @@ function nbaSeason(date = new Date()) {
   return date.getUTCFullYear() + (date.getUTCMonth() >= 9 ? 1 : 0);
 }
 
-async function pregame(playerId) {
-  const { rows, season } = await gameLog(playerId);
+function requestedSeason(value) {
+  const current = nbaSeason();
+  if (value == null || value === '' || value === 'current') return current;
+  if (value === 'previous') return current - 1;
+  throw Object.assign(new Error('invalid season'), { status: 400 });
+}
+
+async function pregame(playerId, season = nbaSeason()) {
+  const { rows } = await gameLog(playerId, season);
   const seasonAvg = averages(rows);
   const last5 = rows.slice(0, 5);
   const last10 = rows.slice(0, 10);
@@ -215,11 +221,11 @@ async function pregame(playerId) {
   const pts = props.pts || {};
   const currentSeason = nbaSeason();
   return { player_id: playerId, player_name: PLAYERS[String(playerId)].name, team_abbr: String(rows[0]?.MATCHUP || '').split(' ')[0], source: 'espn',
-    current_season: currentSeason, sample_season: season, sample_seasons: [String(season)], using_previous_season: false, sample_size: rows.length,
+    current_season: currentSeason, sample_season: season, sample_seasons: [String(season)], using_previous_season: season < currentSeason, sample_size: rows.length,
     season_avg: seasonAvg, props, last5_avg: last5.length === 5 ? averages(last5) : nullAverages(), last10_avg: last10.length === 10 ? averages(last10) : nullAverages(), synthetic_lines: Object.fromEntries(Object.entries(props).map(([key, value]) => [key, value.line])),
     hit_rates: { pts_last10: pts.hit_rate ?? null }, edge_points: pts.edge ?? null, minsL5: last5.length === 5 ? round(mean(last5.map((row) => row.MIN))) : null,
     last5_games: rows.slice(0, 20).map((row) => ({ opp: row.MATCHUP, date: row.GAME_DATE, pts: row.PTS, reb: row.REB, ast: row.AST, fg3m: row.FG3M,
-      season_type: row._SEASON_TYPE, hit: Number.isFinite(pts.line) ? row.PTS >= pts.line : null })), summary: rows.length ? `L5 ${pts.l5 ?? '—'}%` : 'Sem jogos na temporada atual' };
+      season_type: row._SEASON_TYPE, hit: Number.isFinite(pts.line) ? row.PTS >= pts.line : null })), summary: rows.length ? `L5 ${pts.l5 ?? '—'}%` : (season < currentSeason ? 'Sem jogos na temporada anterior' : 'Sem jogos na temporada atual') };
 }
 
 async function boxscore(gameId) {

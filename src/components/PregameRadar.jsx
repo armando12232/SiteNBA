@@ -21,6 +21,7 @@ const PREFS_KEY = 'statcast:nba:pregame:prefs:v1';
 export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleFavorite, savingFavoriteKey = '' }) {
   const savedPrefs = readPrefs();
   const [activeStat, setActiveStat] = useState(savedPrefs.activeStat || 'pts');
+  const [seasonView, setSeasonView] = useState(savedPrefs.seasonView || 'current');
   const [sortBy, setSortBy] = useState(savedPrefs.sortBy || 'l5');
   const [query, setQuery] = useState(savedPrefs.query || '');
   const [directoryPlayers, setDirectoryPlayers] = useState([]);
@@ -31,7 +32,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
   const lastLoadedAt = useRef(Date.now());
   const [scoreInfoOpen, setScoreInfoOpen] = useState(false);
   const [scoreFilter, setScoreFilter] = useState(savedPrefs.scoreFilter || 'all');
-  const [viewMode, setViewMode] = useState(savedPrefs.viewMode || 'list');
+  const [viewMode, setViewMode] = useState(savedPrefs.seasonView === 'previous' ? 'list' : savedPrefs.viewMode || 'list');
   const [state, setState] = useState({
     loading: true,
     error: null,
@@ -46,27 +47,32 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
     let alive = true;
 
     async function load() {
-      setState((current) => ({ ...current, loading: true, error: null, loadedCount: 0 }));
+      setState((current) => ({ ...current, loading: true, error: null, loadedCount: 0, players: [],
+        bpPlayers: seasonView === 'current' ? current.bpPlayers : [],
+        bpDate: seasonView === 'current' ? current.bpDate : null,
+        schedule: seasonView === 'current' ? current.schedule : [] }));
       try {
-        getSchedule()
-          .then(async (scheduleData) => {
-            if (!alive) return;
-            const games = scheduleData.games || [];
-            const dates = scheduleDates(games);
-            const bpData = await getBettingProsForDates(dates);
-            if (!alive) return;
-            setState((current) => ({
-              ...current,
-              bpPlayers: bpData.players || [],
-              bpDate: bpData.date || dates[0] || null,
-              schedule: games,
-            }));
-          })
-          .catch(() => {});
+        if (seasonView === 'current') {
+          getSchedule()
+            .then(async (scheduleData) => {
+              if (!alive) return;
+              const games = scheduleData.games || [];
+              const dates = scheduleDates(games);
+              const bpData = await getBettingProsForDates(dates);
+              if (!alive) return;
+              setState((current) => ({
+                ...current,
+                bpPlayers: bpData.players || [],
+                bpDate: bpData.date || dates[0] || null,
+                schedule: games,
+              }));
+            })
+            .catch(() => {});
+        }
 
         await progressivePool(PREGAME_PLAYERS, 4, async (player) => {
           if (!alive) return;
-          const data = await getPregame(player.id).catch(() => null);
+          const data = await getPregame(player.id, seasonView).catch(() => null);
           if (!alive) return;
           setState((current) => {
             const nextPlayers = data && !data.error
@@ -96,7 +102,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
     return () => {
       alive = false;
     };
-  }, [refreshKey]);
+  }, [refreshKey, seasonView]);
 
   useEffect(() => {
     function refreshWhenVisible() {
@@ -131,19 +137,19 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
       alive = false;
       clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, seasonView]);
 
   useEffect(() => {
-    writePrefs({ activeStat, sortBy, query, scoreFilter, viewMode });
-  }, [activeStat, query, scoreFilter, sortBy, viewMode]);
+    writePrefs({ activeStat, seasonView, sortBy, query, scoreFilter, viewMode });
+  }, [activeStat, seasonView, query, scoreFilter, sortBy, viewMode]);
 
   const basePlayers = useMemo(() => {
     const cleaned = query.trim().toLowerCase();
-    const merged = mergePregamePlayers(state.players, state.bpPlayers, state.schedule);
+    const merged = mergePregamePlayers(state.players, seasonView === 'current' ? state.bpPlayers : [], seasonView === 'current' ? state.schedule : []);
     return cleaned
       ? merged.filter((player) => player.player_name?.toLowerCase().includes(cleaned))
       : merged;
-  }, [query, state.bpPlayers, state.players, state.schedule]);
+  }, [query, seasonView, state.bpPlayers, state.players, state.schedule]);
 
   const visiblePlayers = useMemo(() => {
     const filtered = filterByScoreTier(basePlayers, activeStat, scoreFilter);
@@ -160,7 +166,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
   const scoreBoard = useMemo(() => buildScoreBoard(basePlayers, activeStat), [basePlayers, activeStat]);
   const topEdge = visiblePlayers[0]?.props?.[activeStat]?.edge;
   const avgHit = averageHitRate(visiblePlayers, activeStat);
-  const bpCount = state.bpPlayers?.length || 0;
+  const bpCount = seasonView === 'current' ? (state.bpPlayers?.length || 0) : 0;
   const previewRows = access?.previewRows > 0 && basePlayers.length > visiblePlayers.length
     ? buildLockedPreviewRows(access.previewRows)
     : [];
@@ -219,7 +225,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
               onClick={async () => {
                 setSelectedDirectoryId(player.id);
                 setDirectoryDismissed(true);
-                const data = await getPregame(player.id).catch(() => null);
+                const data = await getPregame(player.id, seasonView).catch(() => null);
                 if (!data || data.error) {
                   setDirectoryDismissed(false);
                   return;
@@ -239,6 +245,28 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
           {!directoryLoading && !directoryPlayers.length ? <div className="player-search-status">Nenhum jogador encontrado no catálogo.</div> : null}
         </div>
       ) : null}
+
+      <div className="season-selector" role="group" aria-label="Temporada das estatísticas">
+        <span>Temporada</span>
+        {[
+          ['current', `${nbaSeasonLabel(0)} · Atual`],
+          ['previous', `${nbaSeasonLabel(1)} · Anterior`],
+        ].map(([value, label]) => (
+          <button type="button" key={value} className={`season-option ${seasonView === value ? 'active' : ''}`}
+            aria-pressed={seasonView === value}
+            onClick={() => {
+              if (seasonView === value) return;
+              setSeasonView(value);
+              setScoreFilter('all');
+              setDirectoryDismissed(false);
+              setDirectoryPlayers([]);
+              if (value === 'previous') setViewMode('list');
+            }}>
+            {label}
+          </button>
+        ))}
+        <small>{seasonView === 'previous' ? 'Dados históricos sem linhas atuais' : 'Dados da temporada em andamento'}</small>
+      </div>
 
       <div className="filter-row">
         {Object.entries(statLabels).map(([stat, label]) => (
@@ -299,13 +327,15 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
         >
           Lista geral
         </button>
-        <button
-          type="button"
-          className={`view-mode-btn premium ${viewMode === 'games' ? 'active' : ''}`}
-          onClick={() => setViewMode('games')}
-        >
-          {bpCount ? 'Melhores Props' : 'Props por confronto'} {bpCount ? <small>{propsDayLabel}</small> : null}<span>Premium</span>
-        </button>
+        {seasonView === 'current' ? (
+          <button
+            type="button"
+            className={`view-mode-btn premium ${viewMode === 'games' ? 'active' : ''}`}
+            onClick={() => setViewMode('games')}
+          >
+            {bpCount ? 'Melhores Props' : 'Props por confronto'} {bpCount ? <small>{propsDayLabel}</small> : null}<span>Premium</span>
+          </button>
+        ) : null}
       </div>
 
       <StatCastBoard
@@ -395,6 +425,11 @@ async function progressivePool(items, limit, worker) {
   await Promise.all(runners);
 }
 
+function nbaSeasonLabel(previousOffset = 0) {
+  const current = new Date().getUTCFullYear() + (new Date().getUTCMonth() >= 9 ? 1 : 0) - previousOffset;
+  return `${current - 1}/${String(current).slice(-2)}`;
+}
+
 function upsertPlayer(players, player) {
   const index = players.findIndex((row) => row.player_id === player.player_id);
   if (index === -1) return [...players, player];
@@ -413,6 +448,7 @@ function readPrefs() {
       query: typeof parsed.query === 'string' && parsed.query.length <= 50 ? parsed.query : '',
       scoreFilter: ['all', 'elite', 'strong', 'watch'].includes(parsed.scoreFilter) ? parsed.scoreFilter : 'all',
       viewMode: ['list', 'games'].includes(parsed.viewMode) ? parsed.viewMode : 'list',
+      seasonView: parsed.seasonView === 'previous' ? 'previous' : 'current',
     };
   } catch {
     return {};

@@ -26,10 +26,11 @@ export function getBoxscore(gameId) {
   return fetchJson(`/api/nba?type=boxscore&gameId=${encodeURIComponent(gameId)}`, { auth: true });
 }
 
-export function getPregame(playerId) {
-  const storageKey = getPregameStorageKey(playerId);
+export function getPregame(playerId, season = 'current') {
+  const seasonView = season === 'previous' ? 'previous' : 'current';
+  const storageKey = getPregameStorageKey(playerId, seasonView);
   return cachedFetch(storageKey, PREGAME_TTL_MS, () => (
-    fetchJson(`/api/nba?type=pregame&playerId=${encodeURIComponent(playerId)}`)
+    fetchJson(`/api/nba?type=pregame&playerId=${encodeURIComponent(playerId)}&season=${seasonView}`)
   ));
 }
 
@@ -64,6 +65,7 @@ export function getPregameNameStorageKey(name) {
   return `${PREGAME_NAME_STORAGE_PREFIX}${normalizePregameName(name)}`;
 }
 
-export function getPregameStorageKey(playerId) {
-  return `${PREGAME_STORAGE_PREFIX}${String(playerId)}`;
+export function getPregameStorageKey(playerId, season = 'current') {
+  const seasonPrefix = season === 'previous' ? 'previous:' : '';
+  return `${PREGAME_STORAGE_PREFIX}${seasonPrefix}${String(playerId)}`;
 }

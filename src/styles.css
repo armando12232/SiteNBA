@@ -7570,3 +7570,61 @@ body::after {
   .liveMatchTabs { padding: 0 16px; }
   .liveGameModal .liveModalBody { padding: 12px; }
 }
+
+
+.season-selector {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 12px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg2);
+}
+
+.season-selector > span {
+  margin-right: 2px;
+  color: var(--text3);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.season-option {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text2);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.season-option:hover {
+  border-color: rgba(0, 255, 136, .45);
+  color: var(--text);
+}
+
+.season-option.active {
+  border-color: rgba(0, 255, 136, .55);
+  color: var(--green, #00e887);
+  background: rgba(0, 255, 136, .09);
+}
+
+.season-selector > small {
+  margin-left: auto;
+  color: var(--text3);
+  font-size: 10px;
+}
+
+@media (max-width: 600px) {
+  .season-selector > small {
+    flex-basis: 100%;
+    margin: 2px 0 0;
+  }
+}
