@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { PregameRadar } from './components/PregameRadar.jsx';
 import { SubscriptionWidget } from './components/SubscriptionWidget.jsx';
-import { SportIcon } from './components/SportIcon.jsx';
+import { SidebarIcon, SportIcon } from './components/SportIcon.jsx';
 import { PageBoundary } from './components/PageBoundary.jsx';
 import { getPlanAccess } from './api/subscriptions.js';
 import { requiredPageFeature } from './utils/navigation.js';
@@ -125,7 +125,7 @@ export default function App() {
                 aria-pressed={page === item}
                 onClick={() => navigate(item)}
               >
-                <span className="navIcon"><SportIcon name={navIcon(item)} /></span>
+                <span className={`navIcon navIcon-${item}`}><SidebarIcon name={item} /></span>
                 <span className="navLabel">{navLabel(item)}</span>
               </button>
             ))}
@@ -275,20 +275,6 @@ function navLabel(page) {
     nhl: 'NHL',
     mlb: 'MLB',
     football: 'Futebol',
-  }[page];
-}
-
-function navIcon(page) {
-  return {
-    wnba: 'basketball',
-    cs2: 'gamepad',
-    home: 'home',
-    radar: 'star',
-    nba: 'basketball',
-    nfl: 'americanFootball',
-    nhl: 'hockey',
-    mlb: 'baseball',
-    football: 'soccer',
   }[page];
 }
 

@@ -69,3 +69,78 @@ export function SportIcon({ name }) {
   );
 }
 
+
+
+export function SidebarIcon({ name }) {
+  const icons = {
+    home: (
+      <>
+        <path d="m3.2 10.6 8.8-7 8.8 7v9.8a1.3 1.3 0 0 1-1.3 1.3H4.5a1.3 1.3 0 0 1-1.3-1.3z" fill="currentColor" />
+        <path d="M9.3 21v-7.2h5.4V21" fill="none" stroke="#10151b" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      </>
+    ),
+    radar: (
+      <>
+        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.7" />
+        <circle cx="12" cy="12" r="5.6" fill="none" stroke="currentColor" strokeWidth="1.3" opacity=".65" />
+        <path d="M12 12 18.4 5.7A9 9 0 0 1 21 12z" fill="currentColor" opacity=".38" />
+        <circle cx="12" cy="12" r="1.7" fill="currentColor" />
+      </>
+    ),
+    nba: (
+      <>
+        <circle cx="12" cy="12" r="9" fill="currentColor" />
+        <path d="M3.4 10.2c4.8.2 8.8 4.2 9.8 10.2M20.6 13.8c-4.8-.2-8.8-4.2-9.8-10.2M12 3v18M3 12h18" fill="none" stroke="#20160c" strokeWidth="1.25" strokeLinecap="round" />
+      </>
+    ),
+    wnba: (
+      <>
+        <circle cx="12" cy="12" r="9" fill="currentColor" />
+        <path d="M3.4 10.2c4.8.2 8.8 4.2 9.8 10.2M20.6 13.8c-4.8-.2-8.8-4.2-9.8-10.2M12 3v18M3 12h18" fill="none" stroke="#24121a" strokeWidth="1.25" strokeLinecap="round" />
+        <path d="m17.7 2 .7 1.6 1.7.2-1.2 1.1.3 1.7-1.5-.8-1.5.8.3-1.7-1.2-1.1 1.7-.2z" fill="#fff0f5" />
+      </>
+    ),
+    football: (
+      <>
+        <circle cx="12" cy="12" r="9" fill="currentColor" opacity=".26" />
+        <path d="m12 6.8 3.7 2.7-1.4 4.4h-4.6l-1.4-4.4z" fill="currentColor" />
+        <path d="m12 6.8 0-3.6M8.3 9.5 5 8.2M8.3 13.9l-2.2 3.2M14.3 13.9l2.2 3.2M15.7 9.5 19 8.2M12 17.2v3.6" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+      </>
+    ),
+    cs2: (
+      <>
+        <path d="M7.5 6.2h9c3.5 0 5.7 2.8 5 6.2l-.8 4c-.4 2.2-3.1 3-4.6 1.4l-2-2h-4.2l-2 2c-1.5 1.6-4.2.8-4.6-1.4l-.8-4c-.7-3.4 1.5-6.2 5-6.2Z" fill="currentColor" />
+        <path d="M7 10v4M5 12h4" stroke="#111823" strokeWidth="1.7" strokeLinecap="round" />
+        <circle cx="16.5" cy="10.8" r="1" fill="#111823" />
+        <circle cx="18.5" cy="13.2" r="1" fill="#111823" />
+      </>
+    ),
+    nfl: (
+      <>
+        <path d="M4.3 16.8C2.1 14.6 3.8 9.4 7.8 5.4s9.2-5.7 11.4-3.5 0 7.4-4 11.4-8.7 5.7-10.9 3.5Z" fill="currentColor" />
+        <path d="m7.1 16.4 9.8-9.8M9.1 10.4l4.5 4.5M11.6 7.9l4.5 4.5" fill="none" stroke="#17140d" strokeWidth="1.35" strokeLinecap="round" />
+      </>
+    ),
+    nhl: (
+      <>
+        <path d="m7 3 2.8 1.1-3.1 10.5c-.4 1.3.6 2.5 2 2.5h8.2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M16.3 15.8h4.3v3.4h-4.3z" fill="currentColor" />
+        <path d="M3 20.7h10.3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="5.5" cy="20.7" r="1.2" fill="currentColor" />
+      </>
+    ),
+    mlb: (
+      <>
+        <path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z" fill="currentColor" opacity=".18" />
+        <path d="M7 4.5c2.1 2 2.8 4.4 2.2 7-.6 2.7-2.2 4.7-4.8 6M17 19.5c-2.1-2-2.8-4.4-2.2-7 .6-2.7 2.2-4.7 4.8-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        <path d="m6.3 8.1 2 .7M5.5 10.9l2 .7M17.7 15.9l-2-.7M18.5 13.1l-2-.7" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+      </>
+    ),
+  };
+
+  return (
+    <svg className="sidebar-sport-icon" viewBox="0 0 24 24" aria-hidden="true">
+      {icons[name] || icons.nba}
+    </svg>
+  );
+}
