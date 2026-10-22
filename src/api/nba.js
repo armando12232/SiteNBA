@@ -38,13 +38,13 @@ export function getPregame(playerId, season = 'current') {
   ));
 }
 
-export function getPregameByName(name) {
-  const storageKey = getPregameNameStorageKey(name);
-  return cachedFetch(storageKey, PREGAME_TTL_MS, () => fetchJson(`/api/nba?type=pregame_by_name&name=${encodeURIComponent(name)}`, { auth: true })
+export function getPregameByName(name, season = 'current') {
+  const seasonView = season === 'previous' ? 'previous' : 'current';
+  const storageKey = getPregameNameStorageKey(name, seasonView);
+  return cachedFetch(storageKey, PREGAME_TTL_MS, () => fetchJson(`/api/nba?type=pregame_by_name&name=${encodeURIComponent(name)}&season=${seasonView}`, { auth: true })
     .then((data) => {
       if (data?.player_id) {
-        const playerKey = String(data.player_id);
-        writeStored(`${PREGAME_STORAGE_PREFIX}${playerKey}`, data);
+        writeStored(getPregameStorageKey(data.player_id, seasonView), data);
       }
       return data;
     }));
@@ -65,8 +65,9 @@ export function normalizePregameName(name) {
   return String(name || '').trim().toLowerCase();
 }
 
-export function getPregameNameStorageKey(name) {
-  return `${PREGAME_NAME_STORAGE_PREFIX}${normalizePregameName(name)}`;
+export function getPregameNameStorageKey(name, season = 'current') {
+  const seasonPrefix = season === 'previous' ? 'previous:' : '';
+  return `${PREGAME_NAME_STORAGE_PREFIX}${seasonPrefix}${normalizePregameName(name)}`;
 }
 
 export function getPregameStorageKey(playerId, season = 'current') {
