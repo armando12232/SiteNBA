@@ -785,7 +785,10 @@ function seasonSampleNote(player) {
   if (player.using_previous_season && Number.isInteger(Number(player.current_season))) {
     return `${formatSeason(sampleSeason)} · ${count} jogos; ${formatSeason(Number(player.current_season))} sem jogos`;
   }
-  if (count < 10) return `${formatSeason(sampleSeason)} · ${count} ${count === 1 ? 'jogo' : 'jogos'}; L5/L10 incompletos`;
+  if (count < 10) {
+    const windowNote = count < 5 ? 'L5/L10 incompletos' : 'L10 incompleto';
+    return `${formatSeason(sampleSeason)} · ${count} ${count === 1 ? 'jogo' : 'jogos'}; ${windowNote}`;
+  }
   return '';
 }
 
