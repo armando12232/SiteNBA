@@ -10,6 +10,10 @@ export function getScoreboard() {
   return fetchJson('/api/nba?type=scoreboard');
 }
 
+export function searchNbaPlayers(query) {
+  return fetchJson(`/api/nba?type=player_search&query=${encodeURIComponent(query)}`);
+}
+
 export function getSchedule() {
   return fetchJson('/api/nba?type=schedule');
 }
