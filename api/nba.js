@@ -111,13 +111,9 @@ async function roster(abbreviation) {
 
 async function teamLast(abbreviation) {
   const team = await teamInfo(abbreviation);
-  const year = new Date().getUTCFullYear();
-  let games = [];
-  for (const season of [year + (new Date().getUTCMonth() >= 9 ? 1 : 0), year]) {
-    const data = await fetchJson(`${BASE}/teams/${team.id}/schedule?season=${season}`);
-    games = (data.events || []).map(eventGame).filter((game) => game.status === 3).sort((a, b) => b.gameTimeUTC.localeCompare(a.gameTimeUTC));
-    if (games.length) break;
-  }
+  const season = nbaSeason();
+  const data = await fetchJson(`${BASE}/teams/${team.id}/schedule?season=${season}`);
+  const games = (data.events || []).map(eventGame).filter((game) => game.status === 3).sort((a, b) => b.gameTimeUTC.localeCompare(a.gameTimeUTC));
   const clean = games.slice(0, 5).map((game) => {
     const home = game.homeTeam.abbr === abbreviation;
     const own = home ? game.homeTeam : game.awayTeam;
@@ -129,17 +125,12 @@ async function teamLast(abbreviation) {
 }
 
 async function defenseRanking(abbreviation, position = 'G', stat = 'pts') {
-  const now = new Date();
-  let season = now.getUTCFullYear() + (now.getUTCMonth() >= 9 ? 1 : 0);
-  let entries = [];
-  for (const candidate of [season, season - 1]) {
-    const data = await fetchJson(`https://site.api.espn.com/apis/v2/sports/basketball/nba/standings?season=${candidate}`, 3_600_000);
-    entries = (data.children || []).flatMap((conference) => conference.standings?.entries || []).map((entry) => {
-      const allowed = entry.stats?.find((item) => item.name === 'avgPointsAgainst')?.value;
-      return { abbr: teamAbbr(entry.team || {}), value: Number(allowed) };
-    }).filter((entry) => Number.isFinite(entry.value) && entry.value > 0);
-    if (entries.length) { season = candidate; break; }
-  }
+  const season = nbaSeason();
+  const data = await fetchJson(`https://site.api.espn.com/apis/v2/sports/basketball/nba/standings?season=${season}`, 3_600_000);
+  const entries = (data.children || []).flatMap((conference) => conference.standings?.entries || []).map((entry) => {
+    const allowed = entry.stats?.find((item) => item.name === 'avgPointsAgainst')?.value;
+    return { abbr: teamAbbr(entry.team || {}), value: Number(allowed) };
+  }).filter((entry) => Number.isFinite(entry.value) && entry.value > 0);
   if (!entries.length) throw Object.assign(new Error('defensive statistics unavailable'), { status: 404 });
   entries.sort((a, b) => b.value - a.value);
   const index = entries.findIndex((entry) => entry.abbr === abbreviation);
@@ -153,13 +144,9 @@ async function defenseRanking(abbreviation, position = 'G', stat = 'pts') {
 async function gameLog(playerId) {
   const player = PLAYERS[String(playerId)];
   if (!player) throw Object.assign(new Error('player not found'), { status: 404 });
-  const currentSeason = nbaSeason();
-  for (const season of [currentSeason, currentSeason - 1]) {
-    const data = await fetchJson(`${COMMON}/athletes/${player.espn_id}/gamelog?season=${season}`);
-    const rows = parseGameLog(data);
-    if (rows.length) return { rows, season };
-  }
-  throw Object.assign(new Error('player statistics unavailable'), { status: 404 });
+  const season = nbaSeason();
+  const data = await fetchJson(`${COMMON}/athletes/${player.espn_id}/gamelog?season=${season}`);
+  return { rows: parseGameLog(data), season };
 }
 
 function parseGameLog(data) {
@@ -184,6 +171,7 @@ function parseGameLog(data) {
 }
 
 function averages(rows) {
+  if (!rows.length) return nullAverages();
   return Object.fromEntries([['pts', 'PTS'], ['reb', 'REB'], ['ast', 'AST'], ['fg3m', 'FG3M']].map(([label, key]) => [label, round(mean(rows.map((row) => row[key])))]));
 }
 
@@ -203,7 +191,7 @@ async function pregame(playerId) {
   const props = {};
   for (const [label, key] of [['pts', 'PTS'], ['reb', 'REB'], ['ast', 'AST'], ['fg3m', 'FG3M']]) {
     const avg = seasonAvg[label];
-    if (avg < 1.5) continue;
+    if (avg == null || avg < 1.5) continue;
     const line = Math.floor(avg) + 0.5;
     const l5 = hitRate(last5, key, line, 5);
     const l10 = hitRate(last10, key, line, 10);
@@ -211,13 +199,12 @@ async function pregame(playerId) {
   }
   const pts = props.pts || {};
   const currentSeason = nbaSeason();
-  const usingPreviousSeason = season < currentSeason;
   return { player_id: playerId, player_name: PLAYERS[String(playerId)].name, team_abbr: String(rows[0]?.MATCHUP || '').split(' ')[0], source: 'espn',
-    current_season: currentSeason, sample_season: season, sample_seasons: [String(season)], using_previous_season: usingPreviousSeason, sample_size: rows.length,
+    current_season: currentSeason, sample_season: season, sample_seasons: [String(season)], using_previous_season: false, sample_size: rows.length,
     season_avg: seasonAvg, props, last5_avg: last5.length === 5 ? averages(last5) : nullAverages(), last10_avg: last10.length === 10 ? averages(last10) : nullAverages(), synthetic_lines: Object.fromEntries(Object.entries(props).map(([key, value]) => [key, value.line])),
     hit_rates: { pts_last10: pts.hit_rate ?? null }, edge_points: pts.edge ?? null, minsL5: last5.length === 5 ? round(mean(last5.map((row) => row.MIN))) : null,
     last5_games: rows.slice(0, 20).map((row) => ({ opp: row.MATCHUP, date: row.GAME_DATE, pts: row.PTS, reb: row.REB, ast: row.AST, fg3m: row.FG3M,
-      season_type: row._SEASON_TYPE, hit: Number.isFinite(pts.line) ? row.PTS >= pts.line : null })), summary: `L5 ${pts.l5 ?? '—'}%` };
+      season_type: row._SEASON_TYPE, hit: Number.isFinite(pts.line) ? row.PTS >= pts.line : null })), summary: rows.length ? `L5 ${pts.l5 ?? '—'}%` : 'Sem jogos na temporada atual' };
 }
 
 async function boxscore(gameId) {
