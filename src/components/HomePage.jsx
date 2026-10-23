@@ -82,4 +82,3 @@ function HomeStat({ label, value }) {
     </div>
   );
 }
-
