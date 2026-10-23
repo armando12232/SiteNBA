@@ -28,11 +28,12 @@ export function HomePage({ onNavigate }) {
       <div className="homeHero panel">
         <div>
           <div className="eyebrow visible">StatCast BR</div>
-          <h1>Central de Dados</h1>
-          <p>Escolha um módulo para acompanhar props, placares, lesões e jogos ao vivo em um painel único.</p>
+          <h1>O jogo visto pelos dados</h1>
+          <p>Compare o desempenho recente, acompanhe os placares e encontre o contexto de cada partida.</p>
+          <button className="homeHeroAction" type="button" onClick={() => onNavigate('nba')}>Abrir NBA Player Props <SportIcon name="chart" /></button>
         </div>
         <div className="homeStatusGrid">
-          <HomeStat label="Jogadores no radar NBA" value={PREGAME_PLAYERS.length} />
+          <HomeStat label="Jogadores NBA no radar" value={PREGAME_PLAYERS.length} />
           <HomeStat label="Módulos" value={MODULES.length} />
           <HomeStat label="Esportes" value="7" />
         </div>

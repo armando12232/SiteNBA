@@ -1,0 +1,579 @@
+/* StatCast sports desk: shared hierarchy and calmer match-first surfaces */
+:root {
+  --surface-raised: #1b2226;
+  --surface-score: #242d32;
+  --focus-ring: #ffd166;
+}
+
+body {
+  background:
+    radial-gradient(ellipse at 12% 0%, rgba(253, 185, 39, .045), transparent 34%),
+    linear-gradient(180deg, #11171a 0%, var(--bg) 40rem);
+  color: var(--text);
+}
+
+body::after {
+  background: linear-gradient(180deg, rgba(255,255,255,.012), transparent 32%, rgba(0,0,0,.12));
+  opacity: .5;
+}
+
+.field-bg,
+.field-bg-football,
+.field-bg-cs2 {
+  opacity: .28;
+  background:
+    radial-gradient(ellipse at 16% 12%, rgba(253,185,39,.045), transparent 34%),
+    radial-gradient(ellipse at 88% 72%, rgba(99,198,221,.03), transparent 33%);
+}
+
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline-color: var(--focus-ring) !important;
+  outline-offset: 3px;
+}
+
+.header {
+  height: 68px;
+  background: rgba(16,20,23,.94);
+  box-shadow: 0 1px 0 rgba(255,255,255,.025), 0 8px 28px rgba(0,0,0,.18);
+}
+
+.brandMark {
+  border-radius: 9px;
+  box-shadow: none;
+}
+
+.logo-text {
+  letter-spacing: .02em;
+}
+
+.live-pill {
+  border-color: rgba(39,194,129,.2);
+  background: rgba(39,194,129,.08);
+  color: #5dd8a2;
+  letter-spacing: .035em;
+}
+
+.app-shell {
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 26px;
+  width: min(100%, 1480px);
+  padding: 24px clamp(18px, 2.5vw, 36px) 80px;
+}
+
+.sport-sidebar {
+  top: 88px;
+}
+
+.sport-sidebar .main-nav {
+  gap: 3px;
+  border-color: rgba(221,231,235,.08);
+  border-radius: 13px;
+  padding: 6px;
+  background: rgba(23,29,33,.94);
+  box-shadow: 0 12px 36px rgba(0,0,0,.16);
+  backdrop-filter: blur(16px);
+}
+
+.sport-sidebar .page-nav-btn {
+  min-height: 40px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.sport-sidebar .page-nav-btn.active {
+  border-color: rgba(253,185,39,.3);
+  background: rgba(253,185,39,.1);
+}
+
+.sport-sidebar .main-nav .page-nav-btn.active .navIcon-nba,
+.sport-sidebar .main-nav .page-nav-btn.active .navIcon-wnba {
+  background: var(--gold);
+  box-shadow: none;
+}
+
+.main {
+  min-width: 0;
+}
+
+.panelHeader {
+  align-items: flex-end;
+  margin-bottom: 20px;
+}
+
+.panelHeader h2,
+h2 {
+  color: var(--text);
+  font-size: clamp(22px, 2.1vw, 28px);
+  letter-spacing: .015em;
+}
+
+.sectionLead.visible {
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.statusPill,
+.radarStats span,
+.refreshButton {
+  border-radius: 7px;
+  background: rgba(255,255,255,.035);
+  color: var(--text2);
+}
+
+.page-nav.nba-tabs {
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(23,29,33,.92);
+}
+
+.nba-tabs .page-nav-btn.active {
+  border-color: rgba(253,185,39,.32);
+  background: rgba(253,185,39,.12);
+  color: #ffd166;
+  box-shadow: none;
+}
+
+.filter-row,
+.subTabs,
+.period-row,
+.footballStatusFilters {
+  gap: 7px;
+}
+
+.filter-chip,
+.prop-filter-btn,
+.subTabs button,
+.period-row button,
+.footballStatusFilters button {
+  border-radius: 7px;
+  transition: color .14s ease, background .14s ease, border-color .14s ease;
+}
+
+.homeHero {
+  min-height: 248px;
+  align-items: center;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: 13px;
+  padding: clamp(24px, 4vw, 42px);
+  background: linear-gradient(110deg, rgba(253,185,39,.065), transparent 48%), var(--bg2);
+  box-shadow: none;
+}
+
+.homeHero h1 {
+  max-width: 8ch;
+  font-size: clamp(44px, 6.4vw, 68px);
+  line-height: .94;
+  letter-spacing: -.015em;
+}
+
+.homeHero p {
+  max-width: 44ch;
+  font-size: 14px;
+}
+
+.eyebrow.visible {
+  color: #ffd166;
+  letter-spacing: .08em;
+}
+
+.homeStatusGrid {
+  grid-template-columns: repeat(3, minmax(78px, 94px));
+  gap: 7px;
+}
+
+.homeStat {
+  border-radius: 9px;
+  background: rgba(16,20,23,.55);
+  text-align: left;
+}
+
+.homeStat strong {
+  color: var(--text);
+  font-size: 28px;
+}
+
+.homeStat span {
+  font-size: 9px;
+  letter-spacing: .04em;
+}
+
+.quickActions {
+  grid-template-columns: 190px minmax(0,1fr);
+  gap: 16px;
+  align-items: center;
+  border: 0;
+  border-block: 1px solid var(--border);
+  border-radius: 0;
+  padding: 14px 0;
+  background: transparent;
+}
+
+.quickActions > div:first-child span,
+.quickActions > div:first-child strong {
+  color: var(--text2);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.quickActions > div:first-child strong {
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.quickActionGrid {
+  grid-template-columns: repeat(auto-fit, minmax(118px,1fr));
+}
+
+.quickActionGrid button {
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--bg2);
+}
+
+.quickActionGrid button:hover {
+  border-color: rgba(253,185,39,.38);
+  background: var(--bg3);
+}
+
+.quickIcon {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  margin: 0 0 8px;
+  border-radius: 7px;
+  background: rgba(253,185,39,.08);
+  color: var(--gold);
+}
+
+.quickActionGrid strong {
+  font-size: 17px;
+  text-transform: none;
+}
+
+.quickActionGrid em {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.moduleGrid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 10px;
+}
+
+.moduleCard {
+  min-height: 174px;
+  border-color: var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  background: var(--bg2);
+  box-shadow: none;
+  transition: border-color .15s ease, background .15s ease;
+}
+
+.moduleCard::after {
+  display: none;
+}
+
+.moduleCard:hover {
+  border-color: rgba(253,185,39,.36);
+  background: var(--bg3);
+  box-shadow: none;
+  transform: none;
+}
+
+.moduleCard .moduleIcon {
+  width: 36px;
+  height: 34px;
+  min-width: 36px;
+  min-height: 34px;
+  margin-bottom: 15px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255,255,255,.045);
+}
+
+.moduleCard small {
+  margin-bottom: 10px;
+  border-color: var(--border);
+  border-radius: 5px;
+  background: transparent;
+  letter-spacing: .04em;
+}
+
+.moduleCard strong {
+  font-size: 23px;
+  line-height: 1;
+}
+
+.moduleCard > span:not(.moduleIcon) {
+  max-width: 34ch;
+  color: var(--text2);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.moduleCard em {
+  margin-top: 14px;
+  color: #ffd166;
+  font-size: 11px;
+  letter-spacing: .02em;
+}
+
+.sportsCard,
+.footballCard,
+.injuryRow,
+.cs2Card,
+.wnba-hero,
+.footballBoard {
+  border-radius: 10px;
+  background-color: var(--bg2);
+  box-shadow: none;
+}
+
+.sportsCard {
+  border-color: var(--border);
+  padding: 16px;
+}
+
+.sportsMeta {
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sportsMeta em {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text2) !important;
+}
+
+.sportsMeta em.is-live {
+  color: var(--green) !important;
+}
+
+.sportsMeta em.is-live::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+.teamLine {
+  min-height: 48px;
+}
+
+.teamLine strong {
+  font-size: 14px;
+}
+
+.teamLine em {
+  font-family: var(--display);
+  font-size: 21px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.footballFooter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  border-top-color: var(--border);
+  color: var(--text3);
+  font-size: 11px;
+}
+
+.emptyState,
+.richEmptyState {
+  border-color: var(--border);
+  border-radius: 10px;
+  background: var(--bg2);
+}
+
+.paywallBox,
+.planLimitBox {
+  border-color: rgba(253,185,39,.2);
+  border-radius: 11px;
+  background: linear-gradient(100deg, rgba(253,185,39,.055), transparent 48%), var(--bg2);
+  box-shadow: none;
+}
+
+@media (max-width: 900px) and (min-width: 701px) {
+  .app-shell {
+    grid-template-columns: 132px minmax(0,1fr);
+    gap: 17px;
+    padding-inline: 16px;
+  }
+
+  .homeHero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .homeStatusGrid {
+    align-self: stretch;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .header {
+    height: 60px;
+    padding-inline: 12px;
+  }
+
+  .app-shell {
+    padding: 13px 11px 104px;
+  }
+
+  .sport-sidebar {
+    background: rgba(16,20,23,.97);
+  }
+
+  .sport-sidebar .page-nav-btn {
+    flex-basis: 68px;
+    font-size: 9px;
+  }
+
+  .homeHero {
+    min-height: 0;
+    gap: 20px;
+    padding: 24px 18px;
+  }
+
+  .homeHero h1 {
+    max-width: 10ch;
+    font-size: clamp(42px, 12vw, 58px);
+  }
+
+  .homeHero p {
+    font-size: 13px;
+  }
+
+  .homeStatusGrid {
+    align-self: stretch;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+  }
+
+  .homeStat {
+    padding: 9px;
+  }
+
+  .homeStat span {
+    line-height: 1.25;
+  }
+
+  .quickActions {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .quickActionGrid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+
+  .quickActionGrid button {
+    display: grid;
+    grid-template-columns: 30px minmax(0,1fr);
+    align-items: center;
+    column-gap: 9px;
+    padding: 9px;
+  }
+
+  .quickIcon {
+    grid-row: span 2;
+    margin: 0;
+  }
+
+  .quickActionGrid em {
+    margin-top: 1px;
+  }
+
+  .moduleGrid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+
+  .moduleCard {
+    min-height: 168px;
+    padding: 14px;
+  }
+
+  .moduleCard strong {
+    font-size: 20px;
+  }
+
+  .moduleCard > span:not(.moduleIcon) {
+    font-size: 11px;
+  }
+
+  .panelHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .footballHeaderActions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .sportsCard {
+    padding: 13px;
+  }
+}
+
+@media (max-width: 380px) {
+  .moduleGrid {
+    grid-template-columns: 1fr;
+  }
+}.homeHeroAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  margin-top: 20px;
+  border: 0;
+  border-radius: 7px;
+  padding: 0 14px;
+  background: var(--gold);
+  color: #17140d;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.homeHeroAction:hover {
+  background: #ffd166;
+}
+
+.homeHeroAction .sport-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.titleIcon .sport-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.sportsCard.is-live {
+  border-top-color: var(--green);
+}
+
+.sportsCard.is-finished {
+  opacity: .86;
+}
+
+.sportsMeta em.is-scheduled {
+  color: var(--text3) !important;
+}
+
+.sportsMeta em.is-finished {
+  color: var(--text2) !important;
+}

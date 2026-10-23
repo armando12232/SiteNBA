@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getNbaInjuries } from '../api/injuries.js';
 import { userErrorMessage } from '../utils/errors.js';
+import { SportIcon } from './SportIcon.jsx';
 
 export function InjuriesPage() {
   const [state, setState] = useState({ loading: true, error: null, data: null });
@@ -36,7 +37,7 @@ export function InjuriesPage() {
     <section className="panel">
       <div className="panelHeader">
         <div>
-          <h2><span className="titleIcon">🩹</span> Lesões NBA</h2>
+          <h2><span className="titleIcon"><SportIcon name="medical" /></span> Lesões NBA</h2>
           <p className="sectionLead visible">Status por jogador, filtro por time e atualização parcial quando alguma lista demora.</p>
         </div>
         <div className="footballHeaderActions">
