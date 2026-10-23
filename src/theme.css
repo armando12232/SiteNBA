@@ -1,5 +1,23 @@
 /* StatCast sports desk: shared hierarchy and calmer match-first surfaces */
 :root {
+  --bg: #101417;
+  --bg2: #171d21;
+  --bg3: #1d252a;
+  --bg4: #252e34;
+  --border: rgba(221,231,235,.10);
+  --border2: rgba(221,231,235,.18);
+  --text: #f2f4f5;
+  --text1: #f2f4f5;
+  --text2: #b4bec4;
+  --text3: #87939a;
+  --gold: #fdb927;
+  --green: #27c281;
+  --red: #e04b50;
+  --red2: #f05b60;
+  --cyan: #63c6dd;
+  --orange: #ee9e48;
+  --amber: #e6b957;
+  --cardGlow: rgba(253,185,39,.08);
   --surface-raised: #1b2226;
   --surface-score: #242d32;
   --focus-ring: #ffd166;
