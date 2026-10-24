@@ -16,12 +16,12 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'method not allowed' });
 
   const type = String(req.query?.type || '');
-  const valid = new Set(['scoreboard', 'boxscore', 'season_avg', 'pregame', 'pregame_by_name', 'schedule', 'defense', 'team_info', 'team_last', 'roster', 'debug_gamelog', 'player_search']);
+  const valid = new Set(['scoreboard', 'boxscore', 'season_avg', 'pregame', 'pregame_by_name', 'schedule', 'defense', 'team_info', 'team_last', 'roster', 'debug_gamelog', 'player_search', 'radar']);
   if (!valid.has(type)) return res.status(400).json({ error: 'invalid type' });
 
   try {
     const protectedFeature = type === 'boxscore' ? 'live'
-      : ['debug_gamelog', 'season_avg', 'pregame', 'pregame_by_name'].includes(type) ? 'modal'
+      : ['debug_gamelog', 'season_avg', 'pregame', 'pregame_by_name', 'radar'].includes(type) ? 'modal'
         : null;
     if (protectedFeature) {
       const access = await checkFeature(req, protectedFeature);
@@ -45,6 +45,10 @@ export default async function handler(req, res) {
     }
     if (type === 'scoreboard') return res.status(200).json({ games: (await scoreboard()).filter((game) => game.status === 2) });
     if (type === 'schedule') return res.status(200).json({ games: await schedule() });
+    if (type === 'radar') {
+      const data = await radar();
+      return res.status(200).json(data);
+    }
     if (type === 'boxscore') return res.status(200).json({ players: await boxscore(requiredId(req.query?.gameId, 'gameId')) });
     if (type === 'season_avg') return res.status(200).json({ avg: averages((await gameLog(requiredPlayerId(req.query?.playerId), requestedSeason(req.query?.season))).rows) });
     if (type === 'pregame') return res.status(200).json(await pregame(requiredPlayerId(req.query?.playerId), requestedSeason(req.query?.season)));
@@ -68,6 +72,84 @@ export default async function handler(req, res) {
     const message = status < 500 ? error.message : 'Dados NBA indisponíveis no momento. Tente novamente.';
     return res.status(status).json({ error: message, runtime: 'node-nba' });
   }
+}
+
+async function fetchSportradarJson(path, ttl = 120_000) {
+  const key = String(process.env.SPORTRADAR_API_KEY || '').trim();
+  if (!key) throw Object.assign(new Error('SPORTRADAR_API_KEY is not configured'), { status: 503 });
+  const url = 'https://api.sportradar.com/nba/trial/v8/en/' + path;
+  return fetchProviderJson(url, { headers: { 'x-api-key': key }, ttlMs: ttl, timeoutMs: 5_000, retries: 1 });
+}
+
+async function radar() {
+  if (!String(process.env.SPORTRADAR_API_KEY || '').trim()) return { configured: false, players: [] };
+  const seasonStart = nbaSeason() - 1;
+  const schedule = await fetchSportradarJson('games/' + seasonStart + '/REG/schedule.json', 30 * 60_000);
+  const teams = new Map();
+  for (const game of schedule.games || []) {
+    for (const side of ['home', 'away']) {
+      const team = game[side];
+      if (team?.id && team?.alias) teams.set(String(team.id), { id: String(team.id), alias: String(team.alias) });
+    }
+  }
+  const feeds = await mapConcurrent([...teams.values()], 4, async (team) => {
+    try {
+      return { team, data: await fetchSportradarJson('seasons/' + seasonStart + '/REG/teams/' + encodeURIComponent(team.id) + '/statistics.json', 120_000) };
+    } catch {
+      return { team, data: null };
+    }
+  });
+  const successfulFeeds = feeds.filter((feed) => feed.data);
+  if (teams.size && !successfulFeeds.length) throw Object.assign(new Error('Sportradar season stats unavailable'), { status: 502 });
+  const byId = new Map();
+  for (const { team, data } of successfulFeeds) {
+    for (const player of data.players || []) {
+      const reference = String(player.reference || '');
+      const playerId = Number(reference) || NAME_TO_NBA.get(normalizeName(player.full_name || player.name));
+      const name = String(player.full_name || player.name || '').trim();
+      const stats = player.total || player.statistics?.total || {};
+      const gamesPlayed = Number(stats.games_played) || 0;
+      if (!playerId || !name || gamesPlayed <= 0) continue;
+      const seasonAvg = {
+        pts: Number(stats.points) / gamesPlayed,
+        reb: Number(stats.rebounds) / gamesPlayed,
+        ast: Number(stats.assists) / gamesPlayed,
+        fg3m: Number(stats.three_points_made) / gamesPlayed,
+      };
+      if (!Object.values(seasonAvg).every(Number.isFinite)) continue;
+      const props = {};
+      for (const [stat, average] of Object.entries(seasonAvg)) {
+        if (average >= 1.5) props[stat] = { line: Math.floor(average) + 0.5, l5: null, l10: null, hit_rate: null, edge: null };
+      }
+      byId.set(playerId, {
+        player_id: playerId, player_name: name, team_abbr: team.alias, source: 'sportradar',
+        current_season: nbaSeason(), sample_season: seasonStart, sample_seasons: [String(seasonStart)],
+        using_previous_season: false, sample_size: gamesPlayed,
+        season_avg: Object.fromEntries(Object.entries(seasonAvg).map(([key, value]) => [key, round(value)])),
+        props, synthetic_lines: Object.fromEntries(Object.entries(props).map(([key, value]) => [key, value.line])),
+        last5_avg: nullAverages(), last10_avg: nullAverages(), last5_games: [], minsL5: null,
+        hit_rates: { pts_last10: null }, edge_points: null,
+        summary: gamesPlayed + ' jogos na temporada; médias oficiais Sportradar',
+      });
+    }
+  }
+  return {
+    configured: true, source: 'sportradar', partial: successfulFeeds.length < feeds.length,
+    teams_loaded: successfulFeeds.length, teams_total: feeds.length,
+    season: nbaSeason(), season_label: seasonStart + '-' + (seasonStart + 1), players: [...byId.values()],
+  };
+}
+
+async function mapConcurrent(items, limit, worker) {
+  const results = new Array(items.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await worker(items[index]);
+    }
+  }));
+  return results;
 }
 
 async function fetchJson(url, ttl = 300_000) {
