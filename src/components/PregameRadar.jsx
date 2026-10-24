@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getBettingProsForDates } from '../api/bettingpros.js';
-import { clearPregameCache, getPregame, getSchedule, getTeamRoster, searchNbaPlayers } from '../api/nba.js';
+import { clearPregameCache, getPregame, getPregameRadar, getSchedule, getTeamRoster, searchNbaPlayers } from '../api/nba.js';
 import { PREGAME_PLAYERS } from '../data/pregamePlayers.js';
 import { numberOrNull, propForStat } from '../utils/props.js';
 import { buildPregameScore } from '../utils/statcastScore.js';
@@ -56,6 +56,8 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
     bpPlayers: [],
     bpDate: null,
     schedule: [],
+    source: '',
+    partial: false,
   });
 
   useEffect(() => {
@@ -65,7 +67,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
       setState((current) => ({ ...current, loading: true, error: null, loadedCount: 0, players: [],
         bpPlayers: seasonView === 'current' ? current.bpPlayers : [],
         bpDate: seasonView === 'current' ? current.bpDate : null,
-        schedule: seasonView === 'current' ? current.schedule : [] }));
+        schedule: seasonView === 'current' ? current.schedule : [], source: '', partial: false }));
       try {
         if (seasonView === 'current') {
           getSchedule()
@@ -85,13 +87,22 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
             .catch(() => {});
         }
 
+        let officialById = new Map();
+        if (seasonView === 'current') {
+          const radarData = await getPregameRadar().catch(() => null);
+          if (alive && radarData?.configured) {
+            officialById = new Map((radarData.players || []).map((player) => [Number(player.player_id), player]));
+            setState((current) => ({ ...current, players: radarData.players || [], source: radarData.source || '', partial: Boolean(radarData.partial) }));
+          }
+        }
+
         await progressivePool(PREGAME_PLAYERS, 4, async (player) => {
           if (!alive) return;
           const data = await getPregame(player.id, seasonView).catch(() => null);
           if (!alive) return;
           setState((current) => {
             const nextPlayers = data && !data.error
-              ? upsertPlayer(current.players, { ...data, player_name: player.name })
+              ? upsertPlayer(current.players, mergeOfficialSeason(data, officialById.get(Number(player.id)), player.name))
               : current.players;
             const loadedCount = current.loadedCount + 1;
             return {
@@ -390,7 +401,7 @@ export function PregameRadar({ access, favorites = [], onSelectPlayer, onToggleF
           Atualizar
         </button>
         <div className="table-summary">
-          BP {bpCount || '-'} {state.bpDate ? `(${state.bpDate})` : ''} / Edge {topEdge ?? '-'} / Hit médio {avgHit != null ? `${avgHit}%` : '-'}
+          {state.source === 'sportradar' ? `Médias atuais Sportradar${state.partial ? ' (parciais)' : ''} / ` : null}BP {bpCount || '-'} {state.bpDate ? `(${state.bpDate})` : ''} / Edge {topEdge ?? '-'} / Hit médio {avgHit != null ? `${avgHit}%` : '-'}
         </div>
       </div>
 
@@ -610,11 +621,39 @@ function nbaSeasonLabel(previousOffset = 0) {
   return `${current - 1}/${String(current).slice(-2)}`;
 }
 
+function mergeOfficialSeason(recent, official, fallbackName) {
+  if (!official) return { ...recent, player_name: fallbackName || recent.player_name };
+  const props = { ...official.props };
+  for (const [stat, prop] of Object.entries(props)) {
+    const recentProp = recent.props?.[stat] || {};
+    const line = prop.line;
+    const games = recent.last5_games || [];
+    const values5 = games.slice(0, 5).map((game) => Number(game[stat])).filter(Number.isFinite);
+    const values10 = games.slice(0, 10).map((game) => Number(game[stat])).filter(Number.isFinite);
+    const l5 = values5.length === 5 ? Math.round(100 * values5.filter((value) => value >= line).length / 5) : null;
+    const l10 = values10.length === 10 ? Math.round(100 * values10.filter((value) => value >= line).length / 10) : null;
+    props[stat] = {
+      ...prop, l5, l10, hit_rate: l10,
+      edge: values5.length === 5 ? Math.round((values5.reduce((sum, value) => sum + value, 0) / 5 - line) * 10) / 10 : null,
+      h2h: recentProp.h2h ?? null,
+    };
+  }
+  return {
+    ...recent, ...official,
+    player_name: fallbackName || official.player_name || recent.player_name,
+    props, last5_avg: recent.last5_avg, last10_avg: recent.last10_avg,
+    last5_games: recent.last5_games || [], minsL5: recent.minsL5, recent_source: 'espn',
+  };
+}
+
 function upsertPlayer(players, player) {
   const index = players.findIndex((row) => row.player_id === player.player_id);
   if (index === -1) return [...players, player];
   const next = [...players];
-  next[index] = player;
+  const existing = next[index];
+  next[index] = existing.source === 'sportradar' && player.source !== 'sportradar'
+    ? mergeOfficialSeason(player, existing, player.player_name)
+    : player;
   return next;
 }
 
@@ -1099,7 +1138,10 @@ function sortPlayers(players, stat, sortBy) {
     const bProp = b.props?.[stat] || {};
     if (sortBy === 'hit') return (bProp.l10 ?? -1) - (aProp.l10 ?? -1);
     if (sortBy === 'h2h') return (bProp.h2h ?? -1) - (aProp.h2h ?? -1);
-    if (sortBy === 'season') return (bProp.hit_rate ?? -1) - (aProp.hit_rate ?? -1);
+    if (sortBy === 'season') {
+      if (a.stats_source === 'sportradar' || b.stats_source === 'sportradar') return (b.season_avg?.[stat] ?? -1) - (a.season_avg?.[stat] ?? -1);
+      return (bProp.hit_rate ?? -1) - (aProp.hit_rate ?? -1);
+    }
     if (sortBy === 'l5') return (bProp.l5 ?? -1) - (aProp.l5 ?? -1);
     if (sortBy === 'score') return pregameSortScore(b, stat) - pregameSortScore(a, stat);
     return (bProp.edge ?? -999) - (aProp.edge ?? -999);

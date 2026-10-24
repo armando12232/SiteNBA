@@ -14,6 +14,10 @@ export function searchNbaPlayers(query) {
   return fetchJson(`/api/nba?type=player_search&query=${encodeURIComponent(query)}`);
 }
 
+export function getPregameRadar() {
+  return fetchJson('/api/nba?type=radar', { auth: true });
+}
+
 export function getSchedule() {
   return fetchJson('/api/nba?type=schedule');
 }
