@@ -12,6 +12,7 @@ export function mergePregamePlayers(nbaPlayers, bpPlayers, schedule) {
     const game = findGameForTeam(safeSchedule, bp.team);
     return {
       ...nba,
+      stats_source: nba.source || '',
       player_name: bp.player_name || nba.player_name,
       team_abbr: bp.team || nba.team_abbr,
       position: bp.position || nba.position,
